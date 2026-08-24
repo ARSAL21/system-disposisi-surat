@@ -1,0 +1,594 @@
+# Workflow Specification — Sistem Disposisi Surat
+
+## 1. Tujuan
+
+Dokumen ini mendefinisikan **state dan transition resmi** untuk workflow surat masuk dan disposisi pada MVP.
+
+Dokumen ini tidak mendefinisikan:
+
+* struktur tabel;
+* permission matrix;
+* detail UI;
+* implementation class.
+
+Hal tersebut mengikuti dokumen masing-masing.
+
+---
+
+## 2. Workflow Formal MVP
+
+```text
+Bagian Umum / Tata Usaha
+        ↓
+Wali Kota ATAU Sekda
+        ↓
+Asisten I / II / III
+        ↓
+Satu atau lebih Kepala Bagian
+        ↓
+Selesai
+```
+
+Aturan:
+
+* seluruh surat masuk dimulai dari Bagian Umum;
+* initial routing hanya ke **satu** Wali Kota atau Sekda;
+* Wali Kota/Sekda memilih **satu Asisten**;
+* Asisten memilih **satu atau lebih Kepala Bagian**;
+* Kepala Bagian merupakan terminal formal workflow MVP;
+* Staff belum termasuk workflow MVP;
+* hierarchy tidak boleh dilompati.
+
+---
+
+# 3. Incoming Letter State
+
+State surat:
+
+```text
+REGISTERED
+ROUTED
+IN_PROGRESS
+COMPLETED
+```
+
+### `REGISTERED`
+
+Surat telah:
+
+* dicatat Bagian Umum;
+* memiliki metadata;
+* memiliki dokumen yang valid;
+
+tetapi belum diarahkan ke Wali Kota/Sekda.
+
+### `ROUTED`
+
+Surat telah diarahkan ke:
+
+```text
+Wali Kota ATAU Sekda
+```
+
+dan menunggu disposisi pertama.
+
+### `IN_PROGRESS`
+
+Surat sudah memasuki proses disposisi.
+
+State ini mencakup kondisi ketika surat:
+
+* berada pada Asisten;
+* sudah diteruskan ke Kepala Bagian;
+* memiliki satu atau lebih branch yang belum selesai.
+
+### `COMPLETED`
+
+Seluruh terminal branch Kepala Bagian yang aktif telah selesai.
+
+`COMPLETED` merupakan state final MVP.
+
+---
+
+# 4. Letter State Transition
+
+```text
+REGISTERED
+    ↓
+ROUTED
+    ↓
+IN_PROGRESS
+    ↓
+COMPLETED
+```
+
+Transition mundur tidak diperbolehkan pada MVP.
+
+Tidak boleh:
+
+```text
+COMPLETED → IN_PROGRESS
+IN_PROGRESS → ROUTED
+ROUTED → REGISTERED
+```
+
+Correction atau reopening belum menjadi bagian MVP dan tidak boleh diimplementasikan tanpa perubahan workflow specification.
+
+---
+
+# 5. Initial Route State
+
+Routing Bagian Umum ke Wali Kota/Sekda menggunakan:
+
+```text
+PENDING
+COMPLETED
+```
+
+### `PENDING`
+
+Surat sudah diarahkan tetapi Wali Kota/Sekda belum membuat disposisi pertama.
+
+### `COMPLETED`
+
+Wali Kota/Sekda telah membuat disposisi yang valid kepada satu Asisten.
+
+Transition:
+
+```text
+PENDING
+   ↓
+COMPLETED
+```
+
+Route historis tidak dihapus setelah selesai.
+
+---
+
+# 6. Disposition Recipient State
+
+Setiap recipient branch menggunakan:
+
+```text
+PENDING
+IN_PROGRESS
+COMPLETED
+```
+
+### `PENDING`
+
+Recipient telah menerima assignment tetapi belum memulai tindakan.
+
+### `IN_PROGRESS`
+
+Recipient sedang menangani branch tersebut.
+
+### `COMPLETED`
+
+Kewajiban recipient pada branch tersebut telah selesai.
+
+Transition normal:
+
+```text
+PENDING
+   ↓
+IN_PROGRESS
+   ↓
+COMPLETED
+```
+
+Transition langsung:
+
+```text
+PENDING → COMPLETED
+```
+
+boleh terjadi jika aksi yang menyelesaikan tanggung jawab recipient dilakukan langsung tanpa membutuhkan fase kerja terpisah.
+
+---
+
+# 7. Wali Kota / Sekda
+
+Bagian Umum hanya boleh melakukan:
+
+```text
+Bagian Umum
+    ↓
+Wali Kota
+```
+
+atau:
+
+```text
+Bagian Umum
+    ↓
+Sekda
+```
+
+Tidak boleh diarahkan ke keduanya sekaligus pada MVP.
+
+Wali Kota/Sekda hanya dapat menyelesaikan initial route dengan membuat disposisi:
+
+```text
+Wali Kota / Sekda
+        ↓
+satu Asisten
+```
+
+Tidak boleh:
+
+```text
+Wali Kota → Kepala Bagian
+Sekda → Kepala Bagian
+```
+
+Ketika disposisi pertama berhasil dibuat secara transactional:
+
+```text
+Initial Route → COMPLETED
+Incoming Letter → IN_PROGRESS
+Assistant Recipient → PENDING
+```
+
+---
+
+# 8. Asisten
+
+Asisten menerima satu branch dari Wali Kota/Sekda.
+
+Asisten dapat meneruskan surat kepada:
+
+```text
+1..N Kepala Bagian
+```
+
+dalam satu tindakan disposisi.
+
+Contoh valid:
+
+```text
+Asisten II
+   ├── Kabag Kesehatan
+   └── Kabag Aset
+```
+
+Contoh invalid:
+
+```text
+Asisten II → Asisten I
+Asisten II → Sekda
+```
+
+Ketika disposisi Asisten berhasil:
+
+```text
+Assistant Branch → COMPLETED
+```
+
+dan setiap Kepala Bagian memperoleh branch:
+
+```text
+SECTION_HEAD Branch → PENDING
+```
+
+Pembuatan seluruh recipient wajib atomic.
+
+Jika satu recipient gagal dibuat, seluruh disposisi gagal.
+
+---
+
+# 9. Kepala Bagian
+
+Kepala Bagian merupakan terminal workflow MVP.
+
+Kepala Bagian tidak dapat membuat disposisi formal lanjutan.
+
+Branch Kepala Bagian dapat bergerak:
+
+```text
+PENDING
+   ↓
+IN_PROGRESS
+   ↓
+COMPLETED
+```
+
+Kepala Bagian dapat menambahkan catatan tindak lanjut selama branch masih aktif.
+
+Branch hanya dapat ditandai selesai oleh user yang sedang memegang Position tersebut dan mempunyai permission yang diperlukan.
+
+---
+
+# 10. Multiple Branch Completion
+
+Setiap Kepala Bagian mempunyai lifecycle independen.
+
+Contoh:
+
+```text
+Asisten II
+   ├── Kabag Kesehatan → COMPLETED
+   └── Kabag Aset      → IN_PROGRESS
+```
+
+Maka:
+
+```text
+Incoming Letter = IN_PROGRESS
+```
+
+Surat belum selesai.
+
+Jika:
+
+```text
+Kabag Kesehatan → COMPLETED
+Kabag Aset      → COMPLETED
+```
+
+maka:
+
+```text
+Incoming Letter → COMPLETED
+```
+
+Rule utama:
+
+> Surat selesai hanya ketika seluruh terminal branch aktif telah `COMPLETED`.
+
+---
+
+# 11. Aggregate Letter State
+
+Branch merupakan sumber utama keadaan workflow.
+
+`incoming_letters.status` adalah aggregate state yang digunakan untuk:
+
+* inbox;
+* filter;
+* reporting;
+* dashboard.
+
+Aggregate state tidak boleh ditentukan oleh frontend.
+
+Conceptual rule:
+
+```text
+belum memiliki route
+→ REGISTERED
+
+route masih pending
+→ ROUTED
+
+workflow sudah berjalan dan masih ada branch aktif
+→ IN_PROGRESS
+
+seluruh terminal branch selesai
+→ COMPLETED
+```
+
+Perubahan branch dan aggregate letter state harus dilakukan dalam transaction yang sama ketika keduanya berkaitan.
+
+---
+
+# 12. Position Assignment dan Pergantian Pejabat
+
+Pekerjaan aktif melekat pada:
+
+```text
+Position
+```
+
+bukan user tertentu.
+
+Contoh:
+
+```text
+Disposition Recipient
+→ Kepala Bagian Hukum
+```
+
+Jika pemegang jabatan berganti ketika branch masih aktif:
+
+```text
+Pejabat lama
+    ↓ selesai masa assignment
+
+Pejabat baru
+    ↓ active assignment
+```
+
+branch tetap aktif pada `Kepala Bagian Hukum`.
+
+Pemegang Position yang baru dapat melanjutkan pekerjaan sesuai authorization.
+
+Namun tindakan historis tetap menyimpan:
+
+```text
+User
++
+Position Assignment
++
+Timestamp
+```
+
+yang berlaku ketika tindakan tersebut dilakukan.
+
+Pergantian pejabat **tidak mengubah state workflow secara otomatis**.
+
+---
+
+# 13. Invalid Transition
+
+Backend wajib menolak transition yang:
+
+* dilakukan oleh Position yang tidak berwenang;
+* melompati hierarchy;
+* menarget Position yang tidak valid;
+* mencoba mengubah branch yang sudah `COMPLETED`;
+* mencoba menyelesaikan surat secara langsung;
+* mencoba mengubah aggregate status dari frontend;
+* menggunakan Position Assignment yang sudah tidak aktif untuk tindakan baru.
+
+UI tidak cukup untuk mencegah transition invalid.
+
+Semua aturan tetap diverifikasi server-side.
+
+---
+
+# 14. Concurrency dan Atomicity
+
+Transition kritis harus dilakukan secara transactional.
+
+Contoh:
+
+```text
+Asisten membuat disposisi
+        ↓
+create disposition
+        ↓
+create recipient A
+        ↓
+create recipient B
+        ↓
+complete Assistant branch
+        ↓
+recalculate Letter state
+        ↓
+create audit event
+```
+
+Semua langkah tersebut merupakan satu logical operation.
+
+Tidak boleh menghasilkan kondisi parsial seperti:
+
+```text
+Recipient A berhasil dibuat
+Recipient B gagal
+Assistant sudah COMPLETED
+```
+
+Jika operasi tidak lengkap, transaction harus rollback.
+
+---
+
+# 15. Audit pada State Transition
+
+Transition penting wajib menghasilkan audit event.
+
+Minimal:
+
+```text
+LETTER_REGISTERED
+LETTER_ROUTED
+
+DISPOSITION_CREATED
+DISPOSITION_STARTED
+DISPOSITION_COMPLETED
+
+LETTER_COMPLETED
+```
+
+Audit merekam:
+
+```text
+actor
+position assignment
+resource
+previous state
+new state
+server timestamp
+relevant context
+```
+
+Audit record tidak menggantikan business state.
+
+Audit adalah histori dari perubahan business state tersebut.
+
+---
+
+# 16. Correction, Withdrawal, dan Reopening
+
+MVP **belum** memiliki transition:
+
+```text
+WITHDRAWN
+CANCELLED
+REOPENED
+```
+
+Jangan menambahkannya sebagai antisipasi.
+
+Jika kebutuhan nyata ditemukan seperti:
+
+* salah memilih Asisten;
+* salah memilih Kepala Bagian;
+* surat sudah selesai tetapi perlu diproses kembali;
+
+workflow tersebut harus dibahas secara eksplisit sebelum state baru ditambahkan.
+
+Historical disposition tidak boleh diselesaikan dengan menghapus record lama.
+
+---
+
+# 17. Workflow Invariants
+
+Invariant MVP:
+
+1. Surat selalu dimulai dari Bagian Umum.
+2. Surat hanya memiliki satu initial route aktif.
+3. Initial route hanya menuju Wali Kota atau Sekda.
+4. Wali Kota/Sekda hanya meneruskan ke satu Asisten.
+5. Asisten meneruskan ke satu atau lebih Kepala Bagian.
+6. Kepala Bagian adalah terminal formal MVP.
+7. Hierarchy tidak dapat dilompati.
+8. Setiap recipient mempunyai lifecycle sendiri.
+9. Branch `COMPLETED` tidak dapat dimodifikasi menjadi aktif kembali.
+10. Surat `COMPLETED` tidak dapat kembali ke state sebelumnya pada MVP.
+11. Surat selesai hanya ketika semua terminal branch aktif selesai.
+12. State transition dilakukan server-side.
+13. State aggregate tidak dikendalikan frontend.
+14. Tindakan baru wajib menggunakan Position Assignment aktif.
+15. Historical actor tetap menggunakan assignment yang berlaku saat tindakan dilakukan.
+
+---
+
+# 18. State Summary
+
+```text
+INCOMING LETTER
+
+REGISTERED
+    ↓
+ROUTED
+    ↓
+IN_PROGRESS
+    ↓
+COMPLETED
+```
+
+```text
+INITIAL ROUTE
+
+PENDING
+    ↓
+COMPLETED
+```
+
+```text
+DISPOSITION RECIPIENT
+
+PENDING
+    ↓
+IN_PROGRESS
+    ↓
+COMPLETED
+
+atau
+
+PENDING
+    ↓
+COMPLETED
+```
+
+Struktur ini adalah workflow resmi MVP. Penambahan state atau transition baru harus dilakukan berdasarkan requirement bisnis nyata dan memperbarui dokumen ini terlebih dahulu.
