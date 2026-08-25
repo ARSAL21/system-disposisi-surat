@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -13,6 +15,9 @@ use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\Passkey;
+use Laravel\Passkeys\Passkeys;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -29,9 +34,36 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureAuthentication();
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+    }
+
+    /**
+     * Configure authentication restrictions shared by public and internal users.
+     */
+    private function configureAuthentication(): void
+    {
+        Fortify::authenticateUsing(function (Request $request): ?User {
+            $email = Str::lower($request->string(Fortify::username())->toString());
+
+            $user = User::query()
+                ->where('email', $email)
+                ->where('is_active', true)
+                ->first();
+
+            if (! $user || ! Hash::check($request->string('password')->toString(), $user->password)) {
+                return null;
+            }
+
+            return $user;
+        });
+
+        Passkeys::authorizeLoginUsing(
+            fn (Request $_request, PasskeyUser $user, Passkey $_passkey): bool => $user instanceof User
+                && $user->is_active,
+        );
     }
 
     /**

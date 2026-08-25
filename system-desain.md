@@ -2,55 +2,254 @@
 
 ## 1. Tujuan Sistem
 
-Sistem Disposisi Surat adalah aplikasi internal Pemerintah Kota untuk mengelola **surat masuk** sejak diterima Bagian Umum sampai seluruh tindak lanjut disposisi selesai.
+Sistem Disposisi Surat adalah aplikasi Pemerintah Kota untuk menerima, meregistrasi, dan memproses **surat masuk** sampai seluruh tindak lanjut disposisi selesai.
+
+Sistem mendukung dua kanal penerimaan surat:
+
+```text
+ONLINE
+Public User
+    ↓
+Submit surat melalui sistem
+
+MANUAL
+Pengirim datang langsung
+    ↓
+Bagian Umum menerima surat fisik
+```
+
+Kedua kanal tersebut harus masuk ke proses administrasi Bagian Umum sebelum menjadi surat masuk resmi.
 
 Sistem harus menjamin:
 
+* surat dapat diterima secara online maupun manual;
+* seluruh surat resmi tetap melalui Bagian Umum;
 * alur disposisi mengikuti hierarki;
 * satu surat dapat memiliki beberapa cabang disposisi;
 * akses surat hanya diberikan kepada pihak yang berwenang;
 * histori tindakan tidak hilang ketika pejabat berganti;
-* dokumen asli dapat diverifikasi integritasnya;
+* dokumen dapat diverifikasi integritasnya;
 * seluruh tindakan penting dapat diaudit;
 * data dapat digunakan untuk laporan periodik.
 
 ---
 
-## 2. Scope MVP
+# 2. Scope MVP
 
-Workflow formal MVP:
+Alur umum MVP:
 
 ```text
-Surat dari instansi/organisasi luar
-            ↓
-Bagian Umum / Tata Usaha
-            ↓
-Registrasi + Upload PDF
-            ↓
-Wali Kota ATAU Sekda
-            ↓
-Asisten I / II / III
-            ↓
-Satu atau lebih Kepala Bagian
-            ↓
-Tindak lanjut
-            ↓
-Selesai
+              ┌───────────────────────────┐
+              │       ONLINE INTAKE       │
+              │                           │
+              │ Public User               │
+              │ Register + Verify Email   │
+              │       ↓                   │
+              │ Submit Surat              │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+                    Submission / Intake
+                            ▲
+                            │
+              ┌─────────────┴─────────────┐
+              │       MANUAL INTAKE       │
+              │                           │
+              │ Pengirim datang langsung │
+              │       ↓                   │
+              │ Bagian Umum input surat  │
+              └───────────────────────────┘
+
+                            ↓
+                  Bagian Umum / Tata Usaha
+                            ↓
+                    Registrasi Surat
+                            ↓
+                      Incoming Letter
+                            ↓
+                 Wali Kota ATAU Sekda
+                            ↓
+                   Asisten I / II / III
+                            ↓
+             Satu atau lebih Kepala Bagian
+                            ↓
+                      Tindak lanjut
+                            ↓
+                         Selesai
 ```
 
 Aturan utama:
 
-* Bagian Umum merupakan entry point seluruh surat.
-* Surat diarahkan ke Wali Kota **atau** Sekda.
-* Wali Kota dan Sekda berada pada level penerimaan awal yang sama dalam workflow.
-* Disposisi wajib mengikuti hierarki dan tidak boleh melompati level.
-* Satu disposisi dapat menghasilkan beberapa cabang.
-* Kepala Bagian adalah terminal formal workflow MVP.
-* Staff belum menjadi penerima disposisi formal pada MVP.
+* Bagian Umum tetap menjadi gerbang administratif seluruh surat.
+* Public User hanya dapat mengirim surat melalui kanal online.
+* Pengirim manual tidak wajib memiliki account.
+* Submission belum otomatis menjadi `IncomingLetter`.
+* Hanya Bagian Umum yang dapat melakukan registrasi surat masuk resmi.
+* Surat resmi diarahkan ke Wali Kota atau Sekda.
+* Wali Kota dan Sekda berada pada level penerimaan awal yang sama.
+* Disposisi wajib mengikuti hierarchy.
+* Kepala Bagian merupakan terminal formal workflow MVP.
+* Staff belum menjadi bagian workflow formal MVP.
 
 ---
 
-# 3. High-Level Architecture
+# 3. Prinsip Hybrid Intake
+
+Sistem tidak memiliki dua workflow surat yang berbeda.
+
+Gunakan satu model konseptual:
+
+```text
+Online Submission ─────┐
+                       │
+                       ▼
+                Submission / Intake
+                       ▲
+                       │
+Manual Submission ─────┘
+                       ↓
+               Bagian Umum Review
+                       ↓
+              Incoming Letter
+```
+
+Perbedaan hanya terdapat pada **sumber intake**.
+
+### Online
+
+Submission dibuat oleh Public User yang telah login dan melakukan email verification.
+
+### Manual
+
+Submission dicatat oleh Bagian Umum berdasarkan surat fisik yang diserahkan langsung.
+
+Setelah itu, proses bisnis keduanya harus menyatu.
+
+Jangan membuat:
+
+```text
+OnlineLetterWorkflow
+ManualLetterWorkflow
+```
+
+sebagai dua domain terpisah.
+
+---
+
+# 4. Submission Bukan Incoming Letter
+
+`Submission` dan `IncomingLetter` merupakan dua konsep berbeda.
+
+### Submission
+
+Artinya:
+
+> sesuatu telah dikirim atau diserahkan kepada kantor dan menunggu proses administratif Bagian Umum.
+
+Submission dapat berasal dari:
+
+```text
+ONLINE
+MANUAL
+```
+
+### IncomingLetter
+
+Artinya:
+
+> surat telah diterima dan diregistrasi secara resmi oleh Bagian Umum sebagai surat masuk Pemerintah Kota.
+
+Hubungannya:
+
+```text
+Submission
+    ↓
+Bagian Umum melakukan registrasi
+    ↓
+IncomingLetter
+```
+
+Public User tidak dapat membuat `IncomingLetter` secara langsung.
+
+---
+
+# 5. Online Submission Boundary
+
+Public User menggunakan authentication Laravel yang sama dengan internal user.
+
+Namun Public User tidak mempunyai:
+
+* Position;
+* Position Assignment;
+* permission internal;
+* akses workflow disposisi.
+
+Alur:
+
+```text
+Register
+    ↓
+Email Verification
+    ↓
+Login
+    ↓
+Create Submission
+    ↓
+Upload PDF
+    ↓
+Submit
+```
+
+Email verification membuktikan kendali terhadap alamat email, bukan identitas manusia secara absolut.
+
+Karena registration dan submission merupakan public surface, sistem tetap harus menerapkan:
+
+* rate limiting;
+* validation;
+* upload security;
+* anti-abuse controls jika dibutuhkan.
+
+Public User hanya dapat mengakses submission miliknya sendiri kecuali terdapat rule khusus.
+
+---
+
+# 6. Manual Submission Boundary
+
+Pengirim yang datang langsung tidak diwajibkan membuat account.
+
+Alur:
+
+```text
+Pengirim datang
+      ↓
+Menyerahkan surat fisik
+      ↓
+Bagian Umum
+      ↓
+Input metadata
+      ↓
+Upload hasil scan PDF
+      ↓
+Create Manual Submission
+```
+
+Karena Bagian Umum sudah melakukan pemeriksaan langsung, manual submission dapat dilanjutkan ke registrasi pada sesi kerja yang sama.
+
+Namun secara domain:
+
+```text
+Manual Submission
+≠
+Incoming Letter
+```
+
+tetap dipertahankan.
+
+Ini menjaga seluruh surat mempunyai intake history yang konsisten.
+
+---
+
+# 7. High-Level Architecture
 
 ```text
 ┌───────────────────────────────┐
@@ -69,14 +268,14 @@ Aturan utama:
 ┌───────────────────────────────┐
 │      Application Layer        │
 │ Actions / Services            │
-│ Workflow Coordination         │
+│ Intake + Workflow Coordination│
 └───────────────┬───────────────┘
                 │
                 ▼
 ┌───────────────────────────────┐
 │        Domain Rules           │
-│ Position / Authorization      │
-│ Disposition / Completion      │
+│ Submission / Position         │
+│ Authorization / Disposition   │
 └───────────────┬───────────────┘
                 │
        ┌────────┴────────┐
@@ -89,20 +288,19 @@ Aturan utama:
 Laravel menjadi pusat:
 
 * authentication;
+* email verification;
 * authorization;
-* routing;
 * validation;
-* business workflow;
+* intake workflow;
+* disposition workflow;
 * persistence;
 * audit.
 
-Vue bertanggung jawab pada presentation dan interaction, bukan business authority.
-
 ---
 
-# 4. Domain Utama
+# 8. Domain Utama
 
-Domain inti terdiri dari:
+Domain inti:
 
 ```text
 User
@@ -112,6 +310,7 @@ Permission
 Position
 PositionAssignment
 
+LetterSubmission
 IncomingLetter
 LetterDocument
 
@@ -125,26 +324,52 @@ AuditLog
 
 ## User
 
-Merepresentasikan identitas account.
+Merepresentasikan account yang dapat login.
+
+User dapat berupa:
+
+```text
+Public User
+Internal User
+```
+
+Jenis akses tidak boleh hanya ditentukan dari field client.
+
+---
+
+## Public User
+
+Public User adalah pengirim eksternal melalui kanal online.
+
+Public User:
+
+* dapat register;
+* wajib melakukan email verification sebelum submit;
+* dapat membuat submission;
+* dapat melihat submission miliknya;
+* tidak memiliki Position Assignment internal.
+
+---
+
+## Internal User
+
+Internal User adalah account pegawai/pejabat.
+
+Internal capability ditentukan melalui:
+
+```text
+Role / Permission
++
+Position Assignment
+```
+
+---
 
 ## Role dan Permission
 
-Mengatur kapabilitas aplikasi.
+Mengatur capability aplikasi.
 
-Contoh:
-
-```text
-letter.create
-letter.view
-letter.route
-
-disposition.create
-disposition.forward
-disposition.complete
-
-report.view
-audit.view
-```
+---
 
 ## Position
 
@@ -159,31 +384,111 @@ Asisten I
 Asisten II
 Asisten III
 Kepala Bagian Hukum
-Kepala Bagian Pemerintahan
+Kepala Bagian Aset
 ...
 ```
 
-`Kepala Bagian` tidak cukup dimodelkan sebagai satu posisi generik jika terdapat beberapa bagian berbeda.
+---
 
 ## PositionAssignment
 
-Menghubungkan user dengan Position dalam periode tertentu.
+Menghubungkan Internal User dengan Position dalam periode tertentu.
 
-```text
-User
-  ↓
-PositionAssignment
-  ↓
-Position
-```
-
-Ini memungkinkan pergantian pejabat tanpa merusak histori.
+Public User tidak mempunyai Position Assignment.
 
 ---
 
-# 5. Role Tidak Menentukan Hierarki
+## LetterSubmission
 
-RBAC dan struktur organisasi adalah dua sistem berbeda.
+Merepresentasikan intake surat sebelum menjadi surat masuk resmi.
+
+Submission harus mengetahui source:
+
+```text
+ONLINE
+MANUAL
+```
+
+Online submission mempunyai hubungan dengan Public User.
+
+Manual submission dicatat oleh Internal User Bagian Umum.
+
+---
+
+## IncomingLetter
+
+Merepresentasikan surat yang telah diregistrasi secara resmi oleh Bagian Umum.
+
+Tidak setiap submission otomatis menjadi IncomingLetter.
+
+---
+
+# 9. Authentication Architecture
+
+Gunakan Laravel built-in session authentication melalui Inertia.
+
+Satu authentication system digunakan untuk public dan internal user.
+
+```text
+                    Laravel Auth
+                         │
+               ┌─────────┴─────────┐
+               ▼                   ▼
+          Public User         Internal User
+               │                   │
+               ▼                   ├── Role / Permission
+      Letter Submission            │
+                                   └── PositionAssignment
+                                               ↓
+                                            Position
+```
+
+Public registration diaktifkan.
+
+Email verification wajib sebelum Public User dapat membuat submission.
+
+Internal privilege tidak pernah dapat dipilih melalui registration form.
+
+Registration publik tidak boleh menerima:
+
+```text
+role
+permission
+position
+is_admin
+```
+
+sebagai trusted input.
+
+---
+
+# 10. Internal Account Provisioning
+
+Internal account tidak dibuat melalui self-service privilege selection.
+
+Internal privilege diberikan melalui proses administratif.
+
+Contoh:
+
+```text
+System Administrator
+        ↓
+Create / activate internal account
+        ↓
+Assign Role
+        ↓
+Assign Position
+```
+
+Seseorang yang register sebagai Public User tidak otomatis dapat memperoleh privilege internal.
+
+Perubahan privilege harus eksplisit, authorized, dan diaudit.
+
+---
+
+# 11. Role Tidak Menentukan Hierarki
+
+RBAC dan hierarchy organisasi merupakan konsep berbeda.
 
 ```text
 Role / Permission
@@ -200,28 +505,16 @@ Workflow
 
 Authorization
         ↓
-"Bolehkah tindakan dilakukan terhadap surat ini?"
+"Bolehkah tindakan dilakukan terhadap resource ini?"
 ```
 
-Workflow tidak boleh bergantung langsung pada nama role.
-
-Contoh:
-
-User mungkin mempunyai permission:
-
-```text
-disposition.forward
-```
-
-tetapi jika Position aktifnya adalah `Asisten II`, workflow hanya mengizinkan penerima pada level Kepala Bagian.
+Public User berada di luar hierarchy internal disposisi.
 
 ---
 
-# 6. Position-Based Assignment
+# 12. Position-Based Assignment
 
-Disposisi diarahkan kepada **Position**, bukan sekadar `user_id`.
-
-Contoh:
+Disposisi diarahkan kepada Position, bukan user tertentu.
 
 ```text
 Disposition
@@ -229,63 +522,131 @@ Disposition
 Kepala Bagian Hukum
 ```
 
-bukan:
+Actor tindakan tetap dicatat sebagai:
 
 ```text
-Disposition
+User
++
+PositionAssignment
+```
+
+Jika pejabat berganti, pekerjaan aktif tetap melekat pada Position.
+
+---
+
+# 13. Intake Workflow
+
+## Online Intake
+
+```text
+Public User
     ↓
-Budi
-```
-
-User yang bertindak tetap dicatat ketika aksi dilakukan.
-
-Dengan demikian:
-
-```text
-Position
-→ menentukan siapa yang memiliki pekerjaan aktif
-
-User + PositionAssignment
-→ menentukan siapa yang benar-benar melakukan tindakan
-```
-
-Jika pejabat berganti, pekerjaan aktif pada jabatan tersebut dapat tetap diteruskan oleh pemegang jabatan yang baru.
-
-Histori tindakan lama tetap menunjukkan user dan assignment yang berlaku ketika tindakan tersebut terjadi.
-
----
-
-# 7. Registrasi Surat Masuk
-
-Bagian Umum menjalankan proses:
-
-```text
-Terima surat fisik
-      ↓
-Periksa administrasi dasar
-      ↓
-Input metadata
-      ↓
+Create Submission
+    ↓
 Upload PDF
-      ↓
-Hitung SHA-256
-      ↓
-Registrasi surat
-      ↓
-Route ke Wali Kota / Sekda
+    ↓
+Submit
+    ↓
+Bagian Umum Queue
 ```
 
-Registrasi surat dan routing merupakan operasi berbeda secara domain.
+Bagian Umum kemudian menentukan apakah submission dapat diregistrasi.
 
-Bagian Umum memiliki kewenangan administratif terhadap registrasi, tetapi tidak mempunyai kewenangan disposisi substantif.
+## Manual Intake
+
+```text
+Surat fisik
+    ↓
+Bagian Umum
+    ↓
+Create Manual Submission
+    ↓
+Upload scan PDF
+    ↓
+Register
+```
+
+Manual intake boleh lebih cepat secara operasional, tetapi tetap melewati domain submission.
 
 ---
 
-# 8. Disposition Model
+# 14. Registrasi Surat Masuk
 
-Satu surat tidak memiliki satu `current_owner`.
+Hanya Bagian Umum yang dapat mengubah submission menjadi IncomingLetter.
 
-Model mentalnya adalah:
+Alur:
+
+```text
+Submission
+      ↓
+Bagian Umum memastikan data administratif
+      ↓
+Register Incoming Letter
+      ↓
+Nomor agenda / metadata resmi
+      ↓
+IncomingLetter
+```
+
+Registrasi merupakan boundary penting.
+
+Sebelum boundary:
+
+```text
+Submission
+```
+
+Sesudah boundary:
+
+```text
+Official Incoming Letter
+```
+
+Tindakan ini harus menghasilkan audit trail.
+
+---
+
+# 15. Document Handling
+
+Online submission:
+
+```text
+Public User Upload
+      ↓
+Validate
+      ↓
+Private Temporary/Submission Storage
+```
+
+Manual submission:
+
+```text
+Bagian Umum Scan
+      ↓
+Validate
+      ↓
+Private Submission Storage
+```
+
+Setelah registrasi:
+
+```text
+Submission Document
+      ↓
+Associated with registered IncomingLetter
+      ↓
+SHA-256 integrity recorded
+```
+
+Detail persistence ditentukan pada database schema.
+
+File tidak pernah menjadi public asset.
+
+---
+
+# 16. Disposition Model
+
+Setelah menjadi IncomingLetter, surat masuk ke workflow internal.
 
 ```text
 IncomingLetter
@@ -295,61 +656,43 @@ Disposition
 Disposition Branch
 ```
 
-`Disposition` merepresentasikan tindakan seseorang meneruskan surat.
+Surat tidak memiliki satu `current_owner`.
 
-Setiap penerima menghasilkan sebuah **branch**.
-
-Contoh:
-
-```text
-Sekda
-  ↓
-Asisten II
-  ↓
-Disposition
-  ├── Kabag Kesehatan
-  └── Kabag Aset
-```
-
-Dua Kepala Bagian tersebut merupakan dua branch aktif terhadap surat yang sama.
+Setiap recipient menghasilkan branch independen.
 
 ---
 
-# 9. Disposition Tree
+# 17. Disposition Tree
 
-Branch dapat menjadi sumber disposisi berikutnya sehingga seluruh perjalanan surat dapat direpresentasikan sebagai tree.
+Workflow:
 
 ```text
-Surat
-  │
-  ▼
-Sekda
-  │
-  ▼
-Asisten II
-  │
-  ├──────────────┐
-  ▼              ▼
-Kabag A        Kabag B
+Incoming Letter
+       ↓
+Wali Kota / Sekda
+       ↓
+Asisten
+       ↓
+┌──────┴──────┐
+▼             ▼
+Kabag A     Kabag B
 ```
 
-Sistem harus mengetahui untuk setiap branch:
+Sistem harus mengetahui:
 
-* berasal dari branch mana;
-* dibuat oleh siapa;
-* dalam Position apa;
-* ditujukan kepada Position apa;
-* kapan dibuat;
-* instruksi yang diberikan;
-* status branch.
-
-Histori tree tidak boleh diganti dengan hanya menyimpan penerima terakhir.
+* parent branch;
+* actor;
+* active Position;
+* recipient Position;
+* timestamp;
+* instruction;
+* state.
 
 ---
 
-# 10. Workflow Enforcement
+# 18. Workflow Enforcement
 
-Workflow MVP:
+Workflow internal MVP:
 
 ```text
 GENERAL_AFFAIRS
@@ -361,94 +704,72 @@ ASSISTANT
 SECTION_HEAD
 ```
 
-Workflow rule menentukan transisi yang diperbolehkan.
+Submission berada **sebelum** workflow disposisi ini.
 
-Contoh:
+Public User tidak pernah menjadi bagian disposition hierarchy.
 
-```text
-Wali Kota → Asisten II      VALID
-Sekda → Asisten I           VALID
-Asisten II → Kabag Hukum    VALID
-
-Wali Kota → Kabag Hukum     INVALID
-Sekda → Kabag Aset          INVALID
-Kabag → Asisten             INVALID
-```
-
-Vue hanya menampilkan tujuan yang valid.
-
-Backend tetap wajib memverifikasi workflow setiap kali disposisi dibuat.
-
-Workflow rule harus tersentralisasi agar tidak tersebar pada Controller, Policy, dan Vue.
+Backend wajib menolak hierarchy bypass.
 
 ---
 
-# 11. Multiple Recipients
+# 19. Multiple Recipients
 
-Domain wajib mendukung beberapa penerima pada satu tindakan disposisi.
-
-Contoh:
+Asisten dapat meneruskan kepada satu atau lebih Kepala Bagian.
 
 ```text
 Asisten I
-   │
    ├── Kabag Pemerintahan
    ├── Kabag Hukum
    └── Kabag Aset
 ```
 
-Setiap penerima memiliki branch dan lifecycle sendiri.
-
-Kegagalan satu branch tidak boleh menghilangkan atau menimpa branch lainnya.
-
-Pembuatan disposition beserta seluruh recipient dilakukan secara transactional.
+Setiap recipient memiliki branch lifecycle sendiri.
 
 ---
 
-# 12. State Management
+# 20. State Management
 
-Status surat dan status branch adalah dua konsep berbeda.
-
-## Branch State
-
-Minimal state konseptual:
+Terdapat tiga state domain berbeda:
 
 ```text
-PENDING
-    ↓
-IN_PROGRESS
-    ↓
-COMPLETED
+Submission State
+Incoming Letter State
+Disposition Branch State
 ```
 
-Detail exact state dan transition akan dikunci pada database/workflow design.
+Ketiganya tidak boleh dicampur.
 
-## Letter State
+Submission state menjawab:
 
-Status keseluruhan diturunkan dari workflow.
+> bagaimana kondisi intake sebelum registrasi resmi?
 
-Contoh:
+Letter state menjawab:
 
-```text
-Kabag A → COMPLETED
-Kabag B → IN_PROGRESS
-```
+> bagaimana kondisi surat resmi secara keseluruhan?
 
-maka:
+Branch state menjawab:
 
-```text
-Incoming Letter → IN_PROGRESS
-```
+> bagaimana kondisi pekerjaan recipient tertentu?
 
-Surat baru dapat dianggap selesai ketika seluruh terminal branch yang masih aktif telah selesai.
-
-Aggregate state dapat disimpan untuk kebutuhan query/reporting, tetapi hanya boleh diperbarui melalui business rule terpusat.
+Exact state dan transition didefinisikan di `workflow-spec.md`.
 
 ---
 
-# 13. Authorization Model
+# 21. Authorization Model
 
-Authorization menggunakan kombinasi:
+Authorization terdiri atas beberapa konteks.
+
+## Public Submission
+
+Public User hanya dapat mengakses submission yang sah miliknya.
+
+## Bagian Umum
+
+Bagian Umum dapat mengakses intake queue sesuai permission dan melakukan registrasi.
+
+## Internal Letter
+
+Authorization menggunakan:
 
 ```text
 RBAC
@@ -459,73 +780,40 @@ Workflow
 +
 Disposition participation
 +
-Resource Policy
-```
-
-## Global Business Visibility
-
-Wali Kota dan Sekda dapat diberikan visibility terhadap seluruh surat.
-
-## Scoped Visibility
-
-Asisten dan Kepala Bagian hanya dapat melihat surat yang terkait dengan jalur disposisinya.
-
-Contoh:
-
-```text
-Asisten II
- ├── Kabag Kesehatan
- └── Kabag Aset
-```
-
-Kedua Kabag tersebut dapat membaca surat terkait.
-
-Kabag lain tidak boleh mengaksesnya.
-
-## System Administrator
-
-System Administrator mengelola aspek teknis tetapi tidak otomatis memperoleh global business visibility.
-
----
-
-# 14. Collection Authorization
-
-Authorization terhadap satu resource dan collection dipisahkan secara jelas.
-
-```text
 Policy
-→ bolehkah user membuka / mengubah resource ini?
-
-Authorized Query
-→ resource mana yang boleh muncul untuk user?
 ```
 
-Daftar surat harus dibatasi sejak database query.
+Wali Kota dan Sekda dapat mempunyai global business visibility.
 
-Tidak diperbolehkan:
-
-```text
-SELECT seluruh surat
-        ↓
-kirim ke Vue
-        ↓
-sembunyikan berdasarkan role
-```
+System Administrator tidak otomatis memiliki global visibility.
 
 ---
 
-# 15. Instruksi Disposisi
+# 22. Collection Authorization
 
-Disposition mempunyai data struktural seperti:
+Collection harus dibatasi sejak query database.
 
-* actor;
-* source branch;
-* recipients;
-* catatan;
-* timestamp;
-* instruction labels.
+Contoh public:
 
-Instruction label dapat dikonfigurasi.
+```text
+"My Submissions"
+→ hanya submission milik authenticated Public User
+```
+
+Contoh internal:
+
+```text
+"Inbox Kabag"
+→ hanya surat/disposition yang berkaitan dengan Position aktifnya
+```
+
+Jangan mengambil semua data lalu menyembunyikannya di Vue.
+
+---
+
+# 23. Instruksi Disposisi
+
+Instruction label configurable.
 
 Contoh:
 
@@ -539,347 +827,290 @@ Untuk disiapkan jawabannya
 Segera
 ```
 
-Label tidak boleh menjadi ENUM yang membutuhkan migration setiap kali berubah.
-
-Klasifikasi keamanan seperti `Rahasia` tidak diaktifkan sebagai access-control rule pada MVP sampai requirement tersebut diputuskan secara resmi.
+Tidak menggunakan ENUM per label.
 
 ---
 
-# 16. Document Storage dan Integrity
+# 24. Document Storage dan Integrity
 
-Dokumen surat disimpan pada private storage.
+Semua dokumen berada di private storage.
 
-```text
-Upload
-  ↓
-Validate
-  ↓
-Generate internal filename
-  ↓
-Store privately
-  ↓
-SHA-256
-  ↓
-Persist fingerprint
-```
+Akses dokumen selalu melalui authorization.
 
-Akses file:
+SHA-256 digunakan untuk document integrity, bukan confidentiality.
 
-```text
-Request document
-      ↓
-Authentication
-      ↓
-Authorization
-      ↓
-Private storage
-      ↓
-Response
-```
-
-Tidak ada direct public URL permanen untuk dokumen surat.
-
-PDF original tidak ditimpa secara diam-diam.
-
-Koreksi menghasilkan versi baru sehingga:
-
-```text
-Original
-   ↓
-Correction Version
-   ↓
-Correction Version
-```
-
-tetap dapat ditelusuri.
+Dokumen asli tidak ditimpa tanpa histori.
 
 ---
 
-# 17. Audit Architecture
+# 25. Audit Architecture
 
-Audit trail bersifat **application-level append-only**.
+Audit trail bersifat application-level append-only.
 
-Audit minimal merekam:
+Audit harus mencakup aktivitas penting pada kedua boundary.
 
-```text
-Actor
-Position Assignment
-Action
-Resource
-Timestamp
-Relevant State Change
-Request Context
-```
-
-Contoh:
+Contoh public:
 
 ```text
-Sekda
-14:10
-FORWARD_DISPOSITION
-Surat SM-001
-→ Asisten II
+SUBMISSION_CREATED
+SUBMISSION_SUBMITTED
 ```
 
-Business mutation dan audit event yang berkaitan harus diperlakukan sebagai satu kesatuan transaksi jika memungkinkan.
+Contoh Bagian Umum:
 
-Tidak tersedia workflow aplikasi normal untuk mengedit atau menghapus audit record.
+```text
+MANUAL_SUBMISSION_CREATED
+INCOMING_LETTER_REGISTERED
+LETTER_ROUTED
+```
 
-Audit log berbeda dari application log.
+Contoh internal:
 
-Production hardening dapat menambahkan:
+```text
+DISPOSITION_CREATED
+DISPOSITION_COMPLETED
+```
 
-* database privilege restriction;
-* backup retention;
-* external audit sink;
-* infrastructure monitoring.
-
-Tidak menggunakan custom hash-chain sebagai pengganti mekanisme audit yang benar.
+Audit juga wajib terhadap privilege dan Position changes.
 
 ---
 
-# 18. Authentication dan Session
+# 26. Authentication dan Session
 
-Web menggunakan Laravel session authentication melalui Inertia.
+Gunakan Laravel session authentication.
 
-Security minimum:
-
-* password hashing;
-* CSRF protection;
-* login rate limiting;
-* session regeneration;
-* secure cookie;
-* session expiration;
-* password recovery;
-* session invalidation.
-
-MFA wajib untuk:
+Public User:
 
 ```text
-Wali Kota
-Sekda
-System Administrator
-```
-
-Tindakan security-sensitive dapat menggunakan re-authentication.
-
----
-
-# 19. Electronic Approval dan TTE
-
-MVP menggunakan **electronic approval**, bukan mengklaim TTE tersertifikasi.
-
-Approval dibuktikan menggunakan:
-
-```text
-Authenticated User
+Password
 +
-Active Position Assignment
-+
-Server Timestamp
-+
-Audit Trail
-+
-Document Integrity
+Verified Email
 ```
 
-TTE resmi merupakan integration boundary terpisah.
-
-Konsep jangka panjang:
+Critical internal account:
 
 ```text
-Application
-     ↓
-Signature Contract
-     ↓
-Signature Provider
+Password
++
+Verified Email
++
+MFA
 ```
 
-Business workflow tidak boleh bergantung langsung pada provider tertentu.
+MFA wajib minimal untuk:
 
-Gambar tanda tangan yang ditempel pada PDF tidak dianggap sebagai digital signature yang aman.
+* Wali Kota;
+* Sekda;
+* System Administrator.
 
 ---
 
-# 20. Reporting Architecture
+# 27. Electronic Approval dan TTE
 
-Operational data harus dapat mendukung laporan:
+MVP menggunakan electronic approval internal.
 
+TTE resmi tetap menjadi future integration boundary.
+
+Public submission tidak dianggap sebagai signed official document hanya karena dikirim melalui authenticated account.
+
+Jika di masa depan diperlukan tanda tangan elektronik resmi dari pengirim atau pejabat, integrasi tersebut harus ditangani secara eksplisit.
+
+---
+
+# 28. Reporting Architecture
+
+Reporting harus mampu membedakan intake channel:
+
+```text
+ONLINE
+MANUAL
+```
+
+Data harus dapat mendukung laporan:
+
+* jumlah submission online;
+* jumlah submission manual;
+* jumlah submission yang menjadi surat masuk;
 * surat masuk per periode;
 * instansi pengirim;
-* surat belum diproses;
-* surat sedang diproses;
+* surat diproses;
 * surat selesai;
-* disposisi per pejabat;
-* disposisi per bagian;
+* disposisi per pejabat/bagian;
 * waktu penyelesaian.
 
-MVP menggunakan query agregasi pada relational database.
-
-Tidak diperlukan analytics database atau data warehouse pada tahap awal.
-
-Index database akan ditentukan berdasarkan pola query laporan aktual.
+MVP menggunakan relational database aggregation.
 
 ---
 
-# 21. Backend Responsibility
+# 29. Frontend Areas
 
-Struktur konseptual:
+Frontend dibagi berdasarkan konteks pengguna.
 
-```text
-Form Request
-     ↓
-Controller
-     ↓
-Policy / Authorization
-     ↓
-Action / Service
-     ↓
-Domain Rules
-     ↓
-Model / Repository Infrastructure
-```
-
-Controller tidak menyimpan business workflow.
-
-Contoh Action:
+## Public Area
 
 ```text
-RegisterIncomingLetter
-RouteIncomingLetter
-CreateDisposition
-ForwardDisposition
-CompleteDisposition
-AssignPosition
+Landing
+Register
+Login
+Email Verification
+
+Public Dashboard
+├── Buat Submission
+├── Submission Saya
+└── Status Submission
 ```
 
-Action yang mengubah beberapa resource wajib menggunakan transaction.
+## Bagian Umum
+
+```text
+Intake Dashboard
+├── Online Submission Queue
+├── Manual Submission
+├── Register Incoming Letter
+└── Incoming Letters
+```
+
+## Pejabat
+
+```text
+Official Dashboard
+├── Inbox
+├── Disposition
+├── Related Letters
+└── Follow Up
+```
+
+Ini tetap satu Vue + Inertia application.
 
 ---
 
-# 22. Frontend Responsibility
+# 30. Security Boundaries
 
-Vue menangani:
+Browser selalu dianggap untrusted.
 
-* form;
-* interactive disposition tree;
-* document viewer;
-* timeline;
-* status presentation;
-* reporting UI;
-* feedback/error state.
+Public registration dan submission meningkatkan attack surface.
 
-Contoh komposisi halaman:
+Perhatikan minimal:
 
-```text
-IncomingLetterDetail.vue
- ├── LetterMetadata.vue
- ├── LetterDocumentViewer.vue
- ├── DispositionTimeline.vue
- ├── DispositionBranch.vue
- └── DispositionForm.vue
-```
-
-Component dipisahkan berdasarkan tanggung jawab nyata.
-
-Business rules dan authorization tidak boleh hanya hidup di frontend.
-
----
-
-# 23. Security Boundaries
-
-Sistem diasumsikan dapat berjalan pada jaringan publik.
-
-Karena itu desain tidak boleh bergantung pada asumsi:
-
-> "aman karena hanya digunakan di kantor."
-
-Boundary utama:
-
-```text
-Browser
-   ↓ UNTRUSTED
-Laravel Application
-   ↓
-Database / Private Storage
-```
-
-Ancaman minimum yang harus diuji:
-
-* IDOR;
-* horizontal privilege escalation;
-* vertical privilege escalation;
-* unauthorized disposition;
+* registration abuse;
+* credential stuffing;
+* email abuse;
+* malicious PDF upload;
+* oversized upload;
+* IDOR pada submission;
+* IDOR pada surat;
+* privilege escalation;
 * workflow bypass;
-* malicious file upload;
 * document tampering;
-* audit tampering;
 * CSRF;
 * XSS;
 * mass assignment.
 
+Public User tidak boleh dapat mengubah field yang menentukan privilege atau state internal.
+
 ---
 
-# 24. Future Capability
+# 31. Future Capability
 
 Tidak termasuk MVP:
 
-* Staff sebagai terminal disposisi tambahan;
-* scanner integration;
-* official TTE/BSrE integration;
-* advanced notification;
+* Staff sebagai terminal disposisi;
+* scanner integration langsung;
+* official TTE integration;
+* advanced notifications;
 * advanced analytics;
-* workload dashboard;
-* external system integration;
-* special confidential-letter workflow.
+* external institutional SSO;
+* confidential-letter workflow khusus.
 
-Penambahan future capability tidak boleh memaksa redesign terhadap domain inti surat, Position, disposition branching, dan authorization.
+Future capability tidak boleh memaksa redesign terhadap:
 
----
-
-# 25. Architectural Invariants
-
-Aturan berikut tidak boleh dilanggar oleh implementasi:
-
-1. Surat selalu masuk melalui proses registrasi Bagian Umum.
-2. Surat awal diarahkan ke Wali Kota atau Sekda.
-3. Disposisi tidak boleh melompati hierarchy.
-4. Kepala Bagian adalah terminal formal workflow MVP.
-5. Satu surat dapat mempunyai beberapa branch aktif.
-6. Setiap branch memiliki lifecycle sendiri.
-7. Surat selesai hanya ketika seluruh terminal branch aktif selesai.
-8. Role tidak digunakan sebagai pengganti Position.
-9. Disposisi diarahkan berdasarkan Position, sementara actor tetap dicatat sebagai User + Position Assignment.
-10. User hanya menerima data surat yang memang berhak diketahuinya.
-11. File original tidak ditimpa tanpa histori.
-12. Audit record tidak dapat dimodifikasi melalui workflow aplikasi normal.
-13. System Administrator tidak otomatis mempunyai akses bisnis ke seluruh surat.
-14. Frontend tidak pernah menjadi sumber kebenaran authorization.
-15. Perubahan multi-resource yang berkaitan harus menjaga atomicity dan consistency.
+* Submission boundary;
+* IncomingLetter;
+* Position;
+* PositionAssignment;
+* disposition branching;
+* authorization.
 
 ---
 
-# 26. Dokumen Lanjutan
+# 32. Architectural Invariants
 
-`system-design.md` menentukan struktur konseptual sistem.
+1. Sistem menerima surat melalui kanal online dan manual.
+2. Kedua kanal masuk melalui Submission/Intake boundary.
+3. Online submission dibuat oleh authenticated + verified Public User.
+4. Manual submission dibuat oleh Bagian Umum dan tidak membutuhkan account pengirim.
+5. Submission bukan IncomingLetter.
+6. Hanya Bagian Umum yang dapat meregistrasikan IncomingLetter.
+7. Surat resmi selalu melewati Bagian Umum.
+8. IncomingLetter diarahkan ke Wali Kota atau Sekda.
+9. Disposisi tidak boleh melompati hierarchy.
+10. Kepala Bagian adalah terminal workflow formal MVP.
+11. Satu surat dapat mempunyai beberapa branch aktif.
+12. Role tidak digunakan sebagai pengganti Position.
+13. Public User tidak mempunyai Position Assignment internal.
+14. Internal privilege tidak dapat diperoleh melalui public registration.
+15. Authorization selalu server-side.
+16. System Administrator tidak otomatis mempunyai visibility seluruh surat.
+17. File disimpan private.
+18. Original document tidak ditimpa tanpa histori.
+19. Audit tidak dapat diedit melalui workflow aplikasi normal.
+20. Multi-resource business operation menjaga atomicity dan consistency.
 
-Detail implementasi berikut dipisahkan:
+---
+
+# 33. Boundary Summary
+
+Keseluruhan sistem dapat dipahami sebagai tiga domain besar:
 
 ```text
-database-schema.md
-→ tabel, kolom, FK, constraint, index, ERD
-
-permission-matrix.md
-→ role, permission, dan akses setiap capability
-
-workflow-spec.md
-→ exact state dan transition
-
-api-contract.md
-→ request/response dan error contract jika dibutuhkan
-
-deployment-notes.md
-→ environment, storage, backup, HTTPS, queue, monitoring
+┌──────────────────────────────┐
+│        EXTERNAL INTAKE       │
+│                              │
+│ Online Public User           │
+│ Manual Physical Submission   │
+└──────────────┬───────────────┘
+               ↓
+        Submission Boundary
+               ↓
+┌──────────────────────────────┐
+│      GENERAL AFFAIRS         │
+│                              │
+│ Review / Register            │
+│ Incoming Letter              │
+└──────────────┬───────────────┘
+               ↓
+        Official Boundary
+               ↓
+┌──────────────────────────────┐
+│      INTERNAL WORKFLOW       │
+│                              │
+│ Wali Kota / Sekda            │
+│        ↓                     │
+│ Asisten                      │
+│        ↓                     │
+│ Kepala Bagian                │
+└──────────────────────────────┘
 ```
 
-Dengan pemisahan ini, System Design tetap menjadi sumber arsitektur tanpa berubah menjadi dokumentasi implementasi yang terlalu detail.
+Boundary ini harus tetap jelas dalam implementasi.
+
+---
+
+# 34. Dokumen Terkait
+
+```text
+instruksi.md
+→ engineering dan security guardrail
+
+database-schema.md
+→ persistence model
+
+workflow-spec.md
+→ exact lifecycle Submission, IncomingLetter,
+  route, dan disposition branch
+
+AGENTS.md
+→ context router untuk coding agent
+```
+
+`system-design.md` tetap mendefinisikan arsitektur konseptual dan tidak menjadi tempat detail migration atau exact workflow transition.

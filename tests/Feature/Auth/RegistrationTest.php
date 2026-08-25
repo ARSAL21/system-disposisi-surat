@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\AccountType;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
@@ -28,12 +30,37 @@ class RegistrationTest extends TestCase
     {
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test@gmail.com',
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+
+        $user = User::query()->where('email', 'test@gmail.com')->firstOrFail();
+
+        $this->assertSame(AccountType::PublicAccount, $user->account_type);
+        $this->assertTrue($user->is_active);
+    }
+
+    public function test_public_registration_cannot_select_internal_account_context()
+    {
+        $this->post(route('register.store'), [
+            'name' => 'Untrusted User',
+            'email' => 'untrusted@gmail.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'account_type' => AccountType::InternalAccount->value,
+            'is_active' => false,
+            'is_admin' => true,
+            'role' => 'system-administrator',
+            'position' => 'mayor',
+        ]);
+
+        $user = User::query()->where('email', 'untrusted@gmail.com')->firstOrFail();
+
+        $this->assertSame(AccountType::PublicAccount, $user->account_type);
+        $this->assertTrue($user->is_active);
     }
 }

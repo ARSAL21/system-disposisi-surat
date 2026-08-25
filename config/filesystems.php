@@ -38,6 +38,13 @@ return [
             'report' => false,
         ],
 
+        'submission-documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/submissions'),
+            'throw' => true,
+            'report' => true,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

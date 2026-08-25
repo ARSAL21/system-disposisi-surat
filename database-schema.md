@@ -60,6 +60,11 @@ erDiagram
     SENDER_ORGANIZATIONS ||--o{ INCOMING_LETTERS : sends
     USERS ||--o{ INCOMING_LETTERS : registers
 
+    USERS ||--o{ LETTER_SUBMISSIONS : submits_or_records
+    LETTER_SUBMISSIONS ||--o| SUBMISSION_DOCUMENTS : has
+    LETTER_SUBMISSIONS ||--o| INCOMING_LETTERS : becomes
+    SUBMISSION_DOCUMENTS ||--o| LETTER_DOCUMENTS : originates
+
     INCOMING_LETTERS ||--o{ LETTER_DOCUMENTS : has
     INCOMING_LETTERS ||--o{ LETTER_ROUTES : routed_through
 
@@ -96,11 +101,35 @@ Minimal:
 | email             | varchar   | unique       |
 | password          | varchar   | required     |
 | email_verified_at | timestamp | nullable     |
+| account_type      | varchar(20) | required, default `PUBLIC` |
 | is_active         | boolean   | default true |
 | created_at        | timestamp |              |
 | updated_at        | timestamp |              |
 
 Field MFA mengikuti authentication stack Laravel yang digunakan.
+
+Nilai `account_type` MVP:
+
+```text
+PUBLIC
+INTERNAL
+```
+
+`account_type` merupakan server-owned trust boundary, bukan Role.
+
+Public self-registration selalu menghasilkan:
+
+```text
+account_type = PUBLIC
+```
+
+Account `INTERNAL` hanya boleh dibuat atau dipromosikan melalui proses provisioning
+administratif yang authorized dan diaudit. Nilai `account_type`, `is_active`, Role,
+Permission, dan Position tidak boleh diterima sebagai trusted input dari public
+registration.
+
+Existing user pada saat migration boundary diperkenalkan menggunakan default
+`PUBLIC` agar perubahan bersifat fail-closed terhadap privilege internal.
 
 Jangan menyimpan jabatan pada tabel `users`.
 
@@ -314,7 +343,95 @@ Jangan menghapus instansi yang sudah digunakan surat lama.
 
 ---
 
-# 7. Surat Masuk
+# 7. Submission / Intake
+
+## `letter_submissions`
+
+Merepresentasikan intake sebelum surat diregistrasi secara resmi oleh Bagian Umum.
+
+| Column                       | Type         | Constraint                                  |
+| ---------------------------- | ------------ | ------------------------------------------- |
+| id                           | bigint       | PK                                          |
+| public_id                    | char(26)     | ULID, unique, server-generated              |
+| source                       | varchar(20)  | required                                    |
+| status                       | varchar(30)  | required                                    |
+| submitted_by_user_id         | bigint       | FK nullable → users.id                      |
+| recorded_by_user_id          | bigint       | FK nullable → users.id                      |
+| sender_organization_name     | varchar(200) | required                                    |
+| contact_name                 | varchar(150) | required                                    |
+| contact_email                | varchar(255) | required                                    |
+| contact_phone                | varchar(30)  | nullable                                    |
+| external_letter_number       | varchar(100) | nullable                                    |
+| external_letter_date         | date         | nullable                                    |
+| subject                      | varchar(255) | required                                    |
+| summary                      | text         | nullable                                    |
+| submitted_at                 | timestamp    | nullable                                    |
+| created_at                   | timestamp    |                                             |
+| updated_at                   | timestamp    |                                             |
+
+Nilai `source`:
+
+```text
+ONLINE
+MANUAL
+```
+
+Nilai `status` dan transition mengikuti `workflow-spec.md`:
+
+```text
+DRAFT
+SUBMITTED
+REGISTERED
+REJECTED
+```
+
+Invariant kepemilikan:
+
+```text
+ONLINE → submitted_by_user_id required, recorded_by_user_id null
+MANUAL → submitted_by_user_id null, recorded_by_user_id required
+```
+
+Untuk online submission, `contact_name` dan `contact_email` merupakan snapshot server-side dari authenticated user pada saat draft dibuat. Field trust boundary, source, status, actor, dan timestamp tidak pernah dipercaya dari frontend.
+
+`public_id` digunakan untuk route dan response publik. Sequential bigint `id` tetap menjadi key internal dan tidak diekspos sebagai identifier publik.
+
+Index:
+
+```text
+UNIQUE (public_id)
+source
+status
+submitted_at
+(submitted_by_user_id, status)
+(submitted_by_user_id, created_at)
+```
+
+## `submission_documents`
+
+Menyimpan tepat satu dokumen PDF aktif untuk satu submission.
+
+| Column                       | Type            | Constraint                         |
+| ---------------------------- | --------------- | ---------------------------------- |
+| id                           | bigint          | PK                                 |
+| letter_submission_id         | bigint          | FK → letter_submissions.id, unique |
+| storage_disk                 | varchar(50)     | required                           |
+| storage_path                 | varchar(500)    | required, unique                   |
+| original_filename            | varchar(255)    | required                           |
+| mime_type                    | varchar(100)    | required                           |
+| size_bytes                   | unsigned bigint | required                           |
+| sha256                       | char(64)        | required                           |
+| uploaded_by_user_id          | bigint          | FK → users.id                      |
+| created_at                   | timestamp       |                                    |
+| updated_at                   | timestamp       |                                    |
+
+Dokumen dapat diganti selama submission masih `DRAFT`. Penggantian draft memperbarui satu active document dan wajib menghasilkan audit. Setelah `SUBMITTED`, metadata serta file menjadi immutable.
+
+File disimpan di private storage menggunakan nama server-generated. Nama file asli hanya metadata download, bukan bagian storage path. SHA-256 dihitung saat upload sebagai fingerprint integritas.
+
+---
+
+# 8. Surat Masuk
 
 ## `incoming_letters`
 
@@ -323,6 +440,7 @@ Merepresentasikan satu surat masuk yang telah diregistrasi Bagian Umum.
 | Column                               | Type         | Constraint                            |
 | ------------------------------------ | ------------ | ------------------------------------- |
 | id                                   | bigint       | PK                                    |
+| letter_submission_id                 | bigint       | FK unique → letter_submissions.id      |
 | agenda_number                        | varchar(50)  | required                              |
 | agenda_year                          | smallint     | required                              |
 | sender_organization_id               | bigint       | FK → sender_organizations.id          |
@@ -361,7 +479,7 @@ Status tidak boleh dikirim bebas dari frontend.
 
 ---
 
-# 8. Dokumen Surat
+# 9. Dokumen Surat
 
 ## `letter_documents`
 
@@ -371,6 +489,7 @@ Menyimpan versi dokumen PDF.
 | -------------------- | --------------- | --------------------------------- |
 | id                   | bigint          | PK                                |
 | incoming_letter_id   | bigint          | FK → incoming_letters.id          |
+| source_submission_document_id | bigint | FK nullable, unique → submission_documents.id |
 | version_number       | unsigned int    | required                          |
 | replaces_document_id | bigint          | FK nullable → letter_documents.id |
 | storage_disk         | varchar(50)     | required                          |
@@ -415,7 +534,7 @@ File tidak pernah disimpan pada public webroot.
 
 ---
 
-# 9. Routing Awal Surat
+# 10. Routing Awal Surat
 
 Bagian Umum tidak membuat disposisi substantif.
 
@@ -463,7 +582,7 @@ Jika terjadi koreksi routing, histori route lama tidak dihapus.
 
 ---
 
-# 10. Disposisi
+# 11. Disposisi
 
 ## `dispositions`
 
@@ -548,7 +667,7 @@ created_at
 
 ---
 
-# 11. Recipient dan Branch Disposisi
+# 12. Recipient dan Branch Disposisi
 
 ## `disposition_recipients`
 
@@ -601,7 +720,7 @@ Surat belum selesai karena Recipient #22 masih aktif.
 
 ---
 
-# 12. Membentuk Disposition Tree
+# 13. Membentuk Disposition Tree
 
 Tree tidak membutuhkan kolom `parent_disposition_id`.
 
@@ -641,7 +760,7 @@ Dengan model ini, parent-child relationship tidak ambigu.
 
 ---
 
-# 13. Instruction Labels
+# 14. Instruction Labels
 
 ## `instruction_labels`
 
@@ -702,7 +821,7 @@ is_active = false
 
 ---
 
-# 14. Tindak Lanjut
+# 15. Tindak Lanjut
 
 ## `disposition_follow_ups`
 
@@ -743,7 +862,7 @@ created_at
 
 ---
 
-# 15. Audit Trail
+# 16. Audit Trail
 
 ## `audit_logs`
 
@@ -785,6 +904,12 @@ request_id
 Contoh action:
 
 ```text
+SUBMISSION_CREATED
+SUBMISSION_UPDATED
+SUBMISSION_DOCUMENT_REPLACED
+SUBMISSION_SUBMITTED
+SUBMISSION_DRAFT_DELETED
+
 LETTER_REGISTERED
 LETTER_ROUTED
 DOCUMENT_VERSION_CREATED
@@ -811,7 +936,7 @@ Jangan menyimpan:
 
 ---
 
-# 16. Aggregate Letter Status
+# 17. Aggregate Letter Status
 
 `incoming_letters.status` disimpan untuk memudahkan:
 
@@ -847,7 +972,15 @@ Frontend tidak boleh langsung menentukan status surat.
 
 ---
 
-# 17. Workflow Invariants
+# 18. Workflow Invariants
+
+### Submission
+
+* Public User hanya dapat mengakses online submission miliknya.
+* Draft dapat diedit, mengganti satu dokumen aktif, dan dihapus oleh pemilik.
+* Submitted submission immutable bagi Public User.
+* `submitted_at` null pada `DRAFT` dan wajib terisi mulai `SUBMITTED`.
+* Setiap transition dan mutasi penting menghasilkan append-only audit.
 
 Invariant berikut wajib dijaga oleh Service + Policy + automated test.
 
@@ -913,9 +1046,11 @@ Surat hanya selesai ketika seluruh terminal branch aktif telah selesai.
 
 ---
 
-# 18. Delete Policy
+# 19. Delete Policy
 
 Core domain record tidak di-hard-delete melalui aplikasi normal.
+
+Pengecualian terkontrol adalah `letter_submissions` berstatus `DRAFT` beserta active `submission_documents` miliknya. Draft belum menjadi intake resmi dan hanya dapat dihapus oleh pemilik. Audit penghapusan tetap dipertahankan. Submission selain `DRAFT` tidak boleh dihapus.
 
 ## Jangan dihapus
 
@@ -956,7 +1091,7 @@ ketika sudah pernah digunakan.
 
 ---
 
-# 19. Foreign Key Delete Strategy
+# 20. Foreign Key Delete Strategy
 
 Untuk historical business data, default gunakan:
 
@@ -988,11 +1123,23 @@ Cascade hanya boleh digunakan untuk data teknis/pivot yang memang tidak mempunya
 
 ---
 
-# 20. Index Minimum
+# 21. Index Minimum
 
 Index awal yang dianggap penting:
 
 ```text
+letter_submissions:
+- public_id
+- source
+- status
+- submitted_by_user_id + status
+- submitted_by_user_id + created_at
+
+submission_documents:
+- letter_submission_id
+- storage_path
+- sha256
+
 incoming_letters:
 - received_at
 - status
@@ -1033,7 +1180,17 @@ Index tambahan dibuat berdasarkan query nyata dan profiling, bukan tebakan.
 
 ---
 
-# 21. Query Utama yang Harus Efisien
+# 22. Query Utama yang Harus Efisien
+
+## Submission Milik Public User
+
+```text
+WHERE source = ONLINE
+AND submitted_by_user_id = authenticated_user.id
+ORDER BY created_at DESC
+```
+
+Authorization collection harus terjadi pada query database, bukan setelah seluruh row diambil.
 
 Schema harus mendukung query berikut dengan baik.
 
@@ -1079,7 +1236,13 @@ menjadi sumber utama agregasi.
 
 ---
 
-# 22. Transaction Boundaries
+# 23. Transaction Boundaries
+
+## Create / Update / Submit Submission
+
+Create, update, document replacement, submit, dan draft deletion harus menggabungkan business mutation dengan audit record dalam satu database transaction. Transition serta penggantian dokumen menggunakan row lock untuk mencegah race condition.
+
+File storage tidak transactional dengan database. Implementasi wajib membersihkan file baru jika persistence gagal dan membersihkan file lama hanya setelah database replacement berhasil.
 
 Beberapa operasi wajib transactional.
 
@@ -1131,7 +1294,7 @@ Semua harus konsisten sebagai satu logical operation.
 
 ---
 
-# 23. Data yang Tidak Boleh Diduplikasi
+# 24. Data yang Tidak Boleh Diduplikasi
 
 Jangan menyimpan:
 
@@ -1151,7 +1314,7 @@ Snapshot boleh digunakan hanya ketika memang dibutuhkan untuk menjaga histori, b
 
 ---
 
-# 24. Schema Summary
+# 25. Schema Summary
 
 Core tables:
 
@@ -1170,6 +1333,9 @@ positions
 position_assignments
 
 sender_organizations
+
+letter_submissions
+submission_documents
 
 incoming_letters
 letter_documents
@@ -1212,7 +1378,7 @@ Model ini memungkinkan branching tanpa menggunakan `current_owner_id` atau struk
 
 ---
 
-# 25. Keputusan yang Sengaja Belum Dikunci
+# 26. Keputusan yang Sengaja Belum Dikunci
 
 Hal berikut ditentukan pada dokumen lanjutan:
 

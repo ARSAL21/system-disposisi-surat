@@ -50,6 +50,12 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        abort_if(
+            $user->letterSubmissions()->exists() || $user->auditLogs()->exists(),
+            409,
+            'Accounts linked to historical records cannot be deleted.',
+        );
+
         Auth::logout();
 
         $user->delete();

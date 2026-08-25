@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AccountType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -26,8 +27,10 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'email' => Str::lower(Str::random(16)).'@gmail.com',
             'email_verified_at' => now(),
+            'account_type' => AccountType::PublicAccount,
+            'is_active' => true,
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
@@ -43,6 +46,26 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the user is an internally provisioned account.
+     */
+    public function internal(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_type' => AccountType::InternalAccount,
+        ]);
+    }
+
+    /**
+     * Indicate that the user account is inactive.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
         ]);
     }
 
