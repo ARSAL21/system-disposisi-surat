@@ -34,6 +34,7 @@ final class AuthorizationCatalog
             RoleName::SuperAdmin => [
                 PermissionName::ViewAuthorization->value,
                 PermissionName::ManageAuthorization->value,
+                PermissionName::ManagePositionAssignments->value,
             ],
         };
     }

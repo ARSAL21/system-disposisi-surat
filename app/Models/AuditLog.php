@@ -22,6 +22,7 @@ use LogicException;
  * @property string|null $user_agent
  * @property Carbon $created_at
  * @property-read User|null $actor
+ * @property-read PositionAssignment|null $actorPositionAssignment
  */
 class AuditLog extends Model
 {
@@ -50,5 +51,11 @@ class AuditLog extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_user_id');
+    }
+
+    /** @return BelongsTo<PositionAssignment, $this> */
+    public function actorPositionAssignment(): BelongsTo
+    {
+        return $this->belongsTo(PositionAssignment::class, 'actor_position_assignment_id');
     }
 }

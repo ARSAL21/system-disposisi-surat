@@ -24,6 +24,12 @@ bertahap bersama milestone yang benar-benar membutuhkan capability baru.
 | `super-admin` | `authorization.view` | Melihat konfigurasi role dan permission. |
 | `super-admin` | `authorization.manage` | Mengelola konfigurasi role dan permission melalui alur yang terotorisasi. |
 
+## Penambahan M2.3
+
+| Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `position-assignments.manage` | Menetapkan, mengganti, dan mengakhiri pemegang Position melalui alur yang terotorisasi dan teraudit. |
+
 Pada tahap ini katalog hanya mendefinisikan nilai resmi. Sinkronisasi katalog,
 provisioning akun internal, assignment `super-admin`, audit perubahan privilege,
 dan UI administrasi akan diimplementasikan pada tahap M2 berikutnya.

@@ -9,4 +9,7 @@ enum AuditAction: string
     case SubmissionDocumentReplaced = 'SUBMISSION_DOCUMENT_REPLACED';
     case SubmissionSubmitted = 'SUBMISSION_SUBMITTED';
     case SubmissionDraftDeleted = 'SUBMISSION_DRAFT_DELETED';
+    case PositionAssigned = 'POSITION_ASSIGNED';
+    case PositionHolderReplaced = 'POSITION_HOLDER_REPLACED';
+    case PositionAssignmentEnded = 'POSITION_ASSIGNMENT_ENDED';
 }

@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -17,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read PositionLevel $positionLevel
  * @property-read OrganizationalUnit|null $organizationalUnit
+ * @property-read Collection<int, PositionAssignment> $assignments
+ * @property-read PositionAssignment|null $activeAssignment
  */
 class Position extends Model
 {
@@ -38,5 +43,17 @@ class Position extends Model
     public function organizationalUnit(): BelongsTo
     {
         return $this->belongsTo(OrganizationalUnit::class);
+    }
+
+    /** @return HasMany<PositionAssignment, $this> */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(PositionAssignment::class);
+    }
+
+    /** @return HasOne<PositionAssignment, $this> */
+    public function activeAssignment(): HasOne
+    {
+        return $this->hasOne(PositionAssignment::class)->whereNull('ended_at');
     }
 }

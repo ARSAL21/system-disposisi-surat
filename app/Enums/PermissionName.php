@@ -6,4 +6,5 @@ enum PermissionName: string
 {
     case ViewAuthorization = 'authorization.view';
     case ManageAuthorization = 'authorization.manage';
+    case ManagePositionAssignments = 'position-assignments.manage';
 }

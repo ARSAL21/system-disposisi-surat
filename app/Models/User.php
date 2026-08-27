@@ -9,6 +9,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -33,6 +34,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read Collection<int, PositionAssignment> $positionAssignments
+ * @property-read Collection<int, PositionAssignment> $activePositionAssignments
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -84,5 +87,17 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class, 'actor_user_id');
+    }
+
+    /** @return HasMany<PositionAssignment, $this> */
+    public function positionAssignments(): HasMany
+    {
+        return $this->hasMany(PositionAssignment::class);
+    }
+
+    /** @return HasMany<PositionAssignment, $this> */
+    public function activePositionAssignments(): HasMany
+    {
+        return $this->positionAssignments()->whereNull('ended_at');
     }
 }
