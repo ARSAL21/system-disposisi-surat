@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('organizational_units', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('parent_id')
+                ->nullable()
+                ->constrained('organizational_units')
+                ->restrictOnDelete();
+            $table->string('code', 50)->nullable()->unique();
+            $table->string('name', 150);
+            $table->boolean('is_active')->default(true)->index();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('organizational_units');
+    }
+};
