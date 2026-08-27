@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureBackOfficeLoginIsGuest;
 use App\Http\Middleware\EnsureCriticalInternalAccountHasMfa;
 use App\Http\Middleware\EnsureUserHasAccountType;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -23,8 +24,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'account' => EnsureUserHasAccountType::class,
             'active' => EnsureUserIsActive::class,
+            'back-office.guest' => EnsureBackOfficeLoginIsGuest::class,
             'critical-mfa' => EnsureCriticalInternalAccountHasMfa::class,
         ]);
+
+        $middleware->redirectGuestsTo(
+            fn (Request $request): string => $request->is('back-office') || $request->is('back-office/*')
+                ? route('back-office.login')
+                : route('login'),
+        );
 
         $middleware->web(append: [
             HandleAppearance::class,

@@ -75,6 +75,6 @@ test('a role cannot bypass the public and internal account boundary', function (
     expect($user->can(PermissionName::ManageAuthorization->value))->toBeTrue();
 
     $this->actingAs($user)
-        ->get(route('internal.dashboard'))
+        ->get(route('back-office.dashboard'))
         ->assertNotFound();
 });

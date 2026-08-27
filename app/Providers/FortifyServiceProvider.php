@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Authentication\LoginAccountTypeResolver;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Support\Timebox;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -45,24 +47,43 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureAuthentication(): void
     {
-        Fortify::authenticateUsing(function (Request $request): ?User {
-            $email = Str::lower($request->string(Fortify::username())->toString());
+        $loginAccountTypeResolver = app(LoginAccountTypeResolver::class);
 
-            $user = User::query()
-                ->where('email', $email)
-                ->where('is_active', true)
-                ->first();
+        Fortify::authenticateUsing(function (Request $request) use ($loginAccountTypeResolver): ?User {
+            return (new Timebox)->call(function (Timebox $timebox) use ($request, $loginAccountTypeResolver): ?User {
+                $accountType = $loginAccountTypeResolver->forPasswordRequest($request);
 
-            if (! $user || ! Hash::check($request->string('password')->toString(), $user->password)) {
-                return null;
-            }
+                if ($accountType === null) {
+                    return null;
+                }
 
-            return $user;
+                $email = Str::lower($request->string(Fortify::username())->toString());
+
+                $user = User::query()
+                    ->where('email', $email)
+                    ->where('account_type', $accountType->value)
+                    ->where('is_active', true)
+                    ->first();
+
+                if (! $user || ! Hash::check($request->string('password')->toString(), $user->password)) {
+                    return null;
+                }
+
+                $timebox->returnEarly();
+
+                return $user;
+            }, (int) config('auth.timebox_duration', 200_000));
         });
 
         Passkeys::authorizeLoginUsing(
-            fn (Request $_request, PasskeyUser $user, Passkey $_passkey): bool => $user instanceof User
-                && $user->is_active,
+            function (Request $request, PasskeyUser $user, Passkey $_passkey) use ($loginAccountTypeResolver): bool {
+                $accountType = $loginAccountTypeResolver->forPasskeyRequest($request);
+
+                return $accountType !== null
+                    && $user instanceof User
+                    && $user->is_active
+                    && $user->account_type === $accountType;
+            },
         );
     }
 
@@ -80,10 +101,13 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/Login', [
-            'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'status' => $request->session()->get('status'),
-        ]));
+        Fortify::loginView(fn (Request $request) => Inertia::render(
+            $request->routeIs('back-office.login') ? 'back-office/auth/Login' : 'auth/Login',
+            [
+                'canResetPassword' => Features::enabled(Features::resetPasswords()),
+                'status' => $request->session()->get('status'),
+            ],
+        ));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
             'email' => $request->email,

@@ -18,7 +18,7 @@ class DashboardController extends Controller
 
         return match ($user->account_type) {
             AccountType::PublicAccount => to_route('public.dashboard'),
-            AccountType::InternalAccount => to_route('internal.dashboard'),
+            AccountType::InternalAccount => to_route('back-office.dashboard'),
         };
     }
 }

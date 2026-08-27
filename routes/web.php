@@ -1,14 +1,52 @@
 <?php
 
 use App\Enums\AccountType;
+use App\Http\Controllers\BackOffice\BackOfficeEntryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicSubmission\LetterSubmissionController;
 use App\Http\Controllers\PublicSubmission\PublicDashboardController;
 use App\Http\Controllers\PublicSubmission\SubmissionDocumentController;
 use App\Http\Controllers\PublicSubmission\SubmitLetterSubmissionController;
 use Illuminate\Support\Facades\Route;
+use Laravel\Fortify\Features;
+use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
+use Laravel\Passkeys\Http\Controllers\PasskeyLoginController;
 
 Route::inertia('/', 'Welcome')->name('home');
+
+Route::prefix('back-office')
+    ->name('back-office.')
+    ->group(function (): void {
+        Route::get('/', BackOfficeEntryController::class)->name('entry');
+
+        Route::middleware('back-office.guest')->group(function (): void {
+            Route::get('login', [AuthenticatedSessionController::class, 'create'])
+                ->name('login');
+
+            $loginLimiter = config('fortify.limiters.login');
+
+            Route::post('login', [AuthenticatedSessionController::class, 'store'])
+                ->middleware(array_filter([
+                    $loginLimiter ? 'throttle:'.$loginLimiter : null,
+                ]))
+                ->name('login.store');
+
+            if (Features::enabled(Features::passkeys())) {
+                $passkeyLimiter = config('fortify.limiters.passkeys');
+                $passkeyMiddleware = array_filter([
+                    $passkeyLimiter ? 'throttle:'.$passkeyLimiter : null,
+                ]);
+
+                Route::get('passkeys/login/options', [PasskeyLoginController::class, 'index'])
+                    ->middleware($passkeyMiddleware)
+                    ->name('passkey.login-options');
+
+                Route::post('passkeys/login', [PasskeyLoginController::class, 'store'])
+                    ->middleware($passkeyMiddleware)
+                    ->name('passkey.login');
+            }
+        });
+    });
 
 Route::middleware(['auth', 'verified', 'active'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -53,14 +91,14 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                 ->name('submit');
         });
 
-    Route::prefix('internal')
-        ->name('internal.')
+    Route::prefix('back-office')
+        ->name('back-office.')
         ->middleware([
             'account:'.AccountType::InternalAccount->value,
             'critical-mfa',
         ])
         ->group(function () {
-            Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+            Route::inertia('dashboard', 'back-office/Dashboard')->name('dashboard');
         });
 });
 

@@ -31,6 +31,6 @@ class DashboardTest extends TestCase
         $this->actingAs($user);
 
         $response = $this->get(route('dashboard'));
-        $response->assertRedirect(route('internal.dashboard'));
+        $response->assertRedirect(route('back-office.dashboard'));
     }
 }

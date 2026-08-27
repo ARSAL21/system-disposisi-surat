@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AccountBoundaryTest extends TestCase
@@ -19,7 +20,7 @@ class AccountBoundaryTest extends TestCase
             ->assertOk();
 
         $this->actingAs($user)
-            ->get(route('internal.dashboard'))
+            ->get(route('back-office.dashboard'))
             ->assertNotFound();
     }
 
@@ -28,8 +29,11 @@ class AccountBoundaryTest extends TestCase
         $user = User::factory()->internal()->create();
 
         $this->actingAs($user)
-            ->get(route('internal.dashboard'))
-            ->assertOk();
+            ->get(route('back-office.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('back-office/Dashboard'),
+            );
 
         $this->actingAs($user)
             ->get(route('public.dashboard'))
@@ -46,7 +50,14 @@ class AccountBoundaryTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($internalUser)
-            ->get(route('internal.dashboard'))
+            ->get(route('back-office.dashboard'))
             ->assertForbidden();
+    }
+
+    public function test_legacy_internal_area_is_not_exposed(): void
+    {
+        $this->actingAs(User::factory()->internal()->create())
+            ->get('/internal/dashboard')
+            ->assertNotFound();
     }
 }

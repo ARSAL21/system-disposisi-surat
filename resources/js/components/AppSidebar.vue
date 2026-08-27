@@ -14,7 +14,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import internalRoutes from '@/routes/internal';
+import backOffice from '@/routes/back-office';
 import publicRoutes from '@/routes/public';
 import type { NavItem } from '@/types';
 
@@ -25,13 +25,11 @@ const isPublicAccount = computed(
 );
 
 const homeHref = computed(() =>
-    isPublicAccount.value
-        ? publicRoutes.dashboard()
-        : internalRoutes.dashboard(),
+    isPublicAccount.value ? publicRoutes.dashboard() : backOffice.dashboard(),
 );
 
 const navigationLabel = computed(() =>
-    isPublicAccount.value ? 'Portal Publik' : 'Ruang Internal',
+    isPublicAccount.value ? 'Portal Publik' : 'Portal Internal',
 );
 
 const mainNavItems = computed<NavItem[]>(() => {
@@ -39,8 +37,9 @@ const mainNavItems = computed<NavItem[]>(() => {
         return [
             {
                 title: 'Dashboard',
-                href: internalRoutes.dashboard(),
+                href: backOffice.dashboard(),
                 icon: LayoutDashboard,
+                isActive: currentPath.value === backOffice.dashboard.url(),
             },
         ];
     }
