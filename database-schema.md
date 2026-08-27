@@ -921,9 +921,15 @@ FOLLOW_UP_ADDED
 
 ROLE_CHANGED
 PERMISSION_CHANGED
+INTERNAL_ACCOUNT_PROVISIONED
 POSITION_ASSIGNED
 POSITION_ENDED
 ```
+
+Untuk operasi bootstrap atau provisioning melalui trusted console,
+`actor_user_id` dapat bernilai `null`. Audit tetap wajib memiliki `request_id`
+dan metadata aman yang menjelaskan sumber console serta command yang dijalankan.
+Password, argument rahasia, dan secret autentikasi tidak boleh masuk metadata.
 
 Jangan menyimpan:
 

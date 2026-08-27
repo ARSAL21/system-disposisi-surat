@@ -30,6 +30,33 @@ bertahap bersama milestone yang benar-benar membutuhkan capability baru.
 | --- | --- | --- |
 | `super-admin` | `position-assignments.manage` | Menetapkan, mengganti, dan mengakhiri pemegang Position melalui alur yang terotorisasi dan teraudit. |
 
-Pada tahap ini katalog hanya mendefinisikan nilai resmi. Sinkronisasi katalog,
-provisioning akun internal, assignment `super-admin`, audit perubahan privilege,
-dan UI administrasi akan diimplementasikan pada tahap M2 berikutnya.
+## Provisioning dan Sinkronisasi M2.4–M2.5
+
+Alur administrative console:
+
+```text
+php artisan internal:user
+php artisan authorization:sync
+php artisan authorization:super-admin {email?}
+```
+
+`internal:user` hanya membuat account `INTERNAL` yang aktif dan terverifikasi.
+Command tersebut tidak memberikan Role, Permission langsung, atau Position.
+
+`authorization:sync` menyinkronkan permission Role resmi secara exact. Role dan
+Permission di luar katalog tidak dihapus otomatis, tetapi dilaporkan sebagai
+catalog drift.
+
+`authorization:super-admin` hanya menerima account internal aktif dan
+terverifikasi. Role dapat diberikan sebelum MFA dikonfigurasi, tetapi seluruh
+akses administratif internal account tersebut tetap diblokir sampai MFA aktif
+dan terkonfirmasi.
+
+Seluruh perubahan account, Role, dan Permission melalui alur ini dicatat pada
+audit append-only. UI administrasi privilege belum termasuk tahap ini dan kelak
+wajib menggunakan Action teraudit yang sama.
+
+Command mutasi bawaan package seperti `permission:create-role`,
+`permission:create-permission`, dan `permission:assign-role` bukan administrative
+flow yang didukung aplikasi karena tidak membawa audit context. Akses shell dan
+database tetap harus dibatasi sebagai infrastructure security boundary.

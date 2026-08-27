@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureCriticalInternalAccountHasMfa;
 use App\Http\Middleware\EnsureUserHasAccountType;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'account' => EnsureUserHasAccountType::class,
             'active' => EnsureUserIsActive::class,
+            'critical-mfa' => EnsureCriticalInternalAccountHasMfa::class,
         ]);
 
         $middleware->web(append: [

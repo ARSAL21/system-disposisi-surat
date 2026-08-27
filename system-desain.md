@@ -897,11 +897,11 @@ Verified Email
 MFA
 ```
 
-MFA wajib minimal untuk:
+MFA wajib untuk System Administrator sebelum capability administratif dapat
+digunakan.
 
-* Wali Kota;
-* Sekda;
-* System Administrator.
+Wali Kota, Sekda, dan pejabat internal lain dapat mengaktifkan MFA, tetapi pada
+MVP penggunaannya merupakan keputusan masing-masing pemegang account.
 
 ---
 

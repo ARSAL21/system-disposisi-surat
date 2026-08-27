@@ -4,6 +4,9 @@ namespace App\Enums;
 
 enum AuditAction: string
 {
+    case InternalAccountProvisioned = 'INTERNAL_ACCOUNT_PROVISIONED';
+    case RoleChanged = 'ROLE_CHANGED';
+    case PermissionChanged = 'PERMISSION_CHANGED';
     case SubmissionCreated = 'SUBMISSION_CREATED';
     case SubmissionUpdated = 'SUBMISSION_UPDATED';
     case SubmissionDocumentReplaced = 'SUBMISSION_DOCUMENT_REPLACED';

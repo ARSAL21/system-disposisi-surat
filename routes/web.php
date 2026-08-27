@@ -53,9 +53,15 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                 ->name('submit');
         });
 
-    Route::inertia('internal/dashboard', 'Dashboard')
-        ->middleware('account:'.AccountType::InternalAccount->value)
-        ->name('internal.dashboard');
+    Route::prefix('internal')
+        ->name('internal.')
+        ->middleware([
+            'account:'.AccountType::InternalAccount->value,
+            'critical-mfa',
+        ])
+        ->group(function () {
+            Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+        });
 });
 
 require __DIR__.'/settings.php';
