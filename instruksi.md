@@ -1,23 +1,15 @@
 # Instruksi Khusus — Sistem Disposisi Surat
 
-Dokumen ini menjadi aturan utama pengembangan Sistem Disposisi Surat Kantor Wali Kota.
+Dokumen ini adalah aturan utama pengembangan Sistem Disposisi Surat Kantor Wali Kota.
 
-Stack utama:
+Stack:
 
-* Laravel
-* Inertia.js
-* Vue
-* relational database
+- Laravel
+- Inertia.js
+- Vue
+- relational database
 
-Sistem berfokus pada **surat masuk dan disposisi internal secara hierarkis**.
-
----
-
-## 1. Prinsip Utama
-
-Sistem ini bukan CRUD biasa.
-
-Setiap implementasi harus memprioritaskan:
+Prioritas sistem:
 
 1. Security
 2. Correctness
@@ -26,23 +18,15 @@ Setiap implementasi harus memprioritaskan:
 5. Maintainability
 6. Developer convenience
 
-Gunakan prinsip:
-
-* DRY
-* SOLID
-* KISS
-* YAGNI
-* least privilege
-* secure by default
-* fail securely
+Gunakan DRY, SOLID, KISS, YAGNI, least privilege, secure by default, dan fail securely.
 
 Jangan membuat abstraction, dependency, atau arsitektur kompleks tanpa kebutuhan nyata.
 
 ---
 
-## 2. Alur Bisnis Utama
+## 1. Workflow Utama
 
-Alur disposisi MVP wajib mengikuti hierarki organisasi:
+Workflow formal MVP:
 
 ```text
 Bagian Umum / Tata Usaha
@@ -54,69 +38,66 @@ Asisten I / II / III
 Satu atau lebih Kepala Bagian
 ```
 
-Bagian Umum menjadi pintu pertama surat masuk dan bertanggung jawab terhadap pencatatan metadata serta upload PDF.
+Bagian Umum menjadi gerbang administratif surat masuk.
 
-Bagian Umum tidak melakukan disposisi substantif.
+Bagian Umum bertanggung jawab pada intake, metadata, dokumen, dan registrasi surat, tetapi tidak melakukan disposisi substantif.
 
-Wali Kota dan Sekda berada pada level penerimaan awal yang sama dalam workflow.
+Disposisi tidak boleh melompati hierarki.
 
-Disposisi **tidak boleh melompati hierarki**.
+Satu disposisi dapat memiliki beberapa penerima.
 
-Satu disposisi dapat mempunyai beberapa penerima sehingga satu surat dapat dikerjakan beberapa bagian secara bersamaan.
+Riwayat parent-child disposisi wajib dipertahankan.
 
-Riwayat parent-child setiap disposisi wajib dipertahankan.
+Kepala Bagian adalah terminal formal workflow MVP.
 
-**Untuk MVP, Kepala Bagian merupakan titik akhir disposisi formal. Staff merupakan future capability dan belum menjadi bagian dari workflow MVP.**
+Staff belum termasuk workflow formal MVP.
 
 ---
 
-## 3. User, Role, Permission, dan Jabatan Harus Dipisahkan
+## 2. Pisahkan User, Role, Permission, Position, dan Assignment
 
-Jangan mencampur konsep berikut:
+Jangan mencampur:
 
-* `User` → identitas pengguna.
-* `Role` → kumpulan permission.
-* `Permission` → kemampuan menggunakan fitur tertentu.
-* `Position` → jabatan dalam organisasi.
-* `Position Assignment` → siapa menduduki jabatan tersebut dan pada periode kapan.
+```text
+User
+→ identitas account
 
-Contoh jabatan:
+Role
+→ kumpulan permission
 
-* Wali Kota
-* Sekda
-* Asisten I
-* Asisten II
-* Asisten III
-* Kepala Bagian
+Permission
+→ capability aplikasi
 
-Workflow organisasi harus berdasarkan **jabatan dan assignment aktif**, bukan nama role.
+Position
+→ jabatan organisasi
+
+PositionAssignment
+→ siapa menduduki Position dan pada periode kapan
+```
+
+Workflow harus berdasarkan Position dan assignment aktif, bukan nama Role.
 
 Histori assignment tidak boleh hilang ketika pejabat berganti.
 
 ---
 
-## 4. RBAC Bukan Workflow Engine
+## 3. RBAC Bukan Workflow Engine
 
-Gunakan RBAC untuk mengatur kapabilitas.
+RBAC menjawab:
 
-Contoh permission:
+> Apa yang boleh dilakukan?
 
-```text
-letter.create
-letter.view
-letter.route
+Position menjawab:
 
-disposition.create
-disposition.forward
-disposition.complete
+> User sedang bertindak sebagai siapa?
 
-report.view
-audit.view
+Workflow Rule menjawab:
 
-user.manage
-role.manage
-system.configure
-```
+> Kepada Position mana tindakan boleh diteruskan?
+
+Authorization menjawab:
+
+> Apakah tindakan tersebut boleh dilakukan terhadap resource ini?
 
 Jangan menyebarkan pengecekan seperti:
 
@@ -124,33 +105,15 @@ Jangan menyebarkan pengecekan seperti:
 $user->role === 'sekda'
 ```
 
-ke seluruh aplikasi.
-
-Mental model yang wajib digunakan:
-
-```text
-Role / Permission
-→ apa yang boleh dilakukan?
-
-Position
-→ user sedang bertindak sebagai siapa?
-
-Workflow Rule
-→ kepada siapa tindakan boleh diteruskan?
-
-Authorization
-→ bolehkah tindakan tersebut dilakukan terhadap resource ini?
-```
-
-Keempatnya berbeda.
+ke seluruh codebase.
 
 ---
 
-## 5. Wali Kota Bukan System Administrator
+## 4. Wali Kota Bukan System Administrator
 
-Wali Kota adalah otoritas organisasi.
+Wali Kota adalah authority organisasi.
 
-`System Administrator` adalah otoritas teknis.
+System Administrator adalah authority teknis.
 
 Jangan membuat:
 
@@ -158,101 +121,133 @@ Jangan membuat:
 Wali Kota = Super Admin
 ```
 
-Orang yang sama boleh memegang jabatan Wali Kota/Sekda sekaligus role Administrator pada MVP, tetapi permission keduanya harus tetap terpisah.
+Orang yang sama boleh memegang Position Wali Kota/Sekda sekaligus Role Administrator, tetapi permission tetap terpisah.
 
-System Administrator juga tidak otomatis berhak membaca seluruh surat.
+System Administrator tidak otomatis boleh membaca seluruh surat.
 
 ---
 
-## 6. Authorization Wajib Server-Side
+## 5. Authorization Wajib Server-Side
 
 Frontend bukan security boundary.
 
-Gunakan Laravel Policy untuk authorization terhadap resource/action tertentu.
-
-Gunakan authorized query/scope untuk membatasi collection yang boleh diketahui user.
-
-Contoh:
+Gunakan:
 
 ```text
 Policy
-→ bolehkah user membuka Surat #123?
+→ authorization terhadap satu resource/action
 
-Authorized Query
-→ surat mana saja yang boleh muncul pada inbox user?
+Authorized Query / Scope
+→ membatasi collection sejak database query
 ```
 
-Jangan mengambil seluruh surat kemudian menyembunyikannya di Vue.
+Jangan mengambil seluruh surat lalu menyembunyikannya di Vue.
 
-Mengetahui URL atau ID sebuah surat tidak pernah berarti user berhak mengaksesnya.
+Mengetahui ID atau URL resource tidak memberikan hak akses.
 
-IDOR dan privilege escalation harus dianggap sebagai ancaman utama.
+IDOR dan privilege escalation adalah ancaman utama.
 
 ---
 
-## 7. Visibility Surat
+## 6. Visibility Surat
 
-Wali Kota dan Sekda dapat memiliki global business visibility sesuai policy.
+Wali Kota dan Sekda dapat memiliki global business visibility sesuai Policy.
 
-Pejabat lain hanya dapat melihat surat jika mempunyai hubungan yang sah dengan workflow/disposisi surat tersebut atau mempunyai permission khusus yang memang diberikan.
+Pejabat lain hanya dapat melihat surat jika:
 
-Contoh:
+- terlibat dalam workflow/disposisi yang sah; atau
+- memiliki permission khusus.
 
-```text
-Asisten II
- ├── Kabag Kesehatan
- └── Kabag Aset
-```
-
-Kedua Kabag tersebut dapat melihat surat yang sama.
-
-Kabag lain tidak otomatis boleh melihatnya hanya karena memiliki jabatan setara.
+Kepala Bagian tidak otomatis dapat melihat surat Kepala Bagian lain.
 
 ---
 
-## 8. Validation
+## 7. Validation
 
 Semua input client dianggap tidak terpercaya.
 
-Gunakan Laravel **Form Request** untuk input request yang membutuhkan validasi.
+Gunakan Laravel Form Request untuk input eksternal yang membutuhkan validasi.
 
-Jangan mempercayai nilai client seperti:
+Validasi meliputi hal seperti:
 
-* actor ID
-* sender ID
-* role
-* permission
-* position
-* status
-* workflow state
-* timestamp tindakan
+- required;
+- type;
+- format;
+- allowed values;
+- length;
+- file MIME;
+- extension;
+- file size.
 
-jika nilainya dapat ditentukan oleh server.
+Jangan mempercayai actor ID, role, permission, Position, status, workflow state, atau timestamp dari frontend jika server dapat menentukannya.
 
-Validation dan authorization adalah dua hal berbeda.
-
-Input yang valid belum tentu boleh dilakukan oleh user tersebut.
+Validation tidak sama dengan authorization.
 
 ---
 
-## 9. Struktur Backend
+## 8. Separation of Responsibilities
 
-Controller harus tipis.
+Gunakan alur:
 
-Tanggung jawab Controller:
+```text
+Route
+  ↓
+Form Request
+  ↓
+Controller
+  ↓
+Policy / Authorization
+  ↓
+Action
+  ↓
+Service / Domain Rule jika diperlukan
+  ↓
+Model / Database
+```
+
+Setiap layer harus mempunyai responsibility jelas.
+
+Jangan membuat file besar hanya untuk mengurangi jumlah file.
+
+Jangan membuat banyak file tanpa responsibility nyata.
+
+---
+
+## 9. Controller Harus Tipis
+
+Controller hanya bertugas:
 
 1. menerima request;
-2. menggunakan validated data;
-3. menjalankan authorization;
-4. memanggil Service/Action;
-5. mengembalikan response.
+2. mengambil validated data;
+3. melakukan authorization;
+4. memanggil Action;
+5. mengembalikan HTTP/Inertia response.
 
-Business logic ditempatkan pada Service atau Action dengan responsibility yang jelas.
+Controller tidak boleh menjadi tempat:
+
+- workflow logic;
+- disposition hierarchy;
+- aggregate state calculation;
+- multi-record business mutation;
+- audit construction;
+- file integrity logic;
+- reusable business rule.
+
+Controller idealnya jauh di bawah 200 baris.
+
+Jika mendekati atau melewati 200 baris, wajib review responsibility dan lakukan refactor jika logic sudah bercampur.
+
+---
+
+## 10. Action = Satu Business Use Case
+
+Action merepresentasikan satu operasi bisnis.
 
 Contoh:
 
 ```text
 RegisterIncomingLetter
+CreateLetterSubmission
 RouteIncomingLetter
 CreateDisposition
 ForwardDisposition
@@ -260,41 +255,78 @@ CompleteDisposition
 AssignPosition
 ```
 
-Hindari `God Service` dan business logic besar di Controller atau Vue.
+Controller sebaiknya memanggil Action, bukan menjalankan workflow sendiri.
 
----
-
-## 10. Database dan Transaction
-
-Operasi yang mengubah beberapa data terkait wajib menggunakan database transaction.
+Action boleh mengorkestrasi beberapa langkah dalam satu use case.
 
 Contoh:
 
 ```text
-buat disposisi
-→ buat recipients
-→ ubah workflow state
-→ catat audit
+CreateDisposition
+→ validate workflow
+→ create disposition
+→ create recipients
+→ update state
+→ audit
 ```
 
-harus berhasil seluruhnya atau gagal seluruhnya.
-
-Gunakan:
-
-* foreign key;
-* unique constraint;
-* index;
-* database constraint;
-
-jika database dapat membantu menjaga invariant.
-
-Jangan hanya mengandalkan validation frontend.
+Jika seluruh langkah harus berhasil atau gagal bersama, gunakan database transaction.
 
 ---
 
-## 11. Status Surat dan Disposisi
+## 11. Service Hanya Jika Dibutuhkan
 
-Status setiap cabang disposisi dan status surat secara keseluruhan adalah konsep berbeda.
+Service digunakan jika logic:
+
+- mempunyai responsibility domain yang jelas;
+- digunakan oleh beberapa Action; atau
+- cukup kompleks untuk dipisahkan.
+
+Contoh:
+
+```text
+DispositionWorkflowService
+LetterStateService
+DocumentIntegrityService
+```
+
+Jangan membuat God Service seperti:
+
+```text
+LetterService
+CommonService
+HelperService
+```
+
+yang menangani terlalu banyak concern.
+
+Jangan membuat Service hanya untuk memindahkan kode dari Controller.
+
+---
+
+## 12. Database dan Transaction
+
+Gunakan foreign key, unique constraint, index, dan database constraint jika dapat menjaga invariant.
+
+Operasi multi-record harus atomic.
+
+Contoh:
+
+```text
+create disposition
+→ create recipients
+→ update branch
+→ update aggregate state
+→ audit
+```
+
+harus berhasil seluruhnya atau rollback.
+
+---
+
+## 13. Status Surat dan Branch
+
+Status branch disposisi berbeda dengan status surat keseluruhan.
 
 Contoh:
 
@@ -303,191 +335,209 @@ Kabag A → COMPLETED
 Kabag B → IN_PROGRESS
 ```
 
-surat secara keseluruhan belum boleh dianggap selesai.
+berarti surat belum selesai.
 
-Branch state menjadi dasar penentuan aggregate letter state.
+Branch state menjadi dasar aggregate letter state.
 
-Jika aggregate status disimpan di database untuk kebutuhan query/reporting, perubahannya harus dilakukan secara konsisten melalui business rule yang terpusat.
+Aggregate state hanya boleh diubah melalui business rule terpusat.
 
-Jangan mengubah status surat secara manual dari frontend.
-
----
-
-## 12. Instruksi Disposisi Harus Configurable
-
-Disposisi dapat memiliki instruksi seperti:
-
-* Untuk diketahui
-* Untuk ditindaklanjuti
-* Untuk dipelajari
-* Untuk dikoordinasikan
-* Untuk menghadiri
-* Untuk disiapkan jawabannya
-* Segera
-
-Daftar tersebut harus dapat ditambah, dinonaktifkan, atau diubah tanpa migration maupun deployment kode.
-
-Jangan menggunakan ENUM atau boolean column terpisah untuk setiap jenis instruksi.
-
-Jika nantinya terdapat klasifikasi seperti `Rahasia`, tentukan secara eksplisit apakah hanya label atau benar-benar memengaruhi authorization.
+Frontend tidak boleh menentukan status surat.
 
 ---
 
-## 13. File Surat
+## 14. Instruksi Disposisi Configurable
 
-MVP menggunakan upload PDF hasil scan surat fisik.
+Instruction label seperti:
 
-Dokumen harus disimpan di **private storage**, bukan public webroot.
+- Untuk diketahui
+- Untuk ditindaklanjuti
+- Untuk dipelajari
+- Untuk dikoordinasikan
+- Untuk menghadiri
+- Untuk disiapkan jawabannya
+- Segera
 
-Akses file harus melewati backend dan authorization.
+harus dapat ditambah atau dinonaktifkan tanpa migration/deployment.
+
+Jangan menggunakan ENUM atau boolean column terpisah per label.
+
+---
+
+## 15. File Surat dan Integrity
+
+Dokumen surat harus disimpan di private storage.
+
+Akses file wajib melalui backend dan authorization.
 
 Upload minimal memvalidasi:
 
-* MIME/type;
-* extension;
-* ukuran;
-* validitas file.
+- MIME/type;
+- extension;
+- ukuran;
+- validitas file.
 
-Jangan mempercayai nama file asli sebagai storage path.
+Nama file asli tidak boleh digunakan langsung sebagai storage path.
 
-Future scanner integration tidak boleh memengaruhi domain inti.
+Setiap file surat resmi harus mempunyai SHA-256 fingerprint.
 
----
+Hash digunakan untuk integrity, bukan encryption, authorization, atau TTE.
 
-## 14. Integritas Dokumen
+Original file tidak boleh ditimpa diam-diam.
 
-Setiap file surat yang diregistrasi harus memiliki hash minimal SHA-256.
-
-Hash digunakan untuk:
-
-> membuktikan apakah isi file masih sama dengan file ketika pertama diterima.
-
-Hash bukan encryption dan bukan access control.
-
-File original tidak boleh diam-diam ditimpa.
-
-Jika terdapat koreksi scan, simpan sebagai version/correction baru dan pertahankan histori.
-
-Jangan membuat custom cryptographic signature atau custom hash-chain untuk menggantikan teknologi tanda tangan elektronik resmi.
+Koreksi harus menghasilkan version baru dan mempertahankan histori.
 
 ---
 
-## 15. Audit Trail
+## 16. Audit Trail
 
-Audit trail wajib dan bersifat **application-level append-only**.
+Audit trail wajib dan application-level append-only.
 
-Tidak boleh ada workflow normal untuk mengubah atau menghapus audit record.
+Tidak ada workflow normal untuk mengubah atau menghapus audit record.
 
 Minimal catat:
 
-* actor;
-* active position;
-* action;
-* target resource;
-* timestamp server;
-* perubahan state penting;
-* konteks yang relevan.
+- actor;
+- active Position Assignment;
+- action;
+- target resource;
+- server timestamp;
+- relevant state changes.
 
-Audit juga wajib untuk operasi administratif seperti:
+Audit juga wajib untuk perubahan:
 
-* perubahan role;
-* perubahan permission;
-* perubahan user;
-* assignment jabatan;
-* perubahan konfigurasi workflow.
+- role;
+- permission;
+- user;
+- Position Assignment;
+- konfigurasi workflow.
 
-Application log dan audit log adalah dua hal berbeda.
-
-Jangan memasukkan password, token, MFA secret, atau recovery code ke log.
-
-Production dapat menambahkan database privilege restriction, backup retention, dan external/immutable audit storage untuk hardening tambahan.
+Jangan menyimpan password, token, MFA secret, atau recovery code dalam audit/log.
 
 ---
 
-## 16. Authentication dan MFA
+## 17. Authentication dan MFA
 
-Gunakan authentication session Laravel standar melalui Inertia.
+Gunakan Laravel session authentication melalui Inertia.
 
 Wajib:
 
-* secure password hashing;
-* CSRF protection;
-* session regeneration;
-* login rate limiting;
-* secure cookies;
-* session expiration;
-* password recovery yang aman.
+- secure password hashing;
+- CSRF protection;
+- session regeneration;
+- login rate limiting;
+- secure cookies;
+- session expiration;
+- password recovery yang aman.
 
 MFA wajib minimal untuk:
 
-* Wali Kota;
-* Sekda;
-* System Administrator.
-
-Operasi security-sensitive dapat meminta re-authentication.
+- Wali Kota;
+- Sekda;
+- System Administrator.
 
 ---
 
-## 17. Electronic Signature
+## 18. Electronic Approval dan TTE
 
 Bedakan:
 
 ```text
 Electronic Approval
 ≠
-TTE resmi/tersertifikasi
+TTE resmi / tersertifikasi
 ```
 
-Untuk MVP, approval/disposisi dapat dibuktikan melalui:
+MVP dapat menggunakan authenticated actor, Position Assignment, server timestamp, MFA untuk account kritis, audit trail, dan document integrity.
 
-* authenticated user;
-* MFA untuk account kritis;
-* timestamp server;
-* position assignment;
-* audit trail;
-* integrity protection.
+Jangan menganggap gambar tanda tangan pada PDF sebagai digital signature yang aman.
 
-Jangan menganggap gambar tanda tangan yang ditempel pada PDF sebagai tanda tangan digital yang aman.
-
-Integrasi TTE resmi harus menjadi **integration boundary** terpisah dan tidak boleh membuat business logic bergantung langsung pada provider tertentu.
+TTE resmi harus menjadi integration boundary terpisah.
 
 ---
 
-## 18. Vue + Inertia
+## 19. Vue Page Harus Tipis
 
-Vue hanya menangani presentation dan interaction.
+Vue Page adalah page composer/orchestrator.
 
-Vue boleh menyembunyikan tombol berdasarkan capability untuk UX, tetapi Laravel tetap wajib melakukan authorization ketika request diterima.
+Page terutama bertanggung jawab pada:
 
-Page kompleks harus dipisahkan menjadi component berdasarkan responsibility.
+- menerima Inertia props;
+- menyusun component;
+- menghubungkan event;
+- menyimpan state page-level.
 
-Hindari giant component, tetapi jangan membuat component kecil tanpa alasan hanya demi abstraction.
+Bagian UI dengan responsibility sendiri wajib dipisahkan.
 
-Business rule tidak boleh diduplikasi di Vue.
+Contoh:
+
+```text
+IncomingLetterDetail.vue
+├── LetterHeader.vue
+├── LetterMetadata.vue
+├── LetterDocumentViewer.vue
+├── DispositionTimeline.vue
+├── DispositionForm.vue
+└── FollowUpSection.vue
+```
+
+Jangan membuat satu Page yang berisi seluruh form, table, modal, filter, timeline, dan document viewer jika masing-masing dapat berdiri sebagai responsibility berbeda.
+
+Jika Page/component mendekati atau melewati 500 baris, wajib architecture review dan decomposition jika responsibility sudah bercampur.
+
+500 baris adalah refactoring trigger, bukan target.
 
 ---
 
-## 19. Error Handling
+## 20. Vue Component Separation
 
-Error harus ditangani secara eksplisit.
+Pisahkan component berdasarkan responsibility, bukan sekadar ukuran.
+
+Gunakan:
+
+```text
+Layout
+└── Page
+    ├── Component
+    ├── Component
+    └── Component
+```
+
+Layout hanya untuk struktur lintas halaman seperti Sidebar, Navigation, dan AppShell.
+
+Component fitur dipanggil oleh Page yang membutuhkan.
+
+Business rule tidak boleh hidup hanya di Vue.
+
+Frontend checks hanya untuk UX.
+
+Backend tetap source of truth.
+
+---
+
+## 21. Error Handling
+
+Error harus ditangani eksplisit.
 
 Jangan:
 
-* swallow exception;
-* mengekspos stack trace;
-* mengekspos SQL error;
-* mengekspos filesystem path;
-* mengekspos credential.
+- swallow exception;
+- mengabaikan error;
+- mengekspos stack trace;
+- mengekspos SQL error;
+- mengekspos filesystem path;
+- mengekspos credential.
 
-Gunakan HTTP status code dengan tepat.
+Gunakan HTTP status code yang sesuai.
+
+Fail jelas dan sedini mungkin.
 
 ---
 
-## 20. Naming dan Code Quality
+## 22. Naming dan Maintainability
 
-Gunakan nama yang menjelaskan intent dan domain.
+Gunakan nama domain yang menjelaskan intent.
 
-Hindari nama generik seperti:
+Hindari nama seperti:
 
 ```text
 process()
@@ -496,27 +546,29 @@ doAction()
 data
 temp
 item
+helper
+manager
 ```
 
-Gunakan nama seperti:
+jika nama yang lebih spesifik tersedia.
+
+Gunakan:
 
 ```text
-createDisposition()
-forwardDisposition()
+CreateDisposition
+ForwardDisposition
 incomingLetter
 dispositionRecipient
 activePositionAssignment
 ```
 
-Function harus memiliki satu responsibility, alur sederhana, dan nesting minimal.
+Function harus memiliki satu responsibility dan nesting minimal.
 
-Gunakan early return/guard clause jika membuat alur lebih jelas.
-
-Jangan memecah fungsi hanya untuk memenuhi batas jumlah baris tertentu.
+Gunakan guard clause/early return jika membuat alur lebih jelas.
 
 ---
 
-## 21. Mass Assignment dan Security Data
+## 23. Mass Assignment dan Server-Owned Data
 
 Jangan gunakan:
 
@@ -524,115 +576,102 @@ Jangan gunakan:
 Model::create($request->all());
 ```
 
-Gunakan validated data dan tentukan field sensitif dari server.
+Gunakan validated data.
 
-Gunakan `$fillable` eksplisit atau strategi mass-assignment yang sama ketatnya.
+Field sensitif ditentukan server, termasuk:
 
-Field seperti actor, creator, workflow state, status, assignment, dan timestamp tindakan tidak boleh dipercaya dari frontend.
+- actor;
+- role;
+- permission;
+- Position;
+- workflow state;
+- status;
+- timestamp.
 
----
-
-## 22. Reporting
-
-Sistem harus mendukung laporan periodik.
-
-Minimal desain data harus memungkinkan laporan:
-
-* jumlah surat masuk;
-* surat berdasarkan periode;
-* instansi pengirim;
-* surat belum diproses;
-* surat sedang diproses;
-* surat selesai;
-* disposisi per pejabat/bagian;
-* waktu penyelesaian.
-
-Detail laporan ditentukan pada System Design.
+Gunakan `$fillable` eksplisit atau perlindungan setara.
 
 ---
 
-## 23. Testing
+## 24. Testing
 
-Fitur kritis tidak dianggap selesai tanpa automated test.
+Critical path wajib memiliki automated test.
 
-Prioritaskan test untuk:
+Prioritaskan:
 
-* authentication;
-* MFA;
-* RBAC;
-* authorization;
-* workflow hierarchy;
-* multiple recipients;
-* branching disposition;
-* status completion;
-* upload;
-* file access;
-* audit trail;
-* privilege escalation prevention.
+- authentication;
+- MFA;
+- RBAC;
+- authorization;
+- Position-based access;
+- hierarchy enforcement;
+- multiple recipients;
+- disposition branching;
+- completion;
+- upload;
+- private file access;
+- audit;
+- privilege escalation.
 
-Selalu uji negative case.
-
-Contoh:
-
-```text
-Kabag A dapat membuka surat yang diberikan kepadanya.
-```
-
-harus disertai:
-
-```text
-Kabag B yang tidak terlibat tidak dapat membuka surat tersebut
-meskipun mengetahui ID suratnya.
-```
+Selalu test positive dan negative path.
 
 ---
 
-## 24. Aturan untuk AI Coding Agent
+## 25. AI Coding Agent Rules
 
-Sebelum membuat fitur, AI wajib memahami:
+Sebelum mengubah code, AI harus memahami requirement, domain, hierarchy, authorization, audit requirement, dan dampak terhadap existing data.
 
-1. requirement;
-2. domain terkait;
-3. hierarchy;
-4. authorization;
-5. audit requirement;
-6. dampak terhadap data existing.
+AI wajib mengevaluasi separation of responsibilities setiap kali menyentuh file besar.
 
 AI tidak boleh:
 
-* melewati Form Request tanpa alasan kuat;
-* menaruh business logic besar di Controller;
-* mempercayai authorization dari frontend;
-* menggunakan role sebagai workflow engine;
-* hard-code hierarchy di banyak tempat;
-* menggunakan public storage untuk dokumen surat;
-* mengganti file original tanpa histori;
-* menghapus audit trail;
-* membuat custom cryptography;
-* menonaktifkan security Laravel demi development;
-* melakukan mass assignment tanpa kontrol;
-* membuat abstraction prematur;
-* melakukan premature optimization;
-* menambahkan Staff sebagai penerima disposisi formal sebelum scope tersebut resmi ditambahkan.
+- melewati Form Request tanpa alasan;
+- menaruh business logic dalam Controller;
+- membuat Controller besar;
+- membuat giant Vue Page/component;
+- menggunakan Role sebagai workflow engine;
+- mempercayai authorization frontend;
+- hard-code hierarchy di banyak tempat;
+- menggunakan public storage untuk surat;
+- mengganti original file tanpa histori;
+- menghapus audit trail;
+- membuat custom cryptography;
+- membuat God Service;
+- melakukan uncontrolled mass assignment;
+- membuat abstraction prematur;
+- melakukan premature optimization;
+- menambahkan Staff ke workflow formal sebelum scope disetujui.
 
-Jika implementasi yang diminta bertentangan dengan security atau integritas data, risiko tersebut harus dijelaskan dan desain yang lebih aman harus dipilih.
+Controller mendekati/melewati 200 baris:
+
+> review dan pisahkan responsibility bila diperlukan.
+
+Vue Page/component mendekati/melewati 500 baris:
+
+> review dan pecah component berdasarkan responsibility.
+
+Jangan mengakali batas tersebut dengan memindahkan kode ke helper generik tanpa domain responsibility yang jelas.
 
 ---
 
-## 25. Definition of Done
+## 26. Definition of Done
 
 Fitur dianggap selesai jika:
 
-* requirement bisnis terpenuhi;
-* validation tersedia;
-* authorization benar;
-* hierarchy dipatuhi;
-* database consistency terjaga;
-* error path ditangani;
-* audit tersedia bila diperlukan;
-* sensitive data tidak terekspos;
-* critical path memiliki test;
-* naming jelas;
-* implementasi tetap sederhana dan dapat dipelihara.
+- requirement terpenuhi;
+- validation tersedia;
+- authorization benar;
+- hierarchy dipatuhi;
+- Controller tetap tipis;
+- use case berada di Action yang tepat;
+- Service mempunyai responsibility nyata jika digunakan;
+- Vue Page/component terpisah secara masuk akal;
+- database consistency terjaga;
+- transaction digunakan bila diperlukan;
+- error path ditangani;
+- audit tersedia bila relevan;
+- sensitive data tidak terekspos;
+- critical path memiliki test;
+- naming jelas;
+- code mudah dipahami dan dipelihara.
 
 > **Security, correctness, integrity, traceability, dan maintainability lebih penting daripada kecepatan menambah fitur.**

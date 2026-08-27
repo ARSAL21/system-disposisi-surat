@@ -16,9 +16,20 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
+    <a
+        href="#main-content"
+        class="fixed top-3 left-3 z-[100] -translate-y-20 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform focus:translate-y-0"
+    >
+        Lewati ke konten utama
+    </a>
     <AppShell variant="sidebar">
         <AppSidebar />
-        <AppContent variant="sidebar" class="min-w-0 overflow-x-clip">
+        <AppContent
+            id="main-content"
+            variant="sidebar"
+            class="min-w-0 overflow-x-clip"
+            tabindex="-1"
+        >
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />
         </AppContent>

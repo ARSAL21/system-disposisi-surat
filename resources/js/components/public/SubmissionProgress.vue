@@ -47,7 +47,7 @@ const steps = [
                     currentStep === index + 1 &&
                         'bg-primary text-primary-foreground',
                     currentStep > index + 1 &&
-                        'bg-brand-teal-soft text-brand-teal-foreground',
+                        'bg-success text-success-foreground',
                     currentStep < index + 1 && 'text-muted-foreground',
                 )
             "

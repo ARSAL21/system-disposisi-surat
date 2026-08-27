@@ -69,7 +69,7 @@ function deleteDraft(): void {
                 </p>
                 <p
                     v-if="!submission.document"
-                    class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-brand-amber-foreground"
+                    class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-warning-foreground"
                 >
                     <TriangleAlert class="size-4" />
                     Unggah satu dokumen PDF untuk mengaktifkan pengiriman.

@@ -17,11 +17,11 @@ defineProps<{
 
 <template>
     <article
-        class="group relative overflow-hidden rounded-[1.5rem] border bg-card p-5 shadow-[0_20px_60px_-48px_rgba(18,48,44,0.55)] transition duration-300 hover:-translate-y-0.5 hover:border-brand-teal/40 hover:shadow-[0_24px_70px_-44px_rgba(34,126,115,0.55)]"
+        class="group relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition-colors duration-200 hover:border-primary/35 hover:bg-muted/30"
     >
         <div class="flex items-start justify-between gap-4">
             <div
-                class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand-teal-soft text-brand-teal-foreground transition-transform duration-500 ease-out group-hover:scale-105"
+                class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"
                 aria-hidden="true"
             >
                 <FileCheck2 v-if="submission.document" class="size-5" />
@@ -62,7 +62,7 @@ defineProps<{
 
         <Link
             :href="publicSubmissionRoutes.show(submission.public_id)"
-            class="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary transition-colors outline-none hover:text-brand-teal focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            class="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary transition-colors outline-none hover:text-primary/75 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
             Lihat detail
             <ArrowUpRight

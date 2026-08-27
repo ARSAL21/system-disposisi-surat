@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { FilePlus2, Files, LayoutDashboard } from '@lucide/vue';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
-import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -14,29 +14,63 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import internalRoutes from '@/routes/internal';
+import publicRoutes from '@/routes/public';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+const page = usePage();
+const currentPath = computed(() => page.url.split('?')[0]);
+const isPublicAccount = computed(
+    () => page.props.auth.user.account_type === 'PUBLIC',
+);
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
+const homeHref = computed(() =>
+    isPublicAccount.value
+        ? publicRoutes.dashboard()
+        : internalRoutes.dashboard(),
+);
+
+const navigationLabel = computed(() =>
+    isPublicAccount.value ? 'Portal Publik' : 'Ruang Internal',
+);
+
+const mainNavItems = computed<NavItem[]>(() => {
+    if (!isPublicAccount.value) {
+        return [
+            {
+                title: 'Dashboard',
+                href: internalRoutes.dashboard(),
+                icon: LayoutDashboard,
+            },
+        ];
+    }
+
+    return [
+        {
+            title: 'Dashboard',
+            href: publicRoutes.dashboard(),
+            icon: LayoutDashboard,
+            isActive: currentPath.value === publicRoutes.dashboard.url(),
+        },
+        {
+            title: 'Surat Saya',
+            href: publicRoutes.submissions.index(),
+            icon: Files,
+            isActive:
+                currentPath.value.startsWith(
+                    publicRoutes.submissions.index.url(),
+                ) &&
+                currentPath.value !== publicRoutes.submissions.create.url(),
+        },
+        {
+            title: 'Buat Surat',
+            href: publicRoutes.submissions.create(),
+            icon: FilePlus2,
+            isActive:
+                currentPath.value === publicRoutes.submissions.create.url(),
+        },
+    ];
+});
 </script>
 
 <template>
@@ -45,7 +79,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="homeHref">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
@@ -54,11 +88,10 @@ const footerNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :items="mainNavItems" :label="navigationLabel" />
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

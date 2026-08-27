@@ -15,15 +15,14 @@ const statusPresentation: Record<
         label: 'Draft',
         description: 'Belum dikirim dan masih dapat diperbarui.',
         badgeClass:
-            'border-brand-amber/45 bg-brand-amber-soft text-brand-amber-foreground',
-        dotClass: 'bg-brand-amber-strong',
+            'border-warning-foreground/20 bg-warning text-warning-foreground',
+        dotClass: 'bg-warning-foreground',
     },
     SUBMITTED: {
         label: 'Terkirim',
         description: 'Menunggu pemeriksaan administratif Bagian Umum.',
-        badgeClass:
-            'border-brand-teal/35 bg-brand-teal-soft text-brand-teal-foreground',
-        dotClass: 'bg-brand-teal',
+        badgeClass: 'border-info-foreground/20 bg-info text-info-foreground',
+        dotClass: 'bg-info-foreground',
     },
     REGISTERED: {
         label: 'Terdaftar',
@@ -35,9 +34,8 @@ const statusPresentation: Record<
     REJECTED: {
         label: 'Ditolak',
         description: 'Tidak dapat dilanjutkan pada pemeriksaan administratif.',
-        badgeClass:
-            'border-brand-orange/35 bg-brand-orange-soft text-brand-orange-foreground',
-        dotClass: 'bg-brand-orange',
+        badgeClass: 'border-destructive/25 bg-destructive/10 text-destructive',
+        dotClass: 'bg-destructive',
     },
 };
 

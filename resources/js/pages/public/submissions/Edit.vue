@@ -7,17 +7,27 @@ import SubmissionMetadataForm from '@/components/public/SubmissionMetadataForm.v
 import SubmissionProgress from '@/components/public/SubmissionProgress.vue';
 import { Button } from '@/components/ui/button';
 import { publicSubmissionRoutes } from '@/lib/publicSubmissionRoutes';
+import publicRoutes from '@/routes/public';
 import type { LetterSubmission } from '@/types';
 
 defineProps<{
     submission: LetterSubmission;
 }>();
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Surat Saya', href: publicRoutes.submissions.index() },
+            { title: 'Lengkapi Draft', href: '#' },
+        ],
+    },
+});
 </script>
 
 <template>
     <Head title="Lengkapi Draft" />
 
-    <div class="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20">
+    <div class="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <Button
             variant="ghost"
             class="min-h-11 cursor-pointer rounded-xl"
@@ -29,31 +39,21 @@ defineProps<{
             </Link>
         </Button>
 
-        <div class="mt-8 max-w-4xl">
-            <p class="text-sm font-semibold text-brand-teal-foreground">
-                Lengkapi draft
-            </p>
-            <h1
-                class="mt-3 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl"
-            >
-                Periksa data, dokumen, lalu kirim.
+        <div class="max-w-4xl">
+            <p class="text-sm font-semibold text-primary">Lengkapi draft</p>
+            <h1 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+                Periksa data, dokumen, lalu kirim
             </h1>
-            <p
-                class="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg"
-            >
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                 Setiap bagian disimpan secara eksplisit agar Anda selalu
                 mengetahui perubahan yang dilakukan.
             </p>
         </div>
 
-        <div class="mt-10">
-            <SubmissionProgress :submission="submission" />
-        </div>
+        <SubmissionProgress :submission="submission" />
 
-        <div class="mt-8 space-y-8">
-            <section
-                class="rounded-[1.75rem] border bg-card p-5 shadow-[0_24px_80px_-58px_rgba(17,62,56,0.55)] sm:p-8"
-            >
+        <div class="space-y-6">
+            <section class="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
                 <SubmissionMetadataForm :submission="submission" />
             </section>
             <SubmissionDocumentPanel :submission="submission" />
