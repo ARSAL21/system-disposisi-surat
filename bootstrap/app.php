@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureBackOfficeLoginIsGuest;
 use App\Http\Middleware\EnsureCriticalInternalAccountHasMfa;
+use App\Http\Middleware\EnsureMfaIsEnabled;
 use App\Http\Middleware\EnsureUserHasAccountType;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'back-office.guest' => EnsureBackOfficeLoginIsGuest::class,
             'critical-mfa' => EnsureCriticalInternalAccountHasMfa::class,
+            'mfa' => EnsureMfaIsEnabled::class,
         ]);
 
         $middleware->redirectGuestsTo(

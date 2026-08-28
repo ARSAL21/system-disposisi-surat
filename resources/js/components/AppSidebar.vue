@@ -14,36 +14,13 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import backOffice from '@/routes/back-office';
 import publicRoutes from '@/routes/public';
 import type { NavItem } from '@/types';
 
 const page = usePage();
 const currentPath = computed(() => page.url.split('?')[0]);
-const isPublicAccount = computed(
-    () => page.props.auth.user.account_type === 'PUBLIC',
-);
-
-const homeHref = computed(() =>
-    isPublicAccount.value ? publicRoutes.dashboard() : backOffice.dashboard(),
-);
-
-const navigationLabel = computed(() =>
-    isPublicAccount.value ? 'Portal Publik' : 'Portal Internal',
-);
 
 const mainNavItems = computed<NavItem[]>(() => {
-    if (!isPublicAccount.value) {
-        return [
-            {
-                title: 'Dashboard',
-                href: backOffice.dashboard(),
-                icon: LayoutDashboard,
-                isActive: currentPath.value === backOffice.dashboard.url(),
-            },
-        ];
-    }
-
     return [
         {
             title: 'Dashboard',
@@ -78,7 +55,7 @@ const mainNavItems = computed<NavItem[]>(() => {
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="homeHref">
+                        <Link :href="publicRoutes.dashboard()">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
@@ -87,7 +64,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" :label="navigationLabel" />
+            <NavMain :items="mainNavItems" label="Portal Publik" />
         </SidebarContent>
 
         <SidebarFooter>

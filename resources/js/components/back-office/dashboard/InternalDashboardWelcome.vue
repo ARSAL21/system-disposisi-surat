@@ -27,8 +27,9 @@ defineProps<{
                 Selamat datang, {{ userName }}.
             </h1>
             <p class="mt-3 max-w-xl leading-7 text-muted-foreground">
-                Anda telah masuk ke ruang kerja internal. Modul akan tersedia
-                sesuai peran dan permission yang diberikan kepada akun Anda.
+                Anda telah masuk ke ruang kerja internal. Modul ditampilkan
+                sesuai capability akun dan setiap akses tetap diverifikasi oleh
+                server.
             </p>
         </div>
     </section>

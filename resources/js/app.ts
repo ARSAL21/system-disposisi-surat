@@ -3,6 +3,7 @@ import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import BackOfficeAuthLayout from '@/layouts/back-office/BackOfficeAuthLayout.vue';
+import BackOfficeLayout from '@/layouts/back-office/BackOfficeLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 
@@ -16,6 +17,8 @@ createInertiaApp({
                 return null;
             case name.startsWith('back-office/auth/'):
                 return BackOfficeAuthLayout;
+            case name.startsWith('back-office/'):
+                return BackOfficeLayout;
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):

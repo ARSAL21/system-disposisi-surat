@@ -1,15 +1,23 @@
 <?php
 
+use App\Authorization\AuthorizationMutationSecurity;
 use App\Enums\AccountType;
+use App\Enums\PermissionName;
+use App\Http\Controllers\BackOffice\Authorization\ActivateAuthorizationMutationController;
+use App\Http\Controllers\BackOffice\Authorization\AuthorizationRoleController;
+use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
+use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicSubmission\LetterSubmissionController;
 use App\Http\Controllers\PublicSubmission\PublicDashboardController;
 use App\Http\Controllers\PublicSubmission\SubmissionDocumentController;
 use App\Http\Controllers\PublicSubmission\SubmitLetterSubmissionController;
+use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
+use Laravel\Fortify\Http\Controllers\ConfirmablePasswordController;
 use Laravel\Passkeys\Http\Controllers\PasskeyLoginController;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -93,12 +101,50 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
 
     Route::prefix('back-office')
         ->name('back-office.')
-        ->middleware([
-            'account:'.AccountType::InternalAccount->value,
-            'critical-mfa',
-        ])
+        ->middleware('account:'.AccountType::InternalAccount->value)
         ->group(function () {
-            Route::inertia('dashboard', 'back-office/Dashboard')->name('dashboard');
+            Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
+                ->name('password.confirm');
+            Route::post('confirm-password', [ConfirmablePasswordController::class, 'store'])
+                ->middleware('throttle:6,1')
+                ->name('password.confirm.store');
+
+            Route::middleware('critical-mfa')->group(function (): void {
+                Route::inertia('dashboard', 'back-office/Dashboard')->name('dashboard');
+
+                Route::middleware('can:'.PermissionName::ViewAuthorization->value)
+                    ->group(function (): void {
+                        Route::redirect('authorization', '/back-office/authorization/roles')
+                            ->name('authorization.legacy');
+                        Route::get('authorization/roles', [AuthorizationRoleController::class, 'index'])
+                            ->name('authorization.index');
+
+                        Route::inertia('privilege-audits', 'back-office/privilege-audits/Index')
+                            ->name('privilege-audits.index');
+                    });
+
+                Route::middleware([
+                    'can:'.PermissionName::ManageAuthorization->value,
+                    'mfa',
+                    RequirePassword::using(
+                        'back-office.password.confirm',
+                        AuthorizationMutationSecurity::PASSWORD_CONFIRMATION_TIMEOUT_SECONDS,
+                    ),
+                ])->group(function (): void {
+                    Route::get('authorization/confirm', ActivateAuthorizationMutationController::class)
+                        ->name('authorization.mutation.confirm');
+                    Route::post('authorization/roles', [AuthorizationRoleController::class, 'store'])
+                        ->name('authorization.roles.store');
+                    Route::patch('authorization/roles/{role}', [AuthorizationRoleController::class, 'update'])
+                        ->name('authorization.roles.update');
+                    Route::delete('authorization/roles/{role}', [AuthorizationRoleController::class, 'destroy'])
+                        ->name('authorization.roles.destroy');
+                    Route::put('authorization/roles/{role}/permissions', [RolePermissionController::class, 'update'])
+                        ->name('authorization.roles.permissions.update');
+                    Route::put('authorization/users/{user}/roles', [UserRoleController::class, 'update'])
+                        ->name('authorization.users.roles.update');
+                });
+            });
         });
 });
 

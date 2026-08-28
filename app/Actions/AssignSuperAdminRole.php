@@ -27,6 +27,16 @@ class AssignSuperAdminRole
 
         try {
             return DB::transaction(function () use ($normalizedEmail, $operationId): array {
+                $role = Role::query()
+                    ->where('name', RoleName::SuperAdmin->value)
+                    ->where('guard_name', AuthorizationCatalog::GUARD_NAME)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($role === null || ! $this->roleMatchesCatalog($role)) {
+                    throw PrivilegeAssignmentNotAllowed::catalogNotSynchronized();
+                }
+
                 $user = User::query()
                     ->where('email', $normalizedEmail)
                     ->lockForUpdate()
@@ -38,16 +48,6 @@ class AssignSuperAdminRole
 
                 if (! $user->isInternalAccount() || ! $user->is_active || ! $user->hasVerifiedEmail()) {
                     throw PrivilegeAssignmentNotAllowed::ineligibleAccount();
-                }
-
-                $role = Role::query()
-                    ->where('name', RoleName::SuperAdmin->value)
-                    ->where('guard_name', AuthorizationCatalog::GUARD_NAME)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($role === null || ! $this->roleMatchesCatalog($role)) {
-                    throw PrivilegeAssignmentNotAllowed::catalogNotSynchronized();
                 }
 
                 $currentRoles = $this->roleNamesFor($user);

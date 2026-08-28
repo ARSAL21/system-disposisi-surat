@@ -20,4 +20,9 @@ class PrivilegeAssignmentNotAllowed extends RuntimeException
     {
         return new self('The super-admin role is not synchronized. Run authorization:sync first.');
     }
+
+    public static function lastSuperAdmin(): self
+    {
+        return new self('The final super-admin assignment cannot be revoked.');
+    }
 }

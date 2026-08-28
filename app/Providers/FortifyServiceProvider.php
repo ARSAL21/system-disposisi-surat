@@ -129,7 +129,16 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge'));
 
-        Fortify::confirmPasswordView(fn () => Inertia::render('auth/ConfirmPassword'));
+        Fortify::confirmPasswordView(function (Request $request) {
+            $backOffice = $request->routeIs('back-office.password.confirm');
+
+            return Inertia::render(
+                $backOffice ? 'back-office/auth/ConfirmPassword' : 'auth/ConfirmPassword',
+                $backOffice
+                    ? ['confirmPasswordUrl' => route('back-office.password.confirm.store')]
+                    : [],
+            );
+        });
     }
 
     /**

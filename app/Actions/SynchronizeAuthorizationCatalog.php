@@ -23,8 +23,7 @@ class SynchronizeAuthorizationCatalog
      *     created_permissions: list<string>,
      *     created_roles: list<string>,
      *     changed_roles: list<string>,
-     *     unknown_permissions: list<string>,
-     *     unknown_roles: list<string>
+     *     unknown_permissions: list<string>
      * }
      */
     public function execute(): array
@@ -46,8 +45,7 @@ class SynchronizeAuthorizationCatalog
      *     created_permissions: list<string>,
      *     created_roles: list<string>,
      *     changed_roles: list<string>,
-     *     unknown_permissions: list<string>,
-     *     unknown_roles: list<string>
+     *     unknown_permissions: list<string>
      * }
      */
     private function synchronize(string $operationId): array
@@ -133,7 +131,6 @@ class SynchronizeAuthorizationCatalog
             'created_roles' => $createdRoles,
             'changed_roles' => $changedRoles,
             'unknown_permissions' => $this->unknownPermissionNames(),
-            'unknown_roles' => $this->unknownRoleNames(),
         ];
     }
 
@@ -150,21 +147,6 @@ class SynchronizeAuthorizationCatalog
             ->all();
 
         return array_values($permissionNames);
-    }
-
-    /** @return list<string> */
-    private function unknownRoleNames(): array
-    {
-        $roleNames = Role::query()
-            ->get(['name', 'guard_name'])
-            ->filter(fn (Role $role): bool => $role->guard_name !== AuthorizationCatalog::GUARD_NAME
-                || ! in_array($role->name, AuthorizationCatalog::roleNames(), true))
-            ->map(fn (Role $role): string => "{$role->guard_name}:{$role->name}")
-            ->sort()
-            ->values()
-            ->all();
-
-        return array_values($roleNames);
     }
 
     /** @return array{source: string, command: string, change: string} */

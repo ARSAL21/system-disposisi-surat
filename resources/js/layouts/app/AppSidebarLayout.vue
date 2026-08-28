@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import AppContent from '@/components/AppContent.vue';
-import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
-import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
-import { Toaster } from '@/components/ui/sonner';
+import SidebarShell from '@/layouts/app/SidebarShell.vue';
 import type { BreadcrumbItem } from '@/types';
 
 type Props = {
@@ -16,23 +13,10 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-    <a
-        href="#main-content"
-        class="fixed top-3 left-3 z-[100] -translate-y-20 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform focus:translate-y-0"
-    >
-        Lewati ke konten utama
-    </a>
-    <AppShell variant="sidebar">
-        <AppSidebar />
-        <AppContent
-            id="main-content"
-            variant="sidebar"
-            class="min-w-0 overflow-x-clip"
-            tabindex="-1"
-        >
-            <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-            <slot />
-        </AppContent>
-        <Toaster />
-    </AppShell>
+    <SidebarShell :breadcrumbs="breadcrumbs">
+        <template #sidebar>
+            <AppSidebar />
+        </template>
+        <slot />
+    </SidebarShell>
 </template>

@@ -2,14 +2,22 @@
 
 namespace App\Providers;
 
+use App\Authorization\AuthorizationCatalog;
+use App\Enums\AccountType;
+use App\Models\User;
+use App\Policies\RolePolicy;
+use App\Policies\UserPolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,7 +35,28 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureAuthorizationPolicies();
+        $this->configureAuthorizationRouteBindings();
         $this->configureRateLimiting();
+    }
+
+    private function configureAuthorizationPolicies(): void
+    {
+        Gate::policy(Role::class, RolePolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
+    }
+
+    private function configureAuthorizationRouteBindings(): void
+    {
+        Route::bind('role', fn (string $value): Role => Role::query()
+            ->whereKey($value)
+            ->where('guard_name', AuthorizationCatalog::GUARD_NAME)
+            ->firstOrFail());
+
+        Route::bind('user', fn (string $value): User => User::query()
+            ->whereKey($value)
+            ->where('account_type', AccountType::InternalAccount->value)
+            ->firstOrFail());
     }
 
     /**

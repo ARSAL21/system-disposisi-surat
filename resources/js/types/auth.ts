@@ -12,8 +12,15 @@ export type User = {
     [key: string]: unknown;
 };
 
+export type AuthCapabilities = {
+    can_view_authorization: boolean;
+    can_manage_authorization: boolean;
+    can_manage_position_assignments: boolean;
+};
+
 export type Auth = {
     user: User;
+    capabilities: AuthCapabilities;
 };
 
 export type Passkey = {

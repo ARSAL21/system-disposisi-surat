@@ -31,7 +31,6 @@ class SyncAuthorizationCommand extends Command
         ));
 
         $this->warnAboutDrift('permissions', $result['unknown_permissions']);
-        $this->warnAboutDrift('roles', $result['unknown_roles']);
 
         return self::SUCCESS;
     }
