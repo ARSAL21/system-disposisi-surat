@@ -33,7 +33,8 @@ test('guest and public accounts receive no internal capabilities', function (): 
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.can_view_authorization', false)
             ->where('auth.capabilities.can_manage_authorization', false)
-            ->where('auth.capabilities.can_manage_position_assignments', false),
+            ->where('auth.capabilities.can_manage_position_assignments', false)
+            ->where('auth.capabilities.can_view_privilege_audits', false),
         );
 
     $publicUser = User::factory()->create();
@@ -42,6 +43,7 @@ test('guest and public accounts receive no internal capabilities', function (): 
         PermissionName::ViewAuthorization,
         PermissionName::ManageAuthorization,
         PermissionName::ManagePositionAssignments,
+        PermissionName::ViewPrivilegeAudits,
     ));
 
     $this->actingAs($publicUser)
@@ -51,6 +53,7 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_view_authorization', false)
             ->where('auth.capabilities.can_manage_authorization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
+            ->where('auth.capabilities.can_view_privilege_audits', false)
             ->missing('auth.user.roles')
             ->missing('auth.user.permissions'),
         );
@@ -65,7 +68,8 @@ test('internal capabilities are derived from explicit permissions', function ():
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.can_view_authorization', false)
             ->where('auth.capabilities.can_manage_authorization', false)
-            ->where('auth.capabilities.can_manage_position_assignments', false),
+            ->where('auth.capabilities.can_manage_position_assignments', false)
+            ->where('auth.capabilities.can_view_privilege_audits', false),
         );
 
     $viewer = User::factory()->internal()->create();
@@ -81,6 +85,7 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_view_authorization', true)
             ->where('auth.capabilities.can_manage_authorization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
+            ->where('auth.capabilities.can_view_privilege_audits', false)
             ->missing('auth.user.roles')
             ->missing('auth.user.permissions'),
         );
@@ -118,10 +123,7 @@ test('authorization skeleton routes enforce account and permission boundaries', 
 
     $this->actingAs($viewer)
         ->get(route('back-office.privilege-audits.index'))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('back-office/privilege-audits/Index'),
-        );
+        ->assertForbidden();
 });
 
 test('critical administrator capabilities remain protected by MFA', function (): void {
@@ -130,6 +132,10 @@ test('critical administrator capabilities remain protected by MFA', function ():
 
     $this->actingAs($administrator)
         ->get(route('back-office.authorization.index'))
+        ->assertRedirect(route('security.edit'));
+
+    $this->actingAs($administrator)
+        ->get(route('back-office.privilege-audits.index'))
         ->assertRedirect(route('security.edit'));
 
     $mfaAdministrator = User::factory()->internal()->withTwoFactor()->create();
@@ -141,6 +147,13 @@ test('critical administrator capabilities remain protected by MFA', function ():
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.can_view_authorization', true)
             ->where('auth.capabilities.can_manage_authorization', true)
-            ->where('auth.capabilities.can_manage_position_assignments', true),
+            ->where('auth.capabilities.can_manage_position_assignments', true)
+            ->where('auth.capabilities.can_view_privilege_audits', true),
         );
+
+    $this->actingAs($mfaAdministrator)
+        ->get(route('back-office.privilege-audits.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('back-office/privilege-audits/Index'));
 });

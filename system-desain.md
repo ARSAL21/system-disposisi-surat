@@ -873,6 +873,38 @@ DISPOSITION_COMPLETED
 
 Audit juga wajib terhadap privilege dan Position changes.
 
+## Audit Perubahan Privilege
+
+Back-office menyediakan console read-only pada:
+
+```text
+GET /back-office/audits/privileges
+```
+
+Akses memerlukan account `INTERNAL` yang aktif, terverifikasi, dan permission
+eksplisit:
+
+```text
+privilege-audits.view
+```
+
+Console ini hanya menampilkan:
+
+```text
+INTERNAL_ACCOUNT_PROVISIONED
+ROLE_CHANGED
+PERMISSION_CHANGED
+```
+
+Perubahan Position Assignment tetap berada pada audit domain organisasi dan
+tidak dicampur ke halaman ini. Filter action, actor/source, target, rentang
+tanggal, dan pagination dilakukan pada query server. Payload response memakai
+allowlist dan tidak mengekspos password, token, MFA secret, recovery code, atau
+metadata audit mentah. Actor console ditampilkan sebagai sistem. Jika subject
+sudah tidak tersedia, identitas target dibentuk dari snapshot aman pada audit.
+
+Tidak terdapat endpoint update atau delete untuk `audit_logs`.
+
 ---
 
 # 26. Authentication dan Session

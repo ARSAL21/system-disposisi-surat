@@ -33,20 +33,21 @@ const mainNavItems = computed<NavItem[]>(() => {
     ];
 
     if (page.props.auth.capabilities.can_view_authorization) {
-        items.push(
-            {
-                title: 'Manage Role',
-                href: authorizationIndex(),
-                icon: ShieldCheck,
-                isActive: currentPath.value === authorizationIndex.url(),
-            },
-            {
-                title: 'Audit Perubahan Privilege',
-                href: privilegeAuditIndex(),
-                icon: History,
-                isActive: currentPath.value === privilegeAuditIndex.url(),
-            },
-        );
+        items.push({
+            title: 'Manage Role',
+            href: authorizationIndex(),
+            icon: ShieldCheck,
+            isActive: currentPath.value === authorizationIndex.url(),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_privilege_audits) {
+        items.push({
+            title: 'Audit Perubahan Privilege',
+            href: privilegeAuditIndex(),
+            icon: History,
+            isActive: currentPath.value === privilegeAuditIndex.url(),
+        });
     }
 
     return items;

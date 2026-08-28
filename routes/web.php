@@ -3,6 +3,7 @@
 use App\Authorization\AuthorizationMutationSecurity;
 use App\Enums\AccountType;
 use App\Enums\PermissionName;
+use App\Http\Controllers\BackOffice\Audit\PrivilegeAuditController;
 use App\Http\Controllers\BackOffice\Authorization\ActivateAuthorizationMutationController;
 use App\Http\Controllers\BackOffice\Authorization\AuthorizationRoleController;
 use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
@@ -119,9 +120,11 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         Route::get('authorization/roles', [AuthorizationRoleController::class, 'index'])
                             ->name('authorization.index');
 
-                        Route::inertia('privilege-audits', 'back-office/privilege-audits/Index')
-                            ->name('privilege-audits.index');
                     });
+
+                Route::get('audits/privileges', PrivilegeAuditController::class)
+                    ->middleware('can:'.PermissionName::ViewPrivilegeAudits->value)
+                    ->name('privilege-audits.index');
 
                 Route::middleware([
                     'can:'.PermissionName::ManageAuthorization->value,

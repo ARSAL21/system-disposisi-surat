@@ -87,6 +87,7 @@ class HandleInertiaRequests extends Middleware
                 'can_view_authorization' => false,
                 'can_manage_authorization' => false,
                 'can_manage_position_assignments' => false,
+                'can_view_privilege_audits' => false,
             ];
         }
 
@@ -94,6 +95,7 @@ class HandleInertiaRequests extends Middleware
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
             'can_manage_authorization' => $user->can(PermissionName::ManageAuthorization->value),
             'can_manage_position_assignments' => $user->can(PermissionName::ManagePositionAssignments->value),
+            'can_view_privilege_audits' => $user->can(PermissionName::ViewPrivilegeAudits->value),
         ];
     }
 }

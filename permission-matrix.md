@@ -30,6 +30,16 @@ bertahap bersama milestone yang benar-benar membutuhkan capability baru.
 | --- | --- | --- |
 | `super-admin` | `position-assignments.manage` | Menetapkan, mengganti, dan mengakhiri pemegang Position melalui alur yang terotorisasi dan teraudit. |
 
+## Penambahan Audit Perubahan Privilege
+
+| Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `privilege-audits.view` | Membaca jejak provisioning akun internal serta perubahan role dan permission melalui console read-only. |
+
+Permission ini terpisah dari `authorization.view`. Custom role auditor dapat
+menerimanya secara eksplisit tanpa memperoleh capability untuk melihat atau
+mengubah konfigurasi RBAC.
+
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
 Alur administrative console:

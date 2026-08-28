@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Authorization\AuthorizationCatalog;
 use App\Enums\AccountType;
+use App\Models\AuditLog;
 use App\Models\User;
+use App\Policies\AuditLogPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use Carbon\CarbonImmutable;
@@ -42,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureAuthorizationPolicies(): void
     {
+        Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
     }

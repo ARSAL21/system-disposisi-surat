@@ -34,6 +34,12 @@ final class AuthorizationCatalog
                     'description' => 'Mengelola lifecycle Position Assignment tanpa mengubah hierarki organisasi.',
                     'group' => 'Organisasi',
                 ],
+                PermissionName::ViewPrivilegeAudits => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat audit perubahan privilege',
+                    'description' => 'Membaca jejak provisioning akun internal serta perubahan role dan permission.',
+                    'group' => 'Audit & Keamanan',
+                ],
             },
             PermissionName::cases(),
         );
@@ -70,6 +76,7 @@ final class AuthorizationCatalog
                 PermissionName::ViewAuthorization->value,
                 PermissionName::ManageAuthorization->value,
                 PermissionName::ManagePositionAssignments->value,
+                PermissionName::ViewPrivilegeAudits->value,
             ],
         };
     }
