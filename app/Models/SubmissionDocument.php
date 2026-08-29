@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read LetterSubmission $submission
  * @property-read User $uploader
+ * @property-read LetterDocument|null $letterDocument
  */
 class SubmissionDocument extends Model
 {
@@ -33,5 +35,11 @@ class SubmissionDocument extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by_user_id');
+    }
+
+    /** @return HasOne<LetterDocument, $this> */
+    public function letterDocument(): HasOne
+    {
+        return $this->hasOne(LetterDocument::class, 'source_submission_document_id');
     }
 }
