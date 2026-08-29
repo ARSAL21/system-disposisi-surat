@@ -17,7 +17,7 @@ class PositionAssignmentEligibility
 
     public function ensureEligibleAssignee(User $assignee): void
     {
-        if (! $assignee->isInternalAccount() || ! $assignee->is_active) {
+        if (! $assignee->isInternalAccount() || ! $assignee->is_active || ! $assignee->hasVerifiedEmail()) {
             throw PositionAssignmentNotAllowed::ineligibleAssignee();
         }
     }
@@ -26,6 +26,13 @@ class PositionAssignmentEligibility
     {
         if (! $position->is_active) {
             throw PositionAssignmentNotAllowed::inactivePosition($position);
+        }
+
+        $position->loadMissing(['positionLevel', 'organizationalUnit']);
+
+        if (! $position->positionLevel->is_active
+            || ($position->organizationalUnit !== null && ! $position->organizationalUnit->is_active)) {
+            throw PositionAssignmentNotAllowed::inactivePositionDependency($position);
         }
     }
 }

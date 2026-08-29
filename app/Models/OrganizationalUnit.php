@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Policies\OrganizationalUnitPolicy;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, OrganizationalUnit> $children
  * @property-read Collection<int, Position> $positions
  */
+#[UsePolicy(OrganizationalUnitPolicy::class)]
 class OrganizationalUnit extends Model
 {
     /** @return array<string, string> */

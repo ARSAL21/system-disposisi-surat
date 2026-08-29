@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Policies\PositionPolicy;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, PositionAssignment> $assignments
  * @property-read PositionAssignment|null $activeAssignment
  */
+#[UsePolicy(PositionPolicy::class)]
 class Position extends Model
 {
     /** @return array<string, string> */
