@@ -22,8 +22,8 @@ class SubmitLetterSubmission
                 ->whereKey($submission->getKey())
                 ->firstOrFail();
 
-            if ($lockedSubmission->status !== SubmissionStatus::Draft) {
-                throw SubmissionStateConflict::expectedDraft($lockedSubmission->status);
+            if (! $lockedSubmission->isPubliclyEditable()) {
+                throw SubmissionStateConflict::expectedPubliclyEditable($lockedSubmission->status);
             }
 
             if (! $lockedSubmission->document()->exists()) {
@@ -32,16 +32,19 @@ class SubmitLetterSubmission
                 ]);
             }
 
+            $oldStatus = $lockedSubmission->status;
             $lockedSubmission->status = SubmissionStatus::Submitted;
             $lockedSubmission->submitted_at = now();
             $lockedSubmission->save();
 
             $this->recordAudit->execute(
                 actor: $actor,
-                action: AuditAction::SubmissionSubmitted,
+                action: $oldStatus === SubmissionStatus::Draft
+                    ? AuditAction::SubmissionSubmitted
+                    : AuditAction::SubmissionResubmitted,
                 subjectType: 'letter_submission',
                 subjectId: $lockedSubmission->getKey(),
-                oldValues: ['status' => SubmissionStatus::Draft->value],
+                oldValues: ['status' => $oldStatus->value],
                 newValues: [
                     'status' => SubmissionStatus::Submitted->value,
                     'submitted_at' => $lockedSubmission->submitted_at->toISOString(),

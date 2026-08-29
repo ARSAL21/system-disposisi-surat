@@ -3,7 +3,6 @@
 namespace App\Actions;
 
 use App\Enums\AuditAction;
-use App\Enums\SubmissionStatus;
 use App\Exceptions\SubmissionStateConflict;
 use App\Models\LetterSubmission;
 use App\Models\SubmissionDocument;
@@ -48,8 +47,8 @@ class ReplaceSubmissionDocument
                     ->whereKey($submission->getKey())
                     ->firstOrFail();
 
-                if ($lockedSubmission->status !== SubmissionStatus::Draft) {
-                    throw SubmissionStateConflict::expectedDraft($lockedSubmission->status);
+                if (! $lockedSubmission->isPubliclyEditable()) {
+                    throw SubmissionStateConflict::expectedPubliclyEditable($lockedSubmission->status);
                 }
 
                 $document = SubmissionDocument::query()

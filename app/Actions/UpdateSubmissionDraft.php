@@ -3,7 +3,6 @@
 namespace App\Actions;
 
 use App\Enums\AuditAction;
-use App\Enums\SubmissionStatus;
 use App\Exceptions\SubmissionStateConflict;
 use App\Models\LetterSubmission;
 use App\Models\User;
@@ -25,8 +24,8 @@ class UpdateSubmissionDraft
                 ->whereKey($submission->getKey())
                 ->firstOrFail();
 
-            if ($lockedSubmission->status !== SubmissionStatus::Draft) {
-                throw SubmissionStateConflict::expectedDraft($lockedSubmission->status);
+            if (! $lockedSubmission->isPubliclyEditable()) {
+                throw SubmissionStateConflict::expectedPubliclyEditable($lockedSubmission->status);
             }
 
             $originalValues = Arr::only($lockedSubmission->getAttributes(), array_keys($attributes));

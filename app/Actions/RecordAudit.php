@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
+use App\Models\PositionAssignment;
 use App\Models\User;
 use Illuminate\Support\Str;
 use LogicException;
@@ -24,6 +25,7 @@ class RecordAudit
         ?array $newValues = null,
         ?array $metadata = null,
         ?string $requestId = null,
+        ?PositionAssignment $actorPositionAssignment = null,
     ): AuditLog {
         if ($actor === null && ! app()->runningInConsole()) {
             throw new LogicException('An unauthenticated audit actor is only allowed for console operations.');
@@ -33,7 +35,7 @@ class RecordAudit
 
         $auditLog = new AuditLog;
         $auditLog->actor_user_id = $actor?->getKey();
-        $auditLog->actor_position_assignment_id = null;
+        $auditLog->actor_position_assignment_id = $actorPositionAssignment?->getKey();
         $auditLog->action = $action->value;
         $auditLog->subject_type = $subjectType;
         $auditLog->subject_id = $subjectId;
