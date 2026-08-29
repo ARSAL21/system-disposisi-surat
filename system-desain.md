@@ -396,6 +396,46 @@ Menghubungkan Internal User dengan Position dalam periode tertentu.
 
 Public User tidak mempunyai Position Assignment.
 
+## Administrasi Struktur Organisasi
+
+Empat `PositionLevel` workflow merupakan katalog terlindungi:
+
+```text
+GENERAL_AFFAIRS
+EXECUTIVE_ENTRY
+ASSISTANT
+SECTION_HEAD
+```
+
+Katalog tersebut disinkronkan secara idempotent melalui
+`organization:sync-levels` dan tidak dapat diedit lewat web. Level asing tidak
+dihapus otomatis, tetapi diperlakukan sebagai drift dan tidak dapat dipakai
+untuk membuat Position baru.
+
+`OrganizationalUnit` dan `Position` konkret dikelola pada back-office. Keduanya
+menggunakan lifecycle aktif/nonaktif, bukan hard delete. Kode Position dan
+Position Level-nya immutable setelah pembuatan; perubahan makna jabatan dilakukan
+dengan membuat Position baru dan menonaktifkan Position lama setelah tidak lagi
+memiliki assignment aktif.
+
+Pemisahan capability:
+
+```text
+organization.view
+organization.manage
+position-assignments.manage
+```
+
+`organization.manage` mengelola struktur, sedangkan
+`position-assignments.manage` mengelola siapa yang menduduki Position. Semua
+mutasi memerlukan account internal aktif dan terverifikasi, MFA, recent password,
+Policy, transaction, row locking, dan audit atomik.
+
+Position Assignment menggunakan waktu efektif milik server. UI tidak boleh
+mengirim `started_at` atau `ended_at`. Pergantian pemegang mengakhiri assignment
+aktif dan membuat assignment baru pada transaction yang sama. Histori tidak
+dapat diubah atau dihapus.
+
 ---
 
 ## LetterSubmission

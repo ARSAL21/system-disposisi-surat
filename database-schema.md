@@ -314,6 +314,35 @@ assignment baru → record baru
 
 ---
 
+## Aturan Operasional Master Organisasi
+
+Schema yang ada sudah mencukupi M2 dan tidak memerlukan tabel tambahan.
+Constraint operasional berikut ditegakkan pada Policy, Form Request, Action, dan
+transaction:
+
+* `position_levels` adalah katalog workflow terlindungi dan hanya di-exact-sync
+  melalui `organization:sync-levels`;
+* unit induk wajib aktif dan perubahan `parent_id` tidak boleh membentuk siklus;
+* unit tidak dapat dinonaktifkan selama mempunyai unit turunan aktif atau
+  Position aktif;
+* kode unit tidak dapat diubah setelah dibuat;
+* Position baru hanya dapat memakai Position Level resmi yang aktif dan unit
+  aktif;
+* `positions.code` dan `positions.position_level_id` immutable setelah dibuat;
+* Position tidak dapat dinonaktifkan selama mempunyai Position Assignment aktif;
+* Assignment baru hanya menerima account `INTERNAL` yang aktif dan terverifikasi;
+* `started_at` dan `ended_at` selalu ditentukan server;
+* assign, replace, dan end menggunakan row locking dan audit pada transaction
+  yang sama;
+* tidak tersedia endpoint hard delete untuk unit, Position, Position Level, atau
+  Position Assignment.
+
+Filter dan pagination halaman organisasi dilakukan pada query server. Riwayat
+assignment hanya dimuat untuk Position yang dipilih agar daftar utama tidak
+memuat histori tanpa batas.
+
+---
+
 # 6. Instansi Pengirim
 
 ## `sender_organizations`

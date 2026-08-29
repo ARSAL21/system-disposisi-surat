@@ -30,6 +30,29 @@ bertahap bersama milestone yang benar-benar membutuhkan capability baru.
 | --- | --- | --- |
 | `super-admin` | `position-assignments.manage` | Menetapkan, mengganti, dan mengakhiri pemegang Position melalui alur yang terotorisasi dan teraudit. |
 
+## Struktur Organisasi Operasional M2
+
+| Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `organization.view` | Membaca katalog Position Level, unit organisasi, jabatan, keterisian, dan histori Position Assignment. |
+| `super-admin` | `organization.manage` | Membuat, memperbarui, mengaktifkan, dan menonaktifkan unit serta jabatan konkret. |
+
+`organization.manage` tidak memberikan hak untuk mengganti pejabat. Lifecycle
+pejabat tetap membutuhkan `position-assignments.manage`. Sebaliknya,
+`position-assignments.manage` tidak dapat mengubah struktur unit, kode jabatan,
+atau Position Level.
+
+UI operasional tersedia pada:
+
+```text
+GET /back-office/organization/structure
+GET /back-office/organization/assignments
+```
+
+Seluruh mutasi memerlukan MFA dan recent password confirmation. Capability yang
+dibagikan ke Vue hanya untuk presentation; Policy, middleware, Form Request, dan
+Action tetap menjadi security boundary server-side.
+
 ## Penambahan Audit Perubahan Privilege
 
 | Role | Permission | Tujuan |
@@ -47,6 +70,7 @@ Alur administrative console:
 ```text
 php artisan internal:user
 php artisan authorization:sync
+php artisan organization:sync-levels
 php artisan authorization:super-admin {email?}
 ```
 
@@ -56,6 +80,12 @@ Command tersebut tidak memberikan Role, Permission langsung, atau Position.
 `authorization:sync` menyinkronkan permission Role resmi secara exact. Role dan
 Permission di luar katalog tidak dihapus otomatis, tetapi dilaporkan sebagai
 catalog drift.
+
+`organization:sync-levels` melakukan exact-sync hanya terhadap empat Position
+Level workflow terlindungi: `GENERAL_AFFAIRS`, `EXECUTIVE_ENTRY`, `ASSISTANT`, dan
+`SECTION_HEAD`. Level asing dipertahankan dan dilaporkan sebagai drift. Unit,
+Position konkret, dan Position Assignment tidak dibuat atau diubah oleh command
+ini.
 
 `authorization:super-admin` hanya menerima account internal aktif dan
 terverifikasi. Role dapat diberikan sebelum MFA dikonfigurasi, tetapi seluruh
