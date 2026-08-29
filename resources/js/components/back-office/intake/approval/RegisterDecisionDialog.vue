@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import InputError from '@/components/InputError.vue';
 import type {
     RegisterApprovalPayload,
     SenderOrganizationOption,
@@ -23,6 +24,7 @@ const props = defineProps<{
     senderName: string;
     organizations: SenderOrganizationOption[];
     processing?: boolean;
+    errors?: Record<string, string>;
 }>();
 const emit = defineEmits<{
     'update:open': [open: boolean];
@@ -110,12 +112,14 @@ function confirm(): void {
                     placeholder="Contoh: AG-0188"
                     class="font-mono"
                 />
+                <InputError :message="errors?.agenda_number" />
             </div>
 
             <SenderOrganizationPicker
                 v-model="senderOrganization"
                 :organizations="organizations"
                 :suggested-name="senderName"
+                :errors="errors"
             />
 
             <label class="block space-y-2">
@@ -127,6 +131,7 @@ function confirm(): void {
                     class="w-full resize-y rounded-xl border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     placeholder="Tambahkan catatan registrasi bila diperlukan..."
                 />
+                <InputError :message="errors?.note" />
             </label>
 
             <DialogFooter class="gap-2 sm:gap-0">

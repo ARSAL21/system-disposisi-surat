@@ -4,9 +4,9 @@ const previewBase = '/back-office/previews/intake-approvals';
 const productionBase = '/back-office/intake/approvals';
 
 export const approvalRoutes = {
-    index: import.meta.env.DEV ? previewBase : productionBase,
+    index: productionBase,
     productionIndex: productionBase,
-    show: (publicId: string, preview = import.meta.env.DEV) =>
+    show: (publicId: string, preview = false) =>
         `${preview ? previewBase : productionBase}/${encodeURIComponent(publicId)}`,
 };
 

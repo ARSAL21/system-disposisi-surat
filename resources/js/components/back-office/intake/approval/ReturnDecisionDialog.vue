@@ -11,9 +11,14 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import InputError from '@/components/InputError.vue';
 import type { ReturnApprovalPayload } from '@/types';
 
-const props = defineProps<{ open: boolean; processing?: boolean }>();
+const props = defineProps<{
+    open: boolean;
+    processing?: boolean;
+    noteError?: string;
+}>();
 const emit = defineEmits<{
     'update:open': [open: boolean];
     confirm: [payload: ReturnApprovalPayload];
@@ -63,6 +68,7 @@ function confirm(): void {
                     Minimal 10 karakter. Catatan hanya terlihat oleh petugas
                     internal terkait.
                 </p>
+                <InputError :message="noteError" />
             </div>
             <DialogFooter class="gap-2 sm:gap-0">
                 <Button

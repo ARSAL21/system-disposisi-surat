@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { FileWarning } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import ApprovalAuthorityCard from '@/components/back-office/intake/approval/ApprovalAuthorityCard.vue';
 import ApprovalDecisionPanel from '@/components/back-office/intake/approval/ApprovalDecisionPanel.vue';
 import ApprovalDetailHeader from '@/components/back-office/intake/approval/ApprovalDetailHeader.vue';
@@ -16,7 +16,7 @@ import SubmissionDocumentReview from '@/components/back-office/intake/Submission
 import SubmissionOverviewCard from '@/components/back-office/intake/SubmissionOverviewCard.vue';
 import SubmissionTimeline from '@/components/back-office/intake/SubmissionTimeline.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useApprovalPreviewDecisions } from '@/composables/useApprovalPreviewDecisions';
+import { useApprovalDecisions } from '@/composables/useApprovalDecisions';
 import {
     previewApprovalDetail,
     previewSenderOrganizations,
@@ -49,12 +49,21 @@ const {
     returnDialogOpen,
     rejectDialogOpen,
     registerDialogOpen,
+    processing,
+    errors,
     decide,
     register,
-} = useApprovalPreviewDecisions(
+} = useApprovalDecisions(
     props.submission ?? previewApprovalDetail,
     previewMode,
     () => senderOrganizations.value,
+);
+
+watch(
+    () => props.submission,
+    (submission) => {
+        if (submission && !previewMode.value) activeSubmission.value = submission;
+    },
 );
 </script>
 
@@ -120,16 +129,22 @@ const {
 
         <ReturnDecisionDialog
             v-model:open="returnDialogOpen"
+            :processing="processing"
+            :note-error="errors.note"
             @confirm="decide($event, 'return')"
         />
         <RejectDecisionDialog
             v-model:open="rejectDialogOpen"
+            :processing="processing"
+            :note-error="errors.note"
             @confirm="decide($event, 'reject')"
         />
         <RegisterDecisionDialog
             v-model:open="registerDialogOpen"
             :sender-name="activeSubmission.sender_organization_name"
             :organizations="senderOrganizations"
+            :processing="processing"
+            :errors="errors"
             @confirm="register"
         />
     </main>

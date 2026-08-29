@@ -51,11 +51,8 @@ const mainNavItems = computed<NavItem[]>(() => {
         });
     }
 
-    if (page.props.auth.capabilities.can_decide_intake || import.meta.env.DEV) {
-        const approvalPath = import.meta.env.DEV
-            ? '/back-office/previews/intake-approvals'
-            : '/back-office/intake/approvals';
-
+    if (page.props.auth.capabilities.can_decide_intake) {
+        const approvalPath = '/back-office/intake/approvals';
         items.push({
             title: 'Persetujuan Surat',
             href: approvalPath,

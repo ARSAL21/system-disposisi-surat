@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import InputError from '@/components/InputError.vue';
 import type {
     RegisterApprovalPayload,
     SenderOrganizationOption,
@@ -20,6 +21,7 @@ const props = defineProps<{
     modelValue: RegisterApprovalPayload['sender_organization'];
     organizations: SenderOrganizationOption[];
     suggestedName: string;
+    errors?: Record<string, string>;
 }>();
 const emit = defineEmits<{
     'update:modelValue': [
@@ -99,6 +101,7 @@ function updateNew(patch: Partial<NewSenderOrganization>): void {
                     {{ organization.name }}
                 </option>
             </select>
+            <InputError :message="errors?.['sender_organization.id']" />
         </div>
 
         <div v-else class="grid gap-3 sm:grid-cols-2">
@@ -109,6 +112,7 @@ function updateNew(patch: Partial<NewSenderOrganization>): void {
                     maxlength="200"
                     @update:model-value="updateNew({ name: String($event) })"
                 />
+                <InputError :message="errors?.['sender_organization.name']" />
             </label>
             <label class="space-y-2">
                 <span class="text-sm font-medium">Alamat (opsional)</span>
@@ -118,6 +122,7 @@ function updateNew(patch: Partial<NewSenderOrganization>): void {
                         updateNew({ address: String($event) || null })
                     "
                 />
+                <InputError :message="errors?.['sender_organization.address']" />
             </label>
             <label class="space-y-2">
                 <span class="text-sm font-medium">Kontak (opsional)</span>
@@ -128,6 +133,7 @@ function updateNew(patch: Partial<NewSenderOrganization>): void {
                         updateNew({ contact: String($event) || null })
                     "
                 />
+                <InputError :message="errors?.['sender_organization.contact']" />
             </label>
         </div>
     </fieldset>

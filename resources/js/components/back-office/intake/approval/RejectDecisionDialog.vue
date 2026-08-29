@@ -11,9 +11,14 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import InputError from '@/components/InputError.vue';
 import type { RejectApprovalPayload } from '@/types';
 
-const props = defineProps<{ open: boolean; processing?: boolean }>();
+const props = defineProps<{
+    open: boolean;
+    processing?: boolean;
+    noteError?: string;
+}>();
 const emit = defineEmits<{
     'update:open': [open: boolean];
     confirm: [payload: RejectApprovalPayload];
@@ -71,6 +76,7 @@ function confirm(): void {
                 <p class="text-xs text-muted-foreground">
                     Minimal 10 karakter.
                 </p>
+                <InputError :message="noteError" />
             </div>
             <DialogFooter class="gap-2 sm:gap-0">
                 <Button
