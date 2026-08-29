@@ -33,6 +33,8 @@ test('guest and public accounts receive no internal capabilities', function (): 
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.can_view_authorization', false)
             ->where('auth.capabilities.can_manage_authorization', false)
+            ->where('auth.capabilities.can_view_organization', false)
+            ->where('auth.capabilities.can_manage_organization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
             ->where('auth.capabilities.can_view_privilege_audits', false),
         );
@@ -42,6 +44,8 @@ test('guest and public accounts receive no internal capabilities', function (): 
         'public-boundary-test',
         PermissionName::ViewAuthorization,
         PermissionName::ManageAuthorization,
+        PermissionName::ViewOrganization,
+        PermissionName::ManageOrganization,
         PermissionName::ManagePositionAssignments,
         PermissionName::ViewPrivilegeAudits,
     ));
@@ -52,6 +56,8 @@ test('guest and public accounts receive no internal capabilities', function (): 
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.can_view_authorization', false)
             ->where('auth.capabilities.can_manage_authorization', false)
+            ->where('auth.capabilities.can_view_organization', false)
+            ->where('auth.capabilities.can_manage_organization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
             ->where('auth.capabilities.can_view_privilege_audits', false)
             ->missing('auth.user.roles')
@@ -68,6 +74,8 @@ test('internal capabilities are derived from explicit permissions', function ():
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.can_view_authorization', false)
             ->where('auth.capabilities.can_manage_authorization', false)
+            ->where('auth.capabilities.can_view_organization', false)
+            ->where('auth.capabilities.can_manage_organization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
             ->where('auth.capabilities.can_view_privilege_audits', false),
         );
@@ -84,6 +92,8 @@ test('internal capabilities are derived from explicit permissions', function ():
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.can_view_authorization', true)
             ->where('auth.capabilities.can_manage_authorization', false)
+            ->where('auth.capabilities.can_view_organization', false)
+            ->where('auth.capabilities.can_manage_organization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
             ->where('auth.capabilities.can_view_privilege_audits', false)
             ->missing('auth.user.roles')
@@ -147,6 +157,8 @@ test('critical administrator capabilities remain protected by MFA', function ():
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.can_view_authorization', true)
             ->where('auth.capabilities.can_manage_authorization', true)
+            ->where('auth.capabilities.can_view_organization', true)
+            ->where('auth.capabilities.can_manage_organization', true)
             ->where('auth.capabilities.can_manage_position_assignments', true)
             ->where('auth.capabilities.can_view_privilege_audits', true),
         );
