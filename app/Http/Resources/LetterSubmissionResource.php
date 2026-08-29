@@ -4,8 +4,8 @@ namespace App\Http\Resources;
 
 use App\Enums\SubmissionStatus;
 use App\Models\LetterSubmission;
-use App\Models\SubmissionDocument;
 use App\Models\SubmissionDecision;
+use App\Models\SubmissionDocument;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;

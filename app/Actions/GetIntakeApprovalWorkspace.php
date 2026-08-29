@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 class GetIntakeApprovalWorkspace
 {
     /**
-     * @param array{tab: string, search: string, date_from: string, date_to: string} $filters
+     * @param  array{tab: string, search: string, date_from: string, date_to: string}  $filters
      * @return array{
      *     submissions: LengthAwarePaginator<int, LetterSubmission>,
      *     summary: array{awaiting_decision: int, returned_to_staff: int, registered: int, rejected: int}

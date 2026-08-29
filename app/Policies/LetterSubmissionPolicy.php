@@ -7,8 +7,8 @@ use App\Enums\SubmissionSource;
 use App\Enums\SubmissionStatus;
 use App\Models\LetterSubmission;
 use App\Models\User;
-use App\Services\IntakePositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
+use App\Services\IntakePositionAssignmentResolver;
 use Illuminate\Auth\Access\Response;
 
 class LetterSubmissionPolicy

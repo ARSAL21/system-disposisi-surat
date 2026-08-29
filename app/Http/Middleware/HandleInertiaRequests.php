@@ -4,8 +4,8 @@ namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
 use App\Models\User;
-use App\Services\IntakePositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
+use App\Services\IntakePositionAssignmentResolver;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 

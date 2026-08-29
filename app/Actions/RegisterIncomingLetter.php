@@ -10,6 +10,7 @@ use App\Exceptions\SubmissionStateConflict;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterSubmission;
+use App\Models\PositionAssignment;
 use App\Models\SenderOrganization;
 use App\Models\SubmissionDocument;
 use App\Models\User;
@@ -120,7 +121,7 @@ class RegisterIncomingLetter
     }
 
     /**
-     * @param array{mode: 'existing', id: int}|array{mode: 'new', name: string, address: string|null, contact: string|null} $selection
+     * @param  array{mode: 'existing', id: int}|array{mode: 'new', name: string, address: string|null, contact: string|null}  $selection
      */
     private function resolveSenderOrganization(array $selection): SenderOrganization
     {
@@ -170,7 +171,7 @@ class RegisterIncomingLetter
         IncomingLetter $incomingLetter,
         LetterDocument $letterDocument,
         int $decisionId,
-        \App\Models\PositionAssignment $positionAssignment,
+        PositionAssignment $positionAssignment,
     ): void {
         $this->recordAudit->execute(
             actor: $actor,

@@ -3,9 +3,9 @@
 namespace App\Http\Requests\BackOffice\Intake;
 
 use App\Enums\SubmissionReviewOutcome;
+use App\Enums\SubmissionStatus;
 use App\Intake\SubmissionScreeningChecklist;
 use App\Models\LetterSubmission;
-use App\Enums\SubmissionStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
