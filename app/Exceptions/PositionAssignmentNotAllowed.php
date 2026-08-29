@@ -23,6 +23,11 @@ class PositionAssignmentNotAllowed extends RuntimeException
         return new self("Inactive Position [{$position->code}] cannot receive a new assignment.");
     }
 
+    public static function inactivePositionDependency(Position $position): self
+    {
+        return new self("Position [{$position->code}] memiliki level atau unit organisasi yang tidak aktif.");
+    }
+
     public function render(): JsonResponse
     {
         return response()->json([

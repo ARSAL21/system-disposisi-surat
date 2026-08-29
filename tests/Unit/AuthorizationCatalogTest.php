@@ -12,6 +12,8 @@ test('authorization catalog exposes unique role and permission names', function 
         ->toBe([
             PermissionName::ViewAuthorization->value,
             PermissionName::ManageAuthorization->value,
+            PermissionName::ViewOrganization->value,
+            PermissionName::ManageOrganization->value,
             PermissionName::ManagePositionAssignments->value,
             PermissionName::ViewPrivilegeAudits->value,
         ])

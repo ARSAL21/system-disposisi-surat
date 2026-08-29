@@ -15,4 +15,11 @@ enum AuditAction: string
     case PositionAssigned = 'POSITION_ASSIGNED';
     case PositionHolderReplaced = 'POSITION_HOLDER_REPLACED';
     case PositionAssignmentEnded = 'POSITION_ASSIGNMENT_ENDED';
+    case PositionLevelCatalogSynchronized = 'POSITION_LEVEL_CATALOG_SYNCHRONIZED';
+    case OrganizationalUnitCreated = 'ORGANIZATIONAL_UNIT_CREATED';
+    case OrganizationalUnitUpdated = 'ORGANIZATIONAL_UNIT_UPDATED';
+    case OrganizationalUnitStatusChanged = 'ORGANIZATIONAL_UNIT_STATUS_CHANGED';
+    case PositionCreated = 'POSITION_CREATED';
+    case PositionUpdated = 'POSITION_UPDATED';
+    case PositionStatusChanged = 'POSITION_STATUS_CHANGED';
 }

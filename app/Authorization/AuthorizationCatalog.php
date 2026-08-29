@@ -28,6 +28,18 @@ final class AuthorizationCatalog
                     'description' => 'Membuat custom role, mengatur permission, dan mengelola assignment role.',
                     'group' => 'Otorisasi',
                 ],
+                PermissionName::ViewOrganization => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat struktur organisasi',
+                    'description' => 'Membaca katalog level, unit organisasi, jabatan, dan riwayat pejabat.',
+                    'group' => 'Organisasi',
+                ],
+                PermissionName::ManageOrganization => [
+                    'name' => $permission->value,
+                    'label' => 'Kelola struktur organisasi',
+                    'description' => 'Membuat dan memperbarui unit serta jabatan tanpa mengubah katalog level terlindungi.',
+                    'group' => 'Organisasi',
+                ],
                 PermissionName::ManagePositionAssignments => [
                     'name' => $permission->value,
                     'label' => 'Kelola penugasan jabatan',
@@ -75,6 +87,8 @@ final class AuthorizationCatalog
             RoleName::SuperAdmin => [
                 PermissionName::ViewAuthorization->value,
                 PermissionName::ManageAuthorization->value,
+                PermissionName::ViewOrganization->value,
+                PermissionName::ManageOrganization->value,
                 PermissionName::ManagePositionAssignments->value,
                 PermissionName::ViewPrivilegeAudits->value,
             ],
