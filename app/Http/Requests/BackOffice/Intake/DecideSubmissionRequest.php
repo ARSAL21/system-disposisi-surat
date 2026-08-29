@@ -99,30 +99,79 @@ class DecideSubmissionRequest extends FormRequest
         ];
     }
 
+    public function outcome(): SubmissionDecisionOutcome
+    {
+        return SubmissionDecisionOutcome::from((string) $this->validated('outcome'));
+    }
+
+    public function decisionNote(): ?string
+    {
+        $note = $this->validated('note');
+
+        return is_string($note) ? $note : null;
+    }
+
     /**
      * @return array{
-     *     outcome: SubmissionDecisionOutcome,
+     *     agenda_number: string,
      *     note: string|null,
-     *     agenda_number?: string,
-     *     sender_organization?: array{mode: 'existing', id: int}|array{mode: 'new', name: string, address: string|null, contact: string|null}
+     *     sender_organization: array{mode: 'existing', id: int}|array{mode: 'new', name: string, address: string|null, contact: string|null}
      * }
      */
-    public function decisionPayload(): array
+    public function registrationPayload(): array
     {
-        $outcome = SubmissionDecisionOutcome::from((string) $this->validated('outcome'));
-        $payload = [
-            'outcome' => $outcome,
-            'note' => $this->validated('note'),
-        ];
-
-        if ($outcome === SubmissionDecisionOutcome::Registered) {
-            /** @var array{mode: 'existing', id: int}|array{mode: 'new', name: string, address: string|null, contact: string|null} $sender */
-            $sender = $this->validated('sender_organization');
-            $payload['agenda_number'] = (string) $this->validated('agenda_number');
-            $payload['sender_organization'] = $sender;
+        if ($this->outcome() !== SubmissionDecisionOutcome::Registered) {
+            throw new \LogicException('Registration payload is only available for a REGISTERED decision.');
         }
 
-        return $payload;
+        $sender = $this->validated('sender_organization');
+
+        if (! is_array($sender)) {
+            throw new \LogicException('Validated sender organization payload is missing.');
+        }
+
+        return [
+            'agenda_number' => (string) $this->validated('agenda_number'),
+            'note' => $this->decisionNote(),
+            'sender_organization' => $this->normalizeSenderOrganization($sender),
+        ];
+    }
+
+    /**
+     * @param  array<mixed, mixed>  $sender
+     * @return array{mode: 'existing', id: int}|array{mode: 'new', name: string, address: string|null, contact: string|null}
+     */
+    private function normalizeSenderOrganization(array $sender): array
+    {
+        $mode = $sender['mode'] ?? null;
+
+        if ($mode === 'existing') {
+            $id = $sender['id'] ?? null;
+
+            if (! is_int($id) && ! (is_string($id) && ctype_digit($id))) {
+                throw new \LogicException('Validated sender organization ID is invalid.');
+            }
+
+            return ['mode' => 'existing', 'id' => (int) $id];
+        }
+
+        $name = $sender['name'] ?? null;
+        $address = $sender['address'] ?? null;
+        $contact = $sender['contact'] ?? null;
+
+        if ($mode !== 'new'
+            || ! is_string($name)
+            || ! (is_string($address) || $address === null)
+            || ! (is_string($contact) || $contact === null)) {
+            throw new \LogicException('Validated new sender organization payload is invalid.');
+        }
+
+        return [
+            'mode' => 'new',
+            'name' => $name,
+            'address' => $address,
+            'contact' => $contact,
+        ];
     }
 
     /** @return array<string, string> */

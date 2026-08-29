@@ -117,7 +117,7 @@ class HandleInertiaRequests extends Middleware
                 && $user->can(PermissionName::ViewIntake->value),
             'can_screen_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ScreenIntake->value),
-            'can_decide_intake' => $hasApprovalPosition && $hasApprovalPermission,
+            'can_decide_intake' => $hasApprovalPosition,
         ];
     }
 }

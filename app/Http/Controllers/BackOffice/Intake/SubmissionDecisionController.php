@@ -25,27 +25,24 @@ class SubmissionDecisionController extends Controller
     ): IntakeApprovalSubmissionResource|RedirectResponse {
         /** @var User $actor */
         $actor = $request->user();
-        $payload = $request->decisionPayload();
+        $outcome = $request->outcome();
+        $note = $request->decisionNote();
 
-        match ($payload['outcome']) {
+        match ($outcome) {
             SubmissionDecisionOutcome::InternalRevisionRequired => $returnToStaff->execute(
                 $actor,
                 $submission,
-                (string) $payload['note'],
+                (string) $note,
             ),
             SubmissionDecisionOutcome::Rejected => $rejectSubmission->execute(
                 $actor,
                 $submission,
-                (string) $payload['note'],
+                (string) $note,
             ),
             SubmissionDecisionOutcome::Registered => $registerIncomingLetter->execute(
                 $actor,
                 $submission,
-                [
-                    'agenda_number' => $payload['agenda_number'],
-                    'note' => $payload['note'],
-                    'sender_organization' => $payload['sender_organization'],
-                ],
+                $request->registrationPayload(),
             ),
         };
 
@@ -64,7 +61,7 @@ class SubmissionDecisionController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => match ($payload['outcome']) {
+            'message' => match ($outcome) {
                 SubmissionDecisionOutcome::InternalRevisionRequired => __('Surat dikembalikan kepada petugas untuk diperbaiki.'),
                 SubmissionDecisionOutcome::Rejected => __('Pengajuan surat telah ditolak.'),
                 SubmissionDecisionOutcome::Registered => __('Surat berhasil diregistrasikan secara resmi.'),

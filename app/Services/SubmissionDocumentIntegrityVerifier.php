@@ -5,13 +5,18 @@ namespace App\Services;
 use App\Exceptions\DocumentIntegrityConflict;
 use App\Models\SubmissionDocument;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class SubmissionDocumentIntegrityVerifier
 {
     public function verify(SubmissionDocument $document): void
     {
-        $stream = Storage::disk($document->storage_disk)
-            ->readStream($document->storage_path);
+        try {
+            $stream = Storage::disk($document->storage_disk)
+                ->readStream($document->storage_path);
+        } catch (Throwable) {
+            throw DocumentIntegrityConflict::unavailable();
+        }
 
         if (! is_resource($stream)) {
             throw DocumentIntegrityConflict::unavailable();

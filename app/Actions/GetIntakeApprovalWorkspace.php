@@ -4,8 +4,8 @@ namespace App\Actions;
 
 use App\Enums\SubmissionStatus;
 use App\Models\LetterSubmission;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class GetIntakeApprovalWorkspace
 {

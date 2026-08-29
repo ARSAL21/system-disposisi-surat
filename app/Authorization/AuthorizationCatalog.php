@@ -14,7 +14,7 @@ final class AuthorizationCatalog
      */
     public static function permissionDefinitions(): array
     {
-        return array_map(
+        return array_values(array_map(
             static fn (PermissionName $permission): array => match ($permission) {
                 PermissionName::ViewAuthorization => [
                     'name' => $permission->value,
@@ -72,7 +72,7 @@ final class AuthorizationCatalog
                 ],
             },
             PermissionName::cases(),
-        );
+        ));
     }
 
     /** @return list<string> */

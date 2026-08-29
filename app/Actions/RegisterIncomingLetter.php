@@ -2,20 +2,19 @@
 
 namespace App\Actions;
 
-use App\Enums\AuditAction;
 use App\Enums\IncomingLetterStatus;
 use App\Enums\SubmissionDecisionOutcome;
 use App\Enums\SubmissionStatus;
 use App\Exceptions\SubmissionStateConflict;
 use App\Models\IncomingLetter;
-use App\Models\LetterDocument;
 use App\Models\LetterSubmission;
-use App\Models\PositionAssignment;
-use App\Models\SenderOrganization;
 use App\Models\SubmissionDocument;
 use App\Models\User;
 use App\Services\CreateSubmissionDecision;
+use App\Services\IncomingLetterRegistrationAuditRecorder;
+use App\Services\InitialLetterDocumentCreator;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
+use App\Services\SenderOrganizationResolver;
 use App\Services\SubmissionDocumentIntegrityVerifier;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -26,8 +25,10 @@ class RegisterIncomingLetter
     public function __construct(
         private readonly IntakeApprovalPositionAssignmentResolver $positionAssignmentResolver,
         private readonly SubmissionDocumentIntegrityVerifier $documentIntegrityVerifier,
+        private readonly SenderOrganizationResolver $senderOrganizationResolver,
+        private readonly InitialLetterDocumentCreator $initialDocumentCreator,
         private readonly CreateSubmissionDecision $createDecision,
-        private readonly RecordAudit $recordAudit,
+        private readonly IncomingLetterRegistrationAuditRecorder $auditRecorder,
     ) {}
 
     /**
@@ -63,7 +64,8 @@ class RegisterIncomingLetter
 
                 $this->documentIntegrityVerifier->verify($document);
                 $positionAssignment = $this->positionAssignmentResolver->lockActiveAssignment($actor);
-                $senderOrganization = $this->resolveSenderOrganization($attributes['sender_organization']);
+                $senderOrganization = $this->senderOrganizationResolver
+                    ->resolveForRegistration($attributes['sender_organization']);
                 $receivedAt = now();
                 $agendaYear = (int) $receivedAt->year;
                 $agendaNumber = trim($attributes['agenda_number']);
@@ -91,7 +93,7 @@ class RegisterIncomingLetter
                 $incomingLetter->registered_by_position_assignment_id = $positionAssignment->getKey();
                 $incomingLetter->save();
 
-                $letterDocument = $this->createInitialDocumentVersion($incomingLetter, $document);
+                $letterDocument = $this->initialDocumentCreator->execute($incomingLetter, $document);
                 $decision = $this->createDecision->execute(
                     actor: $actor,
                     positionAssignment: $positionAssignment,
@@ -100,13 +102,13 @@ class RegisterIncomingLetter
                     note: $attributes['note'],
                 );
 
-                $this->recordRegistrationAudits(
+                $this->auditRecorder->execute(
                     actor: $actor,
+                    positionAssignment: $positionAssignment,
                     submission: $lockedSubmission,
                     incomingLetter: $incomingLetter,
                     letterDocument: $letterDocument,
                     decisionId: $decision->getKey(),
-                    positionAssignment: $positionAssignment,
                 );
 
                 return $incomingLetter;
@@ -118,101 +120,6 @@ class RegisterIncomingLetter
 
             throw $exception;
         }
-    }
-
-    /**
-     * @param  array{mode: 'existing', id: int}|array{mode: 'new', name: string, address: string|null, contact: string|null}  $selection
-     */
-    private function resolveSenderOrganization(array $selection): SenderOrganization
-    {
-        if ($selection['mode'] === 'existing') {
-            return SenderOrganization::query()
-                ->whereKey($selection['id'])
-                ->where('is_active', true)
-                ->lockForUpdate()
-                ->firstOrFail();
-        }
-
-        $organization = new SenderOrganization;
-        $organization->name = trim($selection['name']);
-        $organization->address = $this->nullableTrim($selection['address']);
-        $organization->contact = $this->nullableTrim($selection['contact']);
-        $organization->is_active = true;
-        $organization->save();
-
-        return $organization;
-    }
-
-    private function createInitialDocumentVersion(
-        IncomingLetter $incomingLetter,
-        SubmissionDocument $sourceDocument,
-    ): LetterDocument {
-        $document = new LetterDocument;
-        $document->incoming_letter_id = $incomingLetter->getKey();
-        $document->source_submission_document_id = $sourceDocument->getKey();
-        $document->version_number = 1;
-        $document->replaces_document_id = null;
-        $document->storage_disk = $sourceDocument->storage_disk;
-        $document->storage_path = $sourceDocument->storage_path;
-        $document->original_filename = $sourceDocument->original_filename;
-        $document->mime_type = $sourceDocument->mime_type;
-        $document->size_bytes = $sourceDocument->size_bytes;
-        $document->sha256 = strtolower($sourceDocument->sha256);
-        $document->correction_reason = null;
-        $document->uploaded_by_user_id = $sourceDocument->uploaded_by_user_id;
-        $document->save();
-
-        return $document;
-    }
-
-    private function recordRegistrationAudits(
-        User $actor,
-        LetterSubmission $submission,
-        IncomingLetter $incomingLetter,
-        LetterDocument $letterDocument,
-        int $decisionId,
-        PositionAssignment $positionAssignment,
-    ): void {
-        $this->recordAudit->execute(
-            actor: $actor,
-            action: AuditAction::LetterRegistered,
-            subjectType: 'incoming_letter',
-            subjectId: $incomingLetter->getKey(),
-            oldValues: ['submission_status' => SubmissionStatus::ReadyForApproval->value],
-            newValues: [
-                'submission_status' => SubmissionStatus::Registered->value,
-                'letter_status' => IncomingLetterStatus::Registered->value,
-                'agenda_number' => $incomingLetter->agenda_number,
-                'agenda_year' => $incomingLetter->agenda_year,
-            ],
-            metadata: [
-                'submission_id' => $submission->getKey(),
-                'submission_public_id' => $submission->public_id,
-                'submission_decision_id' => $decisionId,
-            ],
-            actorPositionAssignment: $positionAssignment,
-        );
-
-        $this->recordAudit->execute(
-            actor: $actor,
-            action: AuditAction::DocumentVersionCreated,
-            subjectType: 'letter_document',
-            subjectId: $letterDocument->getKey(),
-            newValues: [
-                'incoming_letter_id' => $incomingLetter->getKey(),
-                'version_number' => 1,
-                'sha256' => $letterDocument->sha256,
-                'source_submission_document_id' => $letterDocument->source_submission_document_id,
-            ],
-            actorPositionAssignment: $positionAssignment,
-        );
-    }
-
-    private function nullableTrim(?string $value): ?string
-    {
-        $value = trim((string) $value);
-
-        return $value !== '' ? $value : null;
     }
 
     private function isAgendaUniqueViolation(QueryException $exception): bool
