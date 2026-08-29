@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
 use App\Models\User;
+use App\Services\IntakePositionAssignmentResolver;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -90,8 +91,15 @@ class HandleInertiaRequests extends Middleware
                 'can_manage_organization' => false,
                 'can_manage_position_assignments' => false,
                 'can_view_privilege_audits' => false,
+                'can_view_intake' => false,
+                'can_screen_intake' => false,
             ];
         }
+
+        $hasIntakePermission = $user->can(PermissionName::ViewIntake->value)
+            || $user->can(PermissionName::ScreenIntake->value);
+        $hasIntakePosition = $hasIntakePermission
+            && app(IntakePositionAssignmentResolver::class)->hasActiveAssignment($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -100,6 +108,10 @@ class HandleInertiaRequests extends Middleware
             'can_manage_organization' => $user->can(PermissionName::ManageOrganization->value),
             'can_manage_position_assignments' => $user->can(PermissionName::ManagePositionAssignments->value),
             'can_view_privilege_audits' => $user->can(PermissionName::ViewPrivilegeAudits->value),
+            'can_view_intake' => $hasIntakePosition
+                && $user->can(PermissionName::ViewIntake->value),
+            'can_screen_intake' => $hasIntakePosition
+                && $user->can(PermissionName::ScreenIntake->value),
         ];
     }
 }

@@ -32,6 +32,10 @@ class LetterSubmissionResource extends JsonResource
             'submitted_at' => $this->submitted_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+            'revision_note' => $this->status === SubmissionStatus::RevisionRequired
+                && $this->relationLoaded('latestReview')
+                ? $this->latestReview?->note
+                : null,
             'document' => $this->whenLoaded('document', function (): ?array {
                 if (! $this->document instanceof SubmissionDocument) {
                     return null;
@@ -54,13 +58,14 @@ class LetterSubmissionResource extends JsonResource
     private function capabilities(): array
     {
         $isDraft = $this->status === SubmissionStatus::Draft;
+        $isPubliclyEditable = $this->isPubliclyEditable();
         $hasDocument = $this->relationLoaded('document')
             && $this->document instanceof SubmissionDocument;
 
         return [
-            'can_update' => $isDraft && Gate::allows('update', $this->resource),
-            'can_replace_document' => $isDraft && Gate::allows('replaceDocument', $this->resource),
-            'can_submit' => $isDraft && $hasDocument && Gate::allows('submit', $this->resource),
+            'can_update' => $isPubliclyEditable && Gate::allows('update', $this->resource),
+            'can_replace_document' => $isPubliclyEditable && Gate::allows('replaceDocument', $this->resource),
+            'can_submit' => $isPubliclyEditable && $hasDocument && Gate::allows('submit', $this->resource),
             'can_delete' => $isDraft && Gate::allows('delete', $this->resource),
             'can_download_document' => $hasDocument && Gate::allows('downloadDocument', $this->resource),
         ];

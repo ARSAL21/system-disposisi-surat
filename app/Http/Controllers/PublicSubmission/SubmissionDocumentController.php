@@ -25,7 +25,7 @@ class SubmissionDocumentController extends Controller
         $user = $request->user();
         $replaceSubmissionDocument->execute($user, $submission, $request->file('document'));
 
-        $resource = new LetterSubmissionResource($submission->refresh()->load('document'));
+        $resource = new LetterSubmissionResource($submission->refresh()->load(['document', 'latestReview']));
 
         if ($request->expectsJson()) {
             return $resource;

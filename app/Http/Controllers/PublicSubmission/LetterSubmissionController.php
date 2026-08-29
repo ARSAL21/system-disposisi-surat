@@ -5,7 +5,6 @@ namespace App\Http\Controllers\PublicSubmission;
 use App\Actions\CreateOnlineSubmission;
 use App\Actions\DeleteSubmissionDraft;
 use App\Actions\UpdateSubmissionDraft;
-use App\Enums\SubmissionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicSubmission\ListLetterSubmissionRequest;
 use App\Http\Requests\PublicSubmission\StoreLetterSubmissionRequest;
@@ -34,7 +33,7 @@ class LetterSubmissionController extends Controller
 
         $submissions = LetterSubmission::query()
             ->ownedByPublicUser($user)
-            ->with('document')
+            ->with(['document', 'latestReview'])
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -65,7 +64,7 @@ class LetterSubmissionController extends Controller
         /** @var User $user */
         $user = $request->user();
         $submission = $createOnlineSubmission->execute($user, $request->validated());
-        $submission->load('document');
+        $submission->load(['document', 'latestReview']);
 
         if ($request->expectsJson()) {
             return (new LetterSubmissionResource($submission))
@@ -85,7 +84,7 @@ class LetterSubmissionController extends Controller
     {
         Gate::authorize('view', $submission);
 
-        $resource = new LetterSubmissionResource($submission->load('document'));
+        $resource = new LetterSubmissionResource($submission->load(['document', 'latestReview']));
 
         if ($request->expectsJson()) {
             return $resource;
@@ -99,10 +98,10 @@ class LetterSubmissionController extends Controller
     public function edit(Request $request, LetterSubmission $submission): InertiaResponse
     {
         Gate::authorize('update', $submission);
-        abort_unless($submission->status === SubmissionStatus::Draft, Response::HTTP_CONFLICT);
+        abort_unless($submission->isPubliclyEditable(), Response::HTTP_CONFLICT);
 
         return Inertia::render('public/submissions/Edit', [
-            'submission' => (new LetterSubmissionResource($submission->load('document')))->resolve($request),
+            'submission' => (new LetterSubmissionResource($submission->load(['document', 'latestReview'])))->resolve($request),
         ]);
     }
 
@@ -115,7 +114,7 @@ class LetterSubmissionController extends Controller
         $user = $request->user();
         $submission = $updateSubmissionDraft->execute($user, $submission, $request->validated());
 
-        $resource = new LetterSubmissionResource($submission->load('document'));
+        $resource = new LetterSubmissionResource($submission->load(['document', 'latestReview']));
 
         if ($request->expectsJson()) {
             return $resource;

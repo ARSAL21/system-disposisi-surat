@@ -25,7 +25,7 @@ class SubmitLetterSubmissionController extends Controller
         $user = $request->user();
         $submission = $submitLetterSubmission->execute($user, $submission);
 
-        $resource = new LetterSubmissionResource($submission->load('document'));
+        $resource = new LetterSubmissionResource($submission->load(['document', 'latestReview']));
 
         if ($request->expectsJson()) {
             return $resource;

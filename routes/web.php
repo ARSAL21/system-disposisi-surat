@@ -9,6 +9,9 @@ use App\Http\Controllers\BackOffice\Authorization\AuthorizationRoleController;
 use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
 use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
+use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionController;
+use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionDocumentController;
+use App\Http\Controllers\BackOffice\Intake\ScreenSubmissionController;
 use App\Http\Controllers\BackOffice\Organization\ActivateOrganizationMutationController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationalUnitController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationStructureController;
@@ -117,6 +120,30 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
 
             Route::middleware('critical-mfa')->group(function (): void {
                 Route::inertia('dashboard', 'back-office/Dashboard')->name('dashboard');
+
+                if (app()->isLocal()) {
+                    Route::inertia('previews/intake-approvals', 'back-office/intake/approvals/Index')
+                        ->name('previews.intake-approvals.index');
+                    Route::inertia('previews/intake-approvals/{submission}', 'back-office/intake/approvals/Show')
+                        ->name('previews.intake-approvals.show');
+                }
+
+                Route::prefix('intake')
+                    ->name('intake.')
+                    ->middleware('can:'.PermissionName::ViewIntake->value)
+                    ->group(function (): void {
+                        Route::get('submissions', [IntakeSubmissionController::class, 'index'])
+                            ->name('submissions.index');
+                        Route::get('submissions/{submission}', [IntakeSubmissionController::class, 'show'])
+                            ->name('submissions.show');
+                        Route::get('submissions/{submission}/document', [IntakeSubmissionDocumentController::class, 'show'])
+                            ->name('submissions.document.show');
+                        Route::get('submissions/{submission}/document/download', [IntakeSubmissionDocumentController::class, 'download'])
+                            ->name('submissions.document.download');
+                        Route::post('submissions/{submission}/screenings', ScreenSubmissionController::class)
+                            ->middleware('can:'.PermissionName::ScreenIntake->value)
+                            ->name('submissions.screen');
+                    });
 
                 Route::middleware('can:'.PermissionName::ViewAuthorization->value)
                     ->group(function (): void {
