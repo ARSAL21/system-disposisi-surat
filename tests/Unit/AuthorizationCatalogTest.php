@@ -18,6 +18,7 @@ test('authorization catalog exposes unique role and permission names', function 
             PermissionName::ViewPrivilegeAudits->value,
             PermissionName::ViewIntake->value,
             PermissionName::ScreenIntake->value,
+            PermissionName::DecideIntake->value,
         ])
         ->toHaveCount(count(array_unique(AuthorizationCatalog::permissionNames())));
 });
