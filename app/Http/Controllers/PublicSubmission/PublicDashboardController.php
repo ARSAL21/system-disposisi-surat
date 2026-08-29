@@ -23,7 +23,7 @@ class PublicDashboardController extends Controller
         $submissions = LetterSubmission::query()->ownedByPublicUser($user);
 
         $recentSubmissions = (clone $submissions)
-            ->with(['document', 'latestReview'])
+            ->with(['document', 'latestReview', 'latestDecision'])
             ->latest('created_at')
             ->limit(4)
             ->get();

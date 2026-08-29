@@ -33,7 +33,7 @@ class LetterSubmissionController extends Controller
 
         $submissions = LetterSubmission::query()
             ->ownedByPublicUser($user)
-            ->with(['document', 'latestReview'])
+            ->with(['document', 'latestReview', 'latestDecision'])
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -64,7 +64,7 @@ class LetterSubmissionController extends Controller
         /** @var User $user */
         $user = $request->user();
         $submission = $createOnlineSubmission->execute($user, $request->validated());
-        $submission->load(['document', 'latestReview']);
+        $submission->load(['document', 'latestReview', 'latestDecision']);
 
         if ($request->expectsJson()) {
             return (new LetterSubmissionResource($submission))
@@ -84,7 +84,7 @@ class LetterSubmissionController extends Controller
     {
         Gate::authorize('view', $submission);
 
-        $resource = new LetterSubmissionResource($submission->load(['document', 'latestReview']));
+        $resource = new LetterSubmissionResource($submission->load(['document', 'latestReview', 'latestDecision']));
 
         if ($request->expectsJson()) {
             return $resource;
@@ -101,7 +101,7 @@ class LetterSubmissionController extends Controller
         abort_unless($submission->isPubliclyEditable(), Response::HTTP_CONFLICT);
 
         return Inertia::render('public/submissions/Edit', [
-            'submission' => (new LetterSubmissionResource($submission->load(['document', 'latestReview'])))->resolve($request),
+            'submission' => (new LetterSubmissionResource($submission->load(['document', 'latestReview', 'latestDecision'])))->resolve($request),
         ]);
     }
 
@@ -114,7 +114,7 @@ class LetterSubmissionController extends Controller
         $user = $request->user();
         $submission = $updateSubmissionDraft->execute($user, $submission, $request->validated());
 
-        $resource = new LetterSubmissionResource($submission->load(['document', 'latestReview']));
+        $resource = new LetterSubmissionResource($submission->load(['document', 'latestReview', 'latestDecision']));
 
         if ($request->expectsJson()) {
             return $resource;
