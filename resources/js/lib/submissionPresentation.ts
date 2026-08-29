@@ -24,6 +24,29 @@ const statusPresentation: Record<
         badgeClass: 'border-info-foreground/20 bg-info text-info-foreground',
         dotClass: 'bg-info-foreground',
     },
+    REVISION_REQUIRED: {
+        label: 'Perlu diperbaiki',
+        description: 'Bagian Umum meminta Anda memperbaiki kelengkapan surat.',
+        badgeClass:
+            'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300',
+        dotClass: 'bg-amber-500',
+    },
+    READY_FOR_APPROVAL: {
+        label: 'Menunggu keputusan',
+        description:
+            'Pengajuan surat lolos pemeriksaan dan menunggu Kepala Bagian Umum.',
+        badgeClass:
+            'border-violet-500/30 bg-violet-500/10 text-violet-800 dark:text-violet-300',
+        dotClass: 'bg-violet-500',
+    },
+    INTERNAL_REVISION_REQUIRED: {
+        label: 'Perbaikan internal',
+        description:
+            'Bagian Umum sedang menyempurnakan hasil pemeriksaan internal.',
+        badgeClass:
+            'border-orange-500/30 bg-orange-500/10 text-orange-800 dark:text-orange-300',
+        dotClass: 'bg-orange-500',
+    },
     REGISTERED: {
         label: 'Terdaftar',
         description: 'Telah diregistrasikan sebagai surat masuk resmi.',

@@ -18,7 +18,7 @@ defineProps<{ submissions: LetterSubmission[] }>();
     >
         <table class="w-full table-fixed border-collapse text-left">
             <caption class="sr-only">
-                Daftar submission surat milik Anda
+                Daftar pengajuan surat milik Anda
             </caption>
             <thead
                 class="border-b bg-muted/60 text-xs font-semibold text-muted-foreground"

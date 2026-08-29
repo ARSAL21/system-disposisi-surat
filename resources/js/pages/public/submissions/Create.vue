@@ -16,11 +16,11 @@ defineOptions({
 </script>
 
 <template>
-    <Head title="Buat Submission" />
+    <Head title="Buat Pengajuan Surat" />
 
     <div class="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <div class="max-w-4xl">
-            <p class="text-sm font-semibold text-primary">Submission baru</p>
+            <p class="text-sm font-semibold text-primary">Pengajuan baru</p>
             <h1 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
                 Mulai dari informasi pada surat
             </h1>

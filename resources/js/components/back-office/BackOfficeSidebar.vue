@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
+    ClipboardCheck,
     History,
+    Inbox,
     LayoutDashboard,
     Network,
     ShieldCheck,
@@ -37,6 +39,30 @@ const mainNavItems = computed<NavItem[]>(() => {
             isActive: currentPath.value === backOffice.dashboard.url(),
         },
     ];
+
+    if (page.props.auth.capabilities.can_view_intake) {
+        items.push({
+            title: 'Penerimaan Surat',
+            href: '/back-office/intake/submissions',
+            icon: Inbox,
+            isActive: currentPath.value.startsWith(
+                '/back-office/intake/submissions',
+            ),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_decide_intake || import.meta.env.DEV) {
+        const approvalPath = import.meta.env.DEV
+            ? '/back-office/previews/intake-approvals'
+            : '/back-office/intake/approvals';
+
+        items.push({
+            title: 'Persetujuan Surat',
+            href: approvalPath,
+            icon: ClipboardCheck,
+            isActive: currentPath.value.startsWith(approvalPath),
+        });
+    }
 
     if (page.props.auth.capabilities.can_view_authorization) {
         items.push({

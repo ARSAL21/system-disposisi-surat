@@ -23,7 +23,7 @@ const currentStep = computed(() => {
 
 const steps = [
     {
-        title: 'Metadata',
+        title: 'Data surat',
         description: 'Simpan informasi surat',
         icon: FileText,
     },
@@ -35,7 +35,7 @@ const steps = [
 <template>
     <ol
         class="grid gap-2 rounded-[1.75rem] border bg-card/85 p-3 shadow-[0_18px_60px_-44px_rgba(20,47,43,0.45)] backdrop-blur md:grid-cols-3"
-        aria-label="Tahapan submission"
+        aria-label="Tahapan pengajuan surat"
     >
         <li
             v-for="(step, index) in steps"

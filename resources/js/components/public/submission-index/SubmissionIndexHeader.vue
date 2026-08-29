@@ -12,10 +12,10 @@ import publicRoutes from '@/routes/public';
         <div>
             <p class="text-sm font-semibold text-primary">Surat Saya</p>
             <h1 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-                Kelola submission surat
+                Kelola pengajuan surat
             </h1>
             <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Hanya submission milik akun Anda yang ditampilkan oleh server.
+                Sistem hanya menampilkan pengajuan surat milik akun Anda.
             </p>
         </div>
         <Button class="min-h-11 cursor-pointer rounded-xl px-5" as-child>

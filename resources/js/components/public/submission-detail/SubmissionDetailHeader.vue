@@ -51,7 +51,12 @@ defineProps<{ submission: LetterSubmission }>();
                 <Link
                     :href="publicRoutes.submissions.edit(submission.public_id)"
                 >
-                    <FilePenLine class="size-4" />Lengkapi draft
+                    <FilePenLine class="size-4" />
+                    {{
+                        submission.status === 'REVISION_REQUIRED'
+                            ? 'Perbaiki surat'
+                            : 'Lengkapi draft'
+                    }}
                 </Link>
             </Button>
         </div>

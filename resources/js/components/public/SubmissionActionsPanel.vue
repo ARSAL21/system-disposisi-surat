@@ -51,7 +51,10 @@ function deleteDraft(): void {
 
 <template>
     <section
-        v-if="submission.status === 'DRAFT'"
+        v-if="
+            submission.capabilities.can_submit ||
+            submission.capabilities.can_delete
+        "
         class="rounded-[1.75rem] border bg-card p-5 shadow-[0_20px_70px_-52px_rgba(16,58,52,0.55)] sm:p-7"
     >
         <div
@@ -59,13 +62,18 @@ function deleteDraft(): void {
         >
             <div>
                 <h2 class="text-xl font-semibold tracking-tight">
-                    Kirim ke Bagian Umum
+                    {{
+                        submission.status === 'REVISION_REQUIRED'
+                            ? 'Kirim ulang ke Bagian Umum'
+                            : 'Kirim ke Bagian Umum'
+                    }}
                 </h2>
                 <p
                     class="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground"
                 >
-                    Periksa metadata dan dokumen terlebih dahulu. Setelah
-                    dikirim, draft tidak dapat diperbarui atau dihapus.
+                    Periksa data surat dan dokumen terlebih dahulu. Setelah
+                    dikirim, pengajuan surat kembali dikunci selama
+                    pemeriksaan.
                 </p>
                 <p
                     v-if="!submission.document"
@@ -101,7 +109,11 @@ function deleteDraft(): void {
                     @click="submitOpen = true"
                 >
                     <Send class="size-4" />
-                    Kirim submission
+                    {{
+                        submission.status === 'REVISION_REQUIRED'
+                            ? 'Kirim ulang'
+                            : 'Kirim pengajuan'
+                    }}
                 </Button>
             </div>
         </div>
@@ -110,10 +122,16 @@ function deleteDraft(): void {
     <Dialog v-model:open="submitOpen">
         <DialogContent class="rounded-[1.5rem] sm:max-w-lg">
             <DialogHeader>
-                <DialogTitle>Kirim submission sekarang?</DialogTitle>
+                <DialogTitle>
+                    {{
+                        submission.status === 'REVISION_REQUIRED'
+                            ? 'Kirim ulang pengajuan surat?'
+                            : 'Kirim pengajuan surat sekarang?'
+                    }}
+                </DialogTitle>
                 <DialogDescription class="leading-relaxed">
-                    Metadata dan dokumen akan dikunci. Submission kemudian masuk
-                    ke antrean pemeriksaan administratif Bagian Umum.
+                    Data surat dan dokumen akan dikunci. Pengajuan kemudian
+                    masuk ke antrean pemeriksaan Bagian Umum.
                 </DialogDescription>
             </DialogHeader>
             <DialogFooter class="gap-2 sm:gap-0">
@@ -141,7 +159,7 @@ function deleteDraft(): void {
             <DialogHeader>
                 <DialogTitle>Hapus draft ini?</DialogTitle>
                 <DialogDescription class="leading-relaxed">
-                    Metadata dan PDF yang tersimpan akan dihapus. Audit
+                    Data surat dan PDF yang tersimpan akan dihapus. Catatan
                     penghapusan tetap dipertahankan untuk keamanan sistem.
                 </DialogDescription>
             </DialogHeader>

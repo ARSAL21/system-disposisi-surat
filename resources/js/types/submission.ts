@@ -1,5 +1,11 @@
 export type SubmissionStatus =
-    'DRAFT' | 'SUBMITTED' | 'REGISTERED' | 'REJECTED';
+    | 'DRAFT'
+    | 'SUBMITTED'
+    | 'REVISION_REQUIRED'
+    | 'READY_FOR_APPROVAL'
+    | 'INTERNAL_REVISION_REQUIRED'
+    | 'REGISTERED'
+    | 'REJECTED';
 
 export type SubmissionDocument = {
     original_filename: string;
@@ -31,6 +37,8 @@ export type LetterSubmission = {
     submitted_at: string | null;
     created_at: string | null;
     updated_at: string | null;
+    revision_note: string | null;
+    rejection_note: string | null;
     document: SubmissionDocument | null;
     capabilities: SubmissionCapabilities;
 };

@@ -19,6 +19,9 @@ export type AuthCapabilities = {
     can_manage_organization: boolean;
     can_manage_position_assignments: boolean;
     can_view_privilege_audits: boolean;
+    can_view_intake: boolean;
+    can_screen_intake: boolean;
+    can_decide_intake: boolean;
 };
 
 export type Auth = {

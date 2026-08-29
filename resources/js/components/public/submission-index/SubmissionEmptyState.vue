@@ -15,7 +15,7 @@ import publicRoutes from '@/routes/public';
             <Inbox class="size-6" />
         </span>
         <h2 class="mt-5 text-xl font-semibold tracking-tight">
-            Belum ada submission
+            Belum ada pengajuan surat
         </h2>
         <p class="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
             Buat draft pertama Anda. PDF dapat ditambahkan setelah informasi
@@ -23,7 +23,7 @@ import publicRoutes from '@/routes/public';
         </p>
         <Button class="mt-6 min-h-11 cursor-pointer rounded-xl px-5" as-child>
             <Link :href="publicRoutes.submissions.create()">
-                <FilePlus2 class="size-4" />Buat submission pertama
+                <FilePlus2 class="size-4" />Buat pengajuan pertama
             </Link>
         </Button>
     </section>

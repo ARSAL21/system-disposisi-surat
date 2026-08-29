@@ -11,7 +11,7 @@ defineProps<{ pagination: PaginatedSubmissions }>();
     <nav
         v-if="pagination.meta.last_page > 1"
         class="flex flex-col gap-4 rounded-2xl border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-        aria-label="Paginasi submission"
+        aria-label="Navigasi halaman pengajuan surat"
     >
         <p class="text-sm text-muted-foreground">
             Menampilkan
@@ -22,7 +22,7 @@ defineProps<{ pagination: PaginatedSubmissions }>();
             <span class="font-semibold text-foreground">{{
                 pagination.meta.total
             }}</span>
-            submission
+            pengajuan surat
         </p>
         <div class="flex items-center gap-2">
             <Button
