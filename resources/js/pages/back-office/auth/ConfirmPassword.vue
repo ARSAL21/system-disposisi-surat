@@ -6,7 +6,7 @@ defineOptions({
     layout: {
         title: 'Konfirmasi akses administratif',
         description:
-            'Area ini memerlukan verifikasi ulang sebelum konfigurasi privilege dapat diubah.',
+            'Area ini memerlukan verifikasi ulang sebelum data administratif sensitif dapat diubah.',
     },
 });
 

@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { History, LayoutDashboard, ShieldCheck } from '@lucide/vue';
+import {
+    History,
+    LayoutDashboard,
+    Network,
+    ShieldCheck,
+    UserRoundCog,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -39,6 +45,26 @@ const mainNavItems = computed<NavItem[]>(() => {
             icon: ShieldCheck,
             isActive: currentPath.value === authorizationIndex.url(),
         });
+    }
+
+    if (page.props.auth.capabilities.can_view_organization) {
+        items.push(
+            {
+                title: 'Struktur Organisasi',
+                href: '/back-office/organization/structure',
+                icon: Network,
+                isActive:
+                    currentPath.value === '/back-office/organization/structure',
+            },
+            {
+                title: 'Penugasan Jabatan',
+                href: '/back-office/organization/assignments',
+                icon: UserRoundCog,
+                isActive:
+                    currentPath.value ===
+                    '/back-office/organization/assignments',
+            },
+        );
     }
 
     if (page.props.auth.capabilities.can_view_privilege_audits) {

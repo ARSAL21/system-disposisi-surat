@@ -15,6 +15,8 @@ export type User = {
 export type AuthCapabilities = {
     can_view_authorization: boolean;
     can_manage_authorization: boolean;
+    can_view_organization: boolean;
+    can_manage_organization: boolean;
     can_manage_position_assignments: boolean;
     can_view_privilege_audits: boolean;
 };

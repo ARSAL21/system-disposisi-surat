@@ -26,8 +26,8 @@ function submit(): void {
         <KeyRound class="text-violet-700 dark:text-violet-300" />
         <AlertTitle>Step-up security</AlertTitle>
         <AlertDescription class="leading-6">
-            Konfirmasi ini membuka mode perubahan RBAC selama 15 menit. MFA dan
-            authorization tetap diverifikasi pada setiap request.
+            Konfirmasi ini membuka mode perubahan administratif selama 15 menit.
+            MFA dan authorization tetap diverifikasi pada setiap request.
         </AlertDescription>
     </Alert>
 
