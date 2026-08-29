@@ -30,7 +30,9 @@ class GetIntakeApprovalWorkspace
         $submissions = (clone $baseQuery)
             ->with([
                 'document',
+                'reviews.createdBy',
                 'latestReview.createdBy',
+                'decisions.createdBy',
                 'latestDecision.createdBy',
                 'incomingLetter.senderOrganization',
             ])

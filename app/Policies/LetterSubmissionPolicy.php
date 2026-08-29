@@ -117,13 +117,7 @@ class LetterSubmissionPolicy
 
     public function decideIntake(User $user, LetterSubmission $submission): Response
     {
-        if (! $this->viewApproval($user, $submission)->allowed()) {
-            return Response::denyAsNotFound();
-        }
-
-        return $submission->status === SubmissionStatus::ReadyForApproval
-            ? Response::allow()
-            : Response::denyAsNotFound();
+        return $this->viewApproval($user, $submission);
     }
 
     public function downloadApprovalDocument(User $user, LetterSubmission $submission): Response
