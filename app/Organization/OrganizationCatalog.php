@@ -4,6 +4,12 @@ namespace App\Organization;
 
 final class OrganizationCatalog
 {
+    public const string GENERAL_AFFAIRS_LEVEL = 'GENERAL_AFFAIRS';
+
+    public const string SECTION_HEAD_LEVEL = 'SECTION_HEAD';
+
+    public const string GENERAL_AFFAIRS_UNIT = 'BAGIAN_UMUM';
+
     /**
      * @return list<array{code: string, name: string, hierarchy_order: int, is_active: bool}>
      */
@@ -11,7 +17,7 @@ final class OrganizationCatalog
     {
         return [
             [
-                'code' => 'GENERAL_AFFAIRS',
+                'code' => self::GENERAL_AFFAIRS_LEVEL,
                 'name' => 'Bagian Umum / Tata Usaha',
                 'hierarchy_order' => 10,
                 'is_active' => true,
@@ -29,7 +35,7 @@ final class OrganizationCatalog
                 'is_active' => true,
             ],
             [
-                'code' => 'SECTION_HEAD',
+                'code' => self::SECTION_HEAD_LEVEL,
                 'name' => 'Kepala Bagian',
                 'hierarchy_order' => 40,
                 'is_active' => true,

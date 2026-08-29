@@ -6,8 +6,10 @@ use App\Enums\SubmissionSource;
 use App\Enums\SubmissionStatus;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
@@ -31,6 +33,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property-read User|null $submitter
  * @property-read User|null $recorder
  * @property-read SubmissionDocument|null $document
+ * @property-read Collection<int, SubmissionReview> $reviews
+ * @property-read SubmissionReview|null $latestReview
+ * @property-read Collection<int, SubmissionDecision> $decisions
+ * @property-read SubmissionDecision|null $latestDecision
+ * @property-read IncomingLetter|null $incomingLetter
  */
 class LetterSubmission extends Model
 {
@@ -68,6 +75,44 @@ class LetterSubmission extends Model
     public function document(): HasOne
     {
         return $this->hasOne(SubmissionDocument::class);
+    }
+
+    /** @return HasMany<SubmissionReview, $this> */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(SubmissionReview::class);
+    }
+
+    /** @return HasOne<SubmissionReview, $this> */
+    public function latestReview(): HasOne
+    {
+        return $this->hasOne(SubmissionReview::class)->latestOfMany();
+    }
+
+    /** @return HasMany<SubmissionDecision, $this> */
+    public function decisions(): HasMany
+    {
+        return $this->hasMany(SubmissionDecision::class);
+    }
+
+    /** @return HasOne<SubmissionDecision, $this> */
+    public function latestDecision(): HasOne
+    {
+        return $this->hasOne(SubmissionDecision::class)->latestOfMany();
+    }
+
+    /** @return HasOne<IncomingLetter, $this> */
+    public function incomingLetter(): HasOne
+    {
+        return $this->hasOne(IncomingLetter::class);
+    }
+
+    public function isPubliclyEditable(): bool
+    {
+        return in_array($this->status, [
+            SubmissionStatus::Draft,
+            SubmissionStatus::RevisionRequired,
+        ], true);
     }
 
     /**

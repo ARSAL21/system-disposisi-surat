@@ -11,7 +11,14 @@ enum AuditAction: string
     case SubmissionUpdated = 'SUBMISSION_UPDATED';
     case SubmissionDocumentReplaced = 'SUBMISSION_DOCUMENT_REPLACED';
     case SubmissionSubmitted = 'SUBMISSION_SUBMITTED';
+    case SubmissionResubmitted = 'SUBMISSION_RESUBMITTED';
+    case SubmissionRevisionRequested = 'SUBMISSION_REVISION_REQUESTED';
+    case SubmissionReadyForApproval = 'SUBMISSION_READY_FOR_APPROVAL';
+    case SubmissionReturnedToStaff = 'SUBMISSION_RETURNED_TO_STAFF';
+    case SubmissionRejected = 'SUBMISSION_REJECTED';
     case SubmissionDraftDeleted = 'SUBMISSION_DRAFT_DELETED';
+    case LetterRegistered = 'LETTER_REGISTERED';
+    case DocumentVersionCreated = 'DOCUMENT_VERSION_CREATED';
     case PositionAssigned = 'POSITION_ASSIGNED';
     case PositionHolderReplaced = 'POSITION_HOLDER_REPLACED';
     case PositionAssignmentEnded = 'POSITION_ASSIGNMENT_ENDED';

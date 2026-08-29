@@ -18,15 +18,15 @@ final class AuthorizationCatalog
             static fn (PermissionName $permission): array => match ($permission) {
                 PermissionName::ViewAuthorization => [
                     'name' => $permission->value,
-                    'label' => 'Lihat konfigurasi otorisasi',
-                    'description' => 'Membaca role, permission resmi, dan assignment role user internal.',
-                    'group' => 'Otorisasi',
+                    'label' => 'Lihat pengaturan peran dan hak akses',
+                    'description' => 'Melihat peran, daftar hak akses resmi, dan penetapan peran akun pegawai.',
+                    'group' => 'Peran dan Hak Akses',
                 ],
                 PermissionName::ManageAuthorization => [
                     'name' => $permission->value,
-                    'label' => 'Kelola otorisasi',
-                    'description' => 'Membuat custom role, mengatur permission, dan mengelola assignment role.',
-                    'group' => 'Otorisasi',
+                    'label' => 'Kelola peran dan hak akses',
+                    'description' => 'Membuat peran khusus, mengatur hak akses, dan menetapkan peran akun pegawai.',
+                    'group' => 'Peran dan Hak Akses',
                 ],
                 PermissionName::ViewOrganization => [
                     'name' => $permission->value,
@@ -43,14 +43,32 @@ final class AuthorizationCatalog
                 PermissionName::ManagePositionAssignments => [
                     'name' => $permission->value,
                     'label' => 'Kelola penugasan jabatan',
-                    'description' => 'Mengelola lifecycle Position Assignment tanpa mengubah hierarki organisasi.',
+                    'description' => 'Mengelola masa penugasan pejabat tanpa mengubah hierarki organisasi.',
                     'group' => 'Organisasi',
                 ],
                 PermissionName::ViewPrivilegeAudits => [
                     'name' => $permission->value,
-                    'label' => 'Lihat audit perubahan privilege',
-                    'description' => 'Membaca jejak provisioning akun internal serta perubahan role dan permission.',
-                    'group' => 'Audit & Keamanan',
+                    'label' => 'Lihat audit perubahan hak akses',
+                    'description' => 'Melihat riwayat pembuatan akun pegawai serta perubahan peran dan hak akses.',
+                    'group' => 'Audit dan Keamanan',
+                ],
+                PermissionName::ViewIntake => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat antrean penerimaan surat',
+                    'description' => 'Melihat pengajuan surat yang masuk untuk diperiksa oleh Bagian Umum.',
+                    'group' => 'Penerimaan Surat',
+                ],
+                PermissionName::ScreenIntake => [
+                    'name' => $permission->value,
+                    'label' => 'Periksa pengajuan surat',
+                    'description' => 'Meminta pengirim memperbaiki surat atau mengajukannya kepada Kepala Bagian Umum.',
+                    'group' => 'Penerimaan Surat',
+                ],
+                PermissionName::DecideIntake => [
+                    'name' => $permission->value,
+                    'label' => 'Putuskan dan registrasikan surat',
+                    'description' => 'Mengembalikan hasil pemeriksaan kepada petugas, menolak pengajuan, atau meregistrasikannya sebagai surat masuk resmi.',
+                    'group' => 'Penerimaan Surat',
                 ],
             },
             PermissionName::cases(),
@@ -91,6 +109,9 @@ final class AuthorizationCatalog
                 PermissionName::ManageOrganization->value,
                 PermissionName::ManagePositionAssignments->value,
                 PermissionName::ViewPrivilegeAudits->value,
+                PermissionName::ViewIntake->value,
+                PermissionName::ScreenIntake->value,
+                PermissionName::DecideIntake->value,
             ],
         };
     }
