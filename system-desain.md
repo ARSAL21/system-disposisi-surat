@@ -607,6 +607,19 @@ ditinjau. Staf tidak dapat menolak atau meregistrasikan surat. Kepala Bagian
 Umum dapat mengembalikan hasil screening kepada staf, menolak secara
 administratif, atau mengesahkan registrasi.
 
+Pemisahan jabatan operasional pada implementasi:
+
+```text
+Staf Administrasi Surat
+→ Position Level GENERAL_AFFAIRS
+
+Kepala Bagian Umum
+→ Position Level SECTION_HEAD
+→ Organizational Unit berkode BAGIAN_UMUM
+```
+
+Permission tidak menggantikan kedua batas Position Assignment tersebut.
+
 ## Manual Intake
 
 ```text
@@ -824,9 +837,12 @@ Public User hanya dapat mengakses submission yang sah miliknya.
 
 ## Bagian Umum
 
-Staf dan Kepala Bagian Umum dapat mengakses intake queue sesuai permission dan
-Position Assignment aktif pada level `GENERAL_AFFAIRS`. Staf melakukan screening
-teknis, sedangkan Kepala Bagian Umum mengambil keputusan administratif resmi.
+Staf dan Kepala Bagian Umum mengakses meja kerja yang terpisah. Staf memerlukan
+permission intake yang sesuai dan Position Assignment aktif pada level
+`GENERAL_AFFAIRS`. Kepala Bagian Umum memerlukan `intake.decide` serta Position
+Assignment aktif pada level `SECTION_HEAD` di unit berkode `BAGIAN_UMUM`.
+Staf melakukan screening teknis, sedangkan Kepala Bagian Umum mengambil
+keputusan administratif resmi.
 
 ## Internal Letter
 
@@ -918,13 +934,16 @@ SUBMISSION_SUBMITTED
 SUBMISSION_RESUBMITTED
 SUBMISSION_REVISION_REQUESTED
 SUBMISSION_READY_FOR_APPROVAL
+SUBMISSION_RETURNED_TO_STAFF
+SUBMISSION_REJECTED
 ```
 
 Contoh Bagian Umum:
 
 ```text
 MANUAL_SUBMISSION_CREATED
-INCOMING_LETTER_REGISTERED
+LETTER_REGISTERED
+DOCUMENT_VERSION_CREATED
 LETTER_ROUTED
 ```
 

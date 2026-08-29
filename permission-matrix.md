@@ -77,6 +77,22 @@ terverifikasi, dan memiliki tepat satu Position Assignment aktif pada level
 hak menolak atau meregistrasikan surat. Capability keputusan Kepala Bagian Umum
 ditambahkan pada slice registrasi berikutnya.
 
+## Penambahan M3.2 Keputusan Kepala Bagian Umum
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `intake.decide` | Katalog capability untuk mengembalikan hasil screening kepada petugas, menolak pengajuan, atau meregistrasikan surat masuk resmi. |
+
+Permission dapat diberikan kepada custom role operasional, tetapi tidak cukup
+untuk membuka meja keputusan. Actor tetap wajib memakai account `INTERNAL` yang
+aktif dan terverifikasi serta mempunyai tepat satu Position Assignment aktif
+pada level `SECTION_HEAD` di Organizational Unit berkode `BAGIAN_UMUM`.
+
+`intake.decide` tidak memberikan hak screening awal. Sebaliknya,
+`intake.screen` tidak memberikan hak menolak atau meregistrasikan surat.
+`super-admin` yang tidak menduduki Position tersebut tetap tidak dapat membaca
+atau memutuskan submission pada meja Kepala Bagian Umum.
+
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
 Alur administrative console:

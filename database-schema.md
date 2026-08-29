@@ -495,6 +495,42 @@ created_at
 (letter_submission_id, created_at)
 ```
 
+## `submission_decisions`
+
+Menyimpan keputusan administratif Kepala Bagian Umum sebagai histori domain
+append-only. Record ini bukan audit log dan tidak dapat diedit atau dihapus.
+
+| Column                            | Type        | Constraint                         |
+| --------------------------------- | ----------- | ---------------------------------- |
+| id                                | bigint      | PK                                 |
+| letter_submission_id              | bigint      | FK → letter_submissions.id         |
+| outcome                           | varchar(40) | required                           |
+| note                              | text        | nullable                           |
+| created_by_user_id                | bigint      | FK → users.id                      |
+| created_by_position_assignment_id | bigint      | FK → position_assignments.id       |
+| created_at                        | timestamp   | required                           |
+
+Nilai outcome:
+
+```text
+INTERNAL_REVISION_REQUIRED
+REJECTED
+REGISTERED
+```
+
+Alasan wajib untuk pengembalian internal dan penolakan. Keputusan registrasi
+dihubungkan dengan `IncomingLetter` melalui `letter_submission_id`, bukan dengan
+menyimpan ulang foreign key yang sama pada decision.
+
+Index:
+
+```text
+letter_submission_id
+outcome
+created_at
+(letter_submission_id, created_at)
+```
+
 ---
 
 # 8. Surat Masuk
@@ -977,6 +1013,8 @@ SUBMISSION_SUBMITTED
 SUBMISSION_RESUBMITTED
 SUBMISSION_REVISION_REQUESTED
 SUBMISSION_READY_FOR_APPROVAL
+SUBMISSION_RETURNED_TO_STAFF
+SUBMISSION_REJECTED
 SUBMISSION_DRAFT_DELETED
 
 LETTER_REGISTERED
@@ -1058,6 +1096,8 @@ Frontend tidak boleh langsung menentukan status surat.
 * `submitted_at` null pada `DRAFT` dan wajib terisi mulai `SUBMITTED`.
 * Screening staf memerlukan permission eksplisit dan Position Assignment aktif pada level `GENERAL_AFFAIRS`.
 * Hasil screening disimpan append-only pada `submission_reviews` dan tidak dapat diedit atau dihapus.
+* Keputusan Kepala Bagian Umum disimpan append-only pada `submission_decisions`.
+* Keputusan memerlukan permission `intake.decide` dan Position Assignment aktif pada level `SECTION_HEAD` di unit berkode `BAGIAN_UMUM`.
 * Setiap transition dan mutasi penting menghasilkan append-only audit.
 
 Invariant berikut wajib dijaga oleh Service + Policy + automated test.
@@ -1135,6 +1175,7 @@ Pengecualian terkontrol adalah `letter_submissions` berstatus `DRAFT` beserta ac
 ```text
 incoming_letters
 letter_documents
+submission_decisions
 letter_routes
 dispositions
 disposition_recipients
@@ -1219,6 +1260,11 @@ submission_documents:
 - sha256
 
 submission_reviews:
+- letter_submission_id
+- outcome
+- letter_submission_id + created_at
+
+submission_decisions:
 - letter_submission_id
 - outcome
 - letter_submission_id + created_at
@@ -1420,6 +1466,7 @@ sender_organizations
 letter_submissions
 submission_documents
 submission_reviews
+submission_decisions
 
 incoming_letters
 letter_documents
