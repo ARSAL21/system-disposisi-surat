@@ -43,7 +43,7 @@ class IntakeSubmissionController extends Controller
     {
         Gate::authorize('viewIntake', $submission);
 
-        $submission->load(['document', 'reviews']);
+        $submission->load(['document', 'reviews', 'decisions', 'latestDecision']);
 
         return Inertia::render('back-office/intake/submissions/Show', [
             'submission' => (new IntakeSubmissionResource($submission))->resolve($request),

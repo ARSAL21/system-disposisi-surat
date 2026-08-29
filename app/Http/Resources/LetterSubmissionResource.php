@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Enums\SubmissionStatus;
 use App\Models\LetterSubmission;
 use App\Models\SubmissionDocument;
+use App\Models\SubmissionDecision;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
@@ -35,6 +36,11 @@ class LetterSubmissionResource extends JsonResource
             'revision_note' => $this->status === SubmissionStatus::RevisionRequired
                 && $this->relationLoaded('latestReview')
                 ? $this->latestReview?->note
+                : null,
+            'rejection_note' => $this->status === SubmissionStatus::Rejected
+                && $this->relationLoaded('latestDecision')
+                && $this->latestDecision instanceof SubmissionDecision
+                ? $this->latestDecision->note
                 : null,
             'document' => $this->whenLoaded('document', function (): ?array {
                 if (! $this->document instanceof SubmissionDocument) {

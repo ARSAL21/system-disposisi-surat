@@ -9,6 +9,7 @@ use App\Intake\SubmissionScreeningChecklist;
 use App\Models\LetterSubmission;
 use App\Models\SubmissionDocument;
 use App\Models\SubmissionReview;
+use App\Models\SubmissionDecision;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -42,9 +43,13 @@ class IntakeSubmissionResource extends JsonResource
                 : null,
             'checklist' => SubmissionScreeningChecklist::present($latestReview?->checklist),
             'latest_note' => $latestReview?->note,
+            'internal_revision_note' => $this->internalRevisionNote(),
             'timeline' => $this->timeline(),
             'capabilities' => [
-                'can_screen' => $this->status === SubmissionStatus::Submitted
+                'can_screen' => in_array($this->status, [
+                    SubmissionStatus::Submitted,
+                    SubmissionStatus::InternalRevisionRequired,
+                ], true)
                     && Gate::allows('screenIntake', $this->resource),
                 'can_download_document' => $document instanceof SubmissionDocument
                     && Gate::allows('downloadIntakeDocument', $this->resource),
@@ -127,11 +132,28 @@ class IntakeSubmissionResource extends JsonResource
             ];
         }
 
-        if ($this->status === SubmissionStatus::Submitted) {
+        foreach ($this->loadedDecisions() as $decision) {
+            $items[] = [
+                'id' => 'decision-'.$decision->getKey(),
+                'title' => 'Dikembalikan oleh Kepala Bagian Umum',
+                'description' => $decision->note ?? 'Hasil pemeriksaan perlu disempurnakan secara internal.',
+                'occurred_at' => $decision->created_at->toISOString(),
+                'state' => 'complete',
+            ];
+        }
+
+        if (in_array($this->status, [
+            SubmissionStatus::Submitted,
+            SubmissionStatus::InternalRevisionRequired,
+        ], true)) {
             $items[] = [
                 'id' => 'awaiting-screening',
-                'title' => 'Menunggu pemeriksaan awal',
-                'description' => 'Belum ada hasil pemeriksaan staf untuk pengiriman terbaru.',
+                'title' => $this->status === SubmissionStatus::InternalRevisionRequired
+                    ? 'Menunggu perbaikan internal'
+                    : 'Menunggu pemeriksaan awal',
+                'description' => $this->status === SubmissionStatus::InternalRevisionRequired
+                    ? 'Petugas perlu menindaklanjuti catatan Kepala Bagian Umum.'
+                    : 'Belum ada hasil pemeriksaan staf untuk pengiriman terbaru.',
                 'occurred_at' => null,
                 'state' => 'current',
             ];
@@ -150,5 +172,32 @@ class IntakeSubmissionResource extends JsonResource
         $latestReview = $this->latestLoadedReview();
 
         return new Collection($latestReview === null ? [] : [$latestReview]);
+    }
+
+    private function internalRevisionNote(): ?string
+    {
+        if ($this->status !== SubmissionStatus::InternalRevisionRequired
+            || ! $this->relationLoaded('latestDecision')) {
+            return null;
+        }
+
+        return $this->latestDecision instanceof SubmissionDecision
+            ? $this->latestDecision->note
+            : null;
+    }
+
+    /** @return Collection<int, SubmissionDecision> */
+    private function loadedDecisions(): Collection
+    {
+        if ($this->relationLoaded('decisions')) {
+            return $this->decisions->sortBy('id')->values();
+        }
+
+        if ($this->relationLoaded('latestDecision')
+            && $this->latestDecision instanceof SubmissionDecision) {
+            return new Collection([$this->latestDecision]);
+        }
+
+        return new Collection;
     }
 }

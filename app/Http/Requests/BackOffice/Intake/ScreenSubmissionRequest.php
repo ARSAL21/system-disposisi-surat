@@ -5,6 +5,7 @@ namespace App\Http\Requests\BackOffice\Intake;
 use App\Enums\SubmissionReviewOutcome;
 use App\Intake\SubmissionScreeningChecklist;
 use App\Models\LetterSubmission;
+use App\Enums\SubmissionStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -49,6 +50,17 @@ class ScreenSubmissionRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $submission = $this->route('submission');
+
+            if ($submission instanceof LetterSubmission
+                && $submission->status === SubmissionStatus::InternalRevisionRequired
+                && $this->input('outcome') !== SubmissionReviewOutcome::ReadyForApproval->value) {
+                $validator->errors()->add(
+                    'outcome',
+                    'Perbaikan internal hanya dapat diajukan kembali kepada Kepala Bagian Umum.',
+                );
+            }
+
             if ($validator->errors()->has('checklist')) {
                 return;
             }

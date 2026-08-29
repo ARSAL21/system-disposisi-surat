@@ -31,7 +31,7 @@ class ScreenSubmissionController extends Controller
             checklist: $checklist,
             note: $request->validated('note'),
         );
-        $submission->load(['document', 'reviews']);
+        $submission->load(['document', 'reviews', 'decisions', 'latestDecision']);
 
         if ($request->expectsJson()) {
             return new IntakeSubmissionResource($submission);

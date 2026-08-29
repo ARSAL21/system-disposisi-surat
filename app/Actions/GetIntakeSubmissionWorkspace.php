@@ -23,7 +23,7 @@ class GetIntakeSubmissionWorkspace
             ->where('status', '!=', SubmissionStatus::Draft->value);
 
         $submissions = (clone $baseQuery)
-            ->with(['document', 'latestReview'])
+            ->with(['document', 'latestReview', 'latestDecision'])
             ->when($filters['search'] !== '', function (Builder $query) use ($filters): void {
                 $search = $filters['search'];
                 $query->where(fn (Builder $query) => $query

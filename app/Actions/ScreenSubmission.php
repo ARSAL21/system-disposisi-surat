@@ -37,9 +37,14 @@ class ScreenSubmission
                 ->whereKey($submission->getKey())
                 ->firstOrFail();
 
-            if ($lockedSubmission->status !== SubmissionStatus::Submitted) {
-                throw SubmissionStateConflict::expectedSubmitted($lockedSubmission->status);
+            if (! in_array($lockedSubmission->status, [
+                SubmissionStatus::Submitted,
+                SubmissionStatus::InternalRevisionRequired,
+            ], true)) {
+                throw SubmissionStateConflict::expectedScreenable($lockedSubmission->status);
             }
+
+            $previousStatus = $lockedSubmission->status;
 
             $positionAssignment = $this->positionAssignmentResolver
                 ->lockActiveAssignment($actor);
@@ -50,6 +55,13 @@ class ScreenSubmission
                 && $normalizedNote === '') {
                 throw ValidationException::withMessages([
                     'note' => 'A correction note is required.',
+                ]);
+            }
+
+            if ($previousStatus === SubmissionStatus::InternalRevisionRequired
+                && $outcome !== SubmissionReviewOutcome::ReadyForApproval) {
+                throw ValidationException::withMessages([
+                    'outcome' => 'Perbaikan internal hanya dapat diajukan kembali kepada Kepala Bagian Umum.',
                 ]);
             }
 
@@ -87,7 +99,7 @@ class ScreenSubmission
                 },
                 subjectType: 'letter_submission',
                 subjectId: $lockedSubmission->getKey(),
-                oldValues: ['status' => SubmissionStatus::Submitted->value],
+                oldValues: ['status' => $previousStatus->value],
                 newValues: ['status' => $outcome->submissionStatus()->value],
                 metadata: [
                     'public_id' => $lockedSubmission->public_id,
