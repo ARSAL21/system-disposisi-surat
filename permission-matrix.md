@@ -63,6 +63,20 @@ Permission ini terpisah dari `authorization.view`. Custom role auditor dapat
 menerimanya secara eksplisit tanpa memperoleh capability untuk melihat atau
 mengubah konfigurasi RBAC.
 
+## Penambahan M3.1 Review Submission
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `intake.view` | Permission katalog untuk membaca antrean dan detail intake. |
+| `super-admin` | `intake.screen` | Permission katalog untuk meminta koreksi publik atau mengajukan submission kepada Kepala Bagian Umum. |
+
+Permission tersebut dapat diberikan kepada custom role operasional. Permission
+saja tidak memberikan visibility surat: account tetap wajib `INTERNAL`, aktif,
+terverifikasi, dan memiliki tepat satu Position Assignment aktif pada level
+`GENERAL_AFFAIRS` ketika menjalankan screening. `intake.screen` tidak memberikan
+hak menolak atau meregistrasikan surat. Capability keputusan Kepala Bagian Umum
+ditambahkan pada slice registrasi berikutnya.
+
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
 Alur administrative console:

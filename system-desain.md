@@ -84,7 +84,7 @@ Aturan utama:
 * Public User hanya dapat mengirim surat melalui kanal online.
 * Pengirim manual tidak wajib memiliki account.
 * Submission belum otomatis menjadi `IncomingLetter`.
-* Hanya Bagian Umum yang dapat melakukan registrasi surat masuk resmi.
+* Hanya Kepala Bagian Umum yang dapat mengesahkan registrasi surat masuk resmi.
 * Surat resmi diarahkan ke Wali Kota atau Sekda.
 * Wali Kota dan Sekda berada pada level penerimaan awal yang sama.
 * Disposisi wajib mengikuti hierarchy.
@@ -590,7 +590,22 @@ Submit
 Bagian Umum Queue
 ```
 
-Bagian Umum kemudian menentukan apakah submission dapat diregistrasi.
+Submission online melewati dua lapis tanggung jawab:
+
+```text
+Staf administrasi Bagian Umum
+    ↓
+periksa identitas, metadata, PDF, dan scope surat
+    ↓
+Kepala Bagian Umum
+    ↓
+keputusan administratif resmi
+```
+
+Staf dapat meminta koreksi kepada pengirim atau menyatakan submission siap
+ditinjau. Staf tidak dapat menolak atau meregistrasikan surat. Kepala Bagian
+Umum dapat mengembalikan hasil screening kepada staf, menolak secara
+administratif, atau mengesahkan registrasi.
 
 ## Manual Intake
 
@@ -612,14 +627,18 @@ Manual intake boleh lebih cepat secara operasional, tetapi tetap melewati domain
 
 # 14. Registrasi Surat Masuk
 
-Hanya Bagian Umum yang dapat mengubah submission menjadi IncomingLetter.
+Hanya Kepala Bagian Umum yang berwenang mengesahkan perubahan submission
+menjadi `IncomingLetter`. Staf administrasi menyiapkan hasil screening, tetapi
+tidak mengambil keputusan resmi.
 
 Alur:
 
 ```text
 Submission
       ↓
-Bagian Umum memastikan data administratif
+Staf memastikan kelengkapan administratif
+      ↓
+Kepala Bagian Umum mengesahkan
       ↓
 Register Incoming Letter
       ↓
@@ -805,7 +824,9 @@ Public User hanya dapat mengakses submission yang sah miliknya.
 
 ## Bagian Umum
 
-Bagian Umum dapat mengakses intake queue sesuai permission dan melakukan registrasi.
+Staf dan Kepala Bagian Umum dapat mengakses intake queue sesuai permission dan
+Position Assignment aktif pada level `GENERAL_AFFAIRS`. Staf melakukan screening
+teknis, sedangkan Kepala Bagian Umum mengambil keputusan administratif resmi.
 
 ## Internal Letter
 
@@ -894,6 +915,9 @@ Contoh public:
 ```text
 SUBMISSION_CREATED
 SUBMISSION_SUBMITTED
+SUBMISSION_RESUBMITTED
+SUBMISSION_REVISION_REQUESTED
+SUBMISSION_READY_FOR_APPROVAL
 ```
 
 Contoh Bagian Umum:
@@ -1112,21 +1136,22 @@ Future capability tidak boleh memaksa redesign terhadap:
 3. Online submission dibuat oleh authenticated + verified Public User.
 4. Manual submission dibuat oleh Bagian Umum dan tidak membutuhkan account pengirim.
 5. Submission bukan IncomingLetter.
-6. Hanya Bagian Umum yang dapat meregistrasikan IncomingLetter.
-7. Surat resmi selalu melewati Bagian Umum.
-8. IncomingLetter diarahkan ke Wali Kota atau Sekda.
-9. Disposisi tidak boleh melompati hierarchy.
-10. Kepala Bagian adalah terminal workflow formal MVP.
-11. Satu surat dapat mempunyai beberapa branch aktif.
-12. Role tidak digunakan sebagai pengganti Position.
-13. Public User tidak mempunyai Position Assignment internal.
-14. Internal privilege tidak dapat diperoleh melalui public registration.
-15. Authorization selalu server-side.
-16. System Administrator tidak otomatis mempunyai visibility seluruh surat.
-17. File disimpan private.
-18. Original document tidak ditimpa tanpa histori.
-19. Audit tidak dapat diedit melalui workflow aplikasi normal.
-20. Multi-resource business operation menjaga atomicity dan consistency.
+6. Staf Bagian Umum melakukan screening teknis, tetapi tidak dapat menolak atau meregistrasikan submission.
+7. Hanya Kepala Bagian Umum yang dapat mengesahkan registrasi IncomingLetter.
+8. Surat resmi selalu melewati Bagian Umum.
+9. IncomingLetter diarahkan ke Wali Kota atau Sekda.
+10. Disposisi tidak boleh melompati hierarchy.
+11. Kepala Bagian adalah terminal workflow formal MVP.
+12. Satu surat dapat mempunyai beberapa branch aktif.
+13. Role tidak digunakan sebagai pengganti Position.
+14. Public User tidak mempunyai Position Assignment internal.
+15. Internal privilege tidak dapat diperoleh melalui public registration.
+16. Authorization selalu server-side.
+17. System Administrator tidak otomatis mempunyai visibility seluruh surat.
+18. File disimpan private.
+19. Original document tidak ditimpa tanpa histori.
+20. Audit tidak dapat diedit melalui workflow aplikasi normal.
+21. Multi-resource business operation menjaga atomicity dan consistency.
 
 ---
 

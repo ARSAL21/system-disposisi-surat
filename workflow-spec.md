@@ -48,6 +48,9 @@ State submission:
 ```text
 DRAFT
 SUBMITTED
+REVISION_REQUIRED
+READY_FOR_APPROVAL
+INTERNAL_REVISION_REQUIRED
 REGISTERED
 REJECTED
 ```
@@ -58,15 +61,27 @@ Submission online telah dibuat oleh Public User, tetapi belum diserahkan ke Bagi
 
 ### `SUBMITTED`
 
-Submission telah diserahkan ke antrean Bagian Umum. Metadata dan dokumennya menjadi immutable, `submitted_at` ditetapkan oleh server, dan Public User tidak dapat menarik, mengubah, atau mengirim ulang submission tersebut pada MVP.
+Submission telah diserahkan ke antrean staf administrasi Bagian Umum. Metadata dan dokumennya immutable selama pemeriksaan, dan `submitted_at` ditetapkan oleh server.
+
+### `REVISION_REQUIRED`
+
+Staf administrasi menemukan kekurangan yang harus diperbaiki pengirim. Pemilik Public User dapat memperbarui metadata atau mengganti dokumen, tetapi tidak dapat menghapus submission. Setelah lengkap, pemilik mengirim ulang dan state kembali menjadi `SUBMITTED`.
+
+### `READY_FOR_APPROVAL`
+
+Submission telah lolos screening teknis staf dan menunggu keputusan administratif Kepala Bagian Umum. Public User dan staf tidak dapat mengubah metadata atau dokumen pada state ini.
+
+### `INTERNAL_REVISION_REQUIRED`
+
+Kepala Bagian Umum mengembalikan hasil screening kepada staf untuk diperbaiki secara internal. State ini tidak membuka akses perubahan kepada Public User. Staf dapat mengajukan ulang ke `READY_FOR_APPROVAL` setelah catatan internal dipenuhi.
 
 ### `REGISTERED`
 
-Bagian Umum menerima submission dan membuat tepat satu `IncomingLetter`. State ini final pada lifecycle submission. Perubahan setelah registrasi mengikuti lifecycle surat masuk dan versioning dokumen surat.
+Kepala Bagian Umum mengesahkan registrasi dan sistem membuat tepat satu `IncomingLetter`. State ini final pada lifecycle submission. Perubahan setelah registrasi mengikuti lifecycle surat masuk dan versioning dokumen surat.
 
 ### `REJECTED`
 
-Bagian Umum menolak submission disertai alasan administratif. State ini final pada MVP. Revision, reopening, dan resubmission tidak tersedia.
+Kepala Bagian Umum menolak submission disertai alasan administratif formal. State ini final pada MVP dan tidak dapat dibuka kembali.
 
 ---
 
@@ -76,17 +91,24 @@ Bagian Umum menolak submission disertai alasan administratif. State ini final pa
 DRAFT
   ↓
 SUBMITTED
-  ├──→ REGISTERED
-  └──→ REJECTED
+  ├──→ REVISION_REQUIRED ──→ SUBMITTED
+  └──→ READY_FOR_APPROVAL
+              ├──→ INTERNAL_REVISION_REQUIRED ──→ READY_FOR_APPROVAL
+              ├──→ REGISTERED
+              └──→ REJECTED
 ```
 
 Aturan:
 
 * hanya authenticated, verified, active Public User yang menjadi pemilik dapat menjalankan `DRAFT → SUBMITTED`;
+* pemilik yang sama dapat menjalankan `REVISION_REQUIRED → SUBMITTED` setelah melakukan koreksi;
 * transition hanya dilakukan server-side;
 * submission wajib memiliki metadata valid dan tepat satu dokumen PDF sebelum submit;
-* `SUBMITTED → REGISTERED` dan `SUBMITTED → REJECTED` merupakan tanggung jawab Bagian Umum pada M3;
-* transition mundur, withdrawal, reopening, dan resubmission tidak diperbolehkan pada MVP;
+* staf administrasi Bagian Umum hanya dapat menjalankan `SUBMITTED → REVISION_REQUIRED` atau `SUBMITTED → READY_FOR_APPROVAL`;
+* Kepala Bagian Umum menjalankan transition dari `READY_FOR_APPROVAL` ke `INTERNAL_REVISION_REQUIRED`, `REGISTERED`, atau `REJECTED`;
+* `INTERNAL_REVISION_REQUIRED → READY_FOR_APPROVAL` merupakan tanggung jawab staf administrasi;
+* staf tidak dapat meregistrasi atau menolak submission dan Kepala Bagian Umum tidak melakukan screening teknis awal;
+* withdrawal dan reopening state final tidak diperbolehkan pada MVP;
 * pelanggaran state menghasilkan conflict dan tidak boleh diatasi dengan menimpa state dari frontend.
 
 ---
@@ -586,7 +608,7 @@ Historical disposition tidak boleh diselesaikan dengan menghapus record lama.
 Invariant MVP:
 
 1. Submission online selalu dimulai sebagai `DRAFT` dan hanya dapat diketahui pemiliknya.
-2. Submission `SUBMITTED`, `REGISTERED`, atau `REJECTED` tidak dapat diubah Public User.
+2. Public User hanya dapat mengubah submission pada `DRAFT` atau `REVISION_REQUIRED`; hanya `DRAFT` yang dapat dihapus.
 3. Submission hanya dapat dikirim jika memiliki tepat satu dokumen PDF.
 4. Submission `REGISTERED` menghasilkan tepat satu Incoming Letter.
 5. Surat selalu dimulai dari Bagian Umum.
@@ -615,8 +637,11 @@ SUBMISSION
 DRAFT
   ↓
 SUBMITTED
-  ├──→ REGISTERED
-  └──→ REJECTED
+  ├──→ REVISION_REQUIRED ──→ SUBMITTED
+  └──→ READY_FOR_APPROVAL
+              ├──→ INTERNAL_REVISION_REQUIRED ──→ READY_FOR_APPROVAL
+              ├──→ REGISTERED
+              └──→ REJECTED
 ```
 
 ```text

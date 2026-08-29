@@ -62,6 +62,7 @@ erDiagram
 
     USERS ||--o{ LETTER_SUBMISSIONS : submits_or_records
     LETTER_SUBMISSIONS ||--o| SUBMISSION_DOCUMENTS : has
+    LETTER_SUBMISSIONS ||--o{ SUBMISSION_REVIEWS : reviewed_through
     LETTER_SUBMISSIONS ||--o| INCOMING_LETTERS : becomes
     SUBMISSION_DOCUMENTS ||--o| LETTER_DOCUMENTS : originates
 
@@ -410,6 +411,9 @@ Nilai `status` dan transition mengikuti `workflow-spec.md`:
 ```text
 DRAFT
 SUBMITTED
+REVISION_REQUIRED
+READY_FOR_APPROVAL
+INTERNAL_REVISION_REQUIRED
 REGISTERED
 REJECTED
 ```
@@ -454,9 +458,42 @@ Menyimpan tepat satu dokumen PDF aktif untuk satu submission.
 | created_at                   | timestamp       |                                    |
 | updated_at                   | timestamp       |                                    |
 
-Dokumen dapat diganti selama submission masih `DRAFT`. Penggantian draft memperbarui satu active document dan wajib menghasilkan audit. Setelah `SUBMITTED`, metadata serta file menjadi immutable.
+Dokumen dapat diganti selama submission berstatus `DRAFT` atau `REVISION_REQUIRED`. Penggantian memperbarui satu active document dan wajib menghasilkan audit. Pada state lain, metadata serta file immutable bagi Public User.
 
 File disimpan di private storage menggunakan nama server-generated. Nama file asli hanya metadata download, bukan bagian storage path. SHA-256 dihitung saat upload sebagai fingerprint integritas.
+
+## `submission_reviews`
+
+Menyimpan hasil screening staf Bagian Umum sebagai histori domain append-only.
+Audit tetap dicatat terpisah dan tidak digunakan sebagai pengganti state bisnis.
+
+| Column                            | Type        | Constraint                            |
+| --------------------------------- | ----------- | ------------------------------------- |
+| id                                | bigint      | PK                                    |
+| letter_submission_id              | bigint      | FK → letter_submissions.id             |
+| outcome                           | varchar(40) | required                              |
+| checklist                         | json        | required                              |
+| note                              | text        | nullable                              |
+| created_by_user_id                | bigint      | FK → users.id                          |
+| created_by_position_assignment_id | bigint      | FK → position_assignments.id           |
+| created_at                        | timestamp   | required                              |
+
+Tidak ada `updated_at` atau endpoint update/delete. Nilai outcome M3.1:
+
+```text
+REVISION_REQUIRED
+READY_FOR_APPROVAL
+```
+
+Checklist hanya menyimpan key resmi dan boolean hasil pemeriksaan; label tetap
+berasal dari katalog server. Index:
+
+```text
+letter_submission_id
+outcome
+created_at
+(letter_submission_id, created_at)
+```
 
 ---
 
@@ -937,6 +974,9 @@ SUBMISSION_CREATED
 SUBMISSION_UPDATED
 SUBMISSION_DOCUMENT_REPLACED
 SUBMISSION_SUBMITTED
+SUBMISSION_RESUBMITTED
+SUBMISSION_REVISION_REQUESTED
+SUBMISSION_READY_FOR_APPROVAL
 SUBMISSION_DRAFT_DELETED
 
 LETTER_REGISTERED
@@ -1012,9 +1052,12 @@ Frontend tidak boleh langsung menentukan status surat.
 ### Submission
 
 * Public User hanya dapat mengakses online submission miliknya.
-* Draft dapat diedit, mengganti satu dokumen aktif, dan dihapus oleh pemilik.
-* Submitted submission immutable bagi Public User.
+* `DRAFT` dapat diedit, mengganti satu dokumen aktif, dan dihapus oleh pemilik.
+* `REVISION_REQUIRED` dapat diedit, mengganti dokumen aktif, dan dikirim ulang oleh pemilik, tetapi tidak dapat dihapus.
+* State submission lainnya immutable bagi Public User.
 * `submitted_at` null pada `DRAFT` dan wajib terisi mulai `SUBMITTED`.
+* Screening staf memerlukan permission eksplisit dan Position Assignment aktif pada level `GENERAL_AFFAIRS`.
+* Hasil screening disimpan append-only pada `submission_reviews` dan tidak dapat diedit atau dihapus.
 * Setiap transition dan mutasi penting menghasilkan append-only audit.
 
 Invariant berikut wajib dijaga oleh Service + Policy + automated test.
@@ -1174,6 +1217,11 @@ submission_documents:
 - letter_submission_id
 - storage_path
 - sha256
+
+submission_reviews:
+- letter_submission_id
+- outcome
+- letter_submission_id + created_at
 
 incoming_letters:
 - received_at
@@ -1371,6 +1419,7 @@ sender_organizations
 
 letter_submissions
 submission_documents
+submission_reviews
 
 incoming_letters
 letter_documents
