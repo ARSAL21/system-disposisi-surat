@@ -11,7 +11,10 @@ use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
 use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionController;
 use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionDocumentController;
+use App\Http\Controllers\BackOffice\Intake\IntakeApprovalController;
+use App\Http\Controllers\BackOffice\Intake\IntakeApprovalDocumentController;
 use App\Http\Controllers\BackOffice\Intake\ScreenSubmissionController;
+use App\Http\Controllers\BackOffice\Intake\SubmissionDecisionController;
 use App\Http\Controllers\BackOffice\Organization\ActivateOrganizationMutationController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationalUnitController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationStructureController;
@@ -143,6 +146,23 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         Route::post('submissions/{submission}/screenings', ScreenSubmissionController::class)
                             ->middleware('can:'.PermissionName::ScreenIntake->value)
                             ->name('submissions.screen');
+                    });
+
+                Route::prefix('intake/approvals')
+                    ->name('intake.approvals.')
+                    ->middleware('can:'.PermissionName::DecideIntake->value)
+                    ->group(function (): void {
+                        Route::get('/', [IntakeApprovalController::class, 'index'])
+                            ->name('index');
+                        Route::get('{submission}', [IntakeApprovalController::class, 'show'])
+                            ->name('show');
+                        Route::get('{submission}/document', [IntakeApprovalDocumentController::class, 'show'])
+                            ->name('document.show');
+                        Route::get('{submission}/document/download', [IntakeApprovalDocumentController::class, 'download'])
+                            ->name('document.download');
+                        Route::post('{submission}/decisions', SubmissionDecisionController::class)
+                            ->middleware('throttle:30,1')
+                            ->name('decisions.store');
                     });
 
                 Route::middleware('can:'.PermissionName::ViewAuthorization->value)
