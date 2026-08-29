@@ -86,6 +86,8 @@ class HandleInertiaRequests extends Middleware
             return [
                 'can_view_authorization' => false,
                 'can_manage_authorization' => false,
+                'can_view_organization' => false,
+                'can_manage_organization' => false,
                 'can_manage_position_assignments' => false,
                 'can_view_privilege_audits' => false,
             ];
@@ -94,6 +96,8 @@ class HandleInertiaRequests extends Middleware
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
             'can_manage_authorization' => $user->can(PermissionName::ManageAuthorization->value),
+            'can_view_organization' => $user->can(PermissionName::ViewOrganization->value),
+            'can_manage_organization' => $user->can(PermissionName::ManageOrganization->value),
             'can_manage_position_assignments' => $user->can(PermissionName::ManagePositionAssignments->value),
             'can_view_privilege_audits' => $user->can(PermissionName::ViewPrivilegeAudits->value),
         ];

@@ -9,6 +9,11 @@ use App\Http\Controllers\BackOffice\Authorization\AuthorizationRoleController;
 use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
 use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
+use App\Http\Controllers\BackOffice\Organization\ActivateOrganizationMutationController;
+use App\Http\Controllers\BackOffice\Organization\OrganizationalUnitController;
+use App\Http\Controllers\BackOffice\Organization\OrganizationStructureController;
+use App\Http\Controllers\BackOffice\Organization\PositionAssignmentController;
+use App\Http\Controllers\BackOffice\Organization\PositionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicSubmission\LetterSubmissionController;
 use App\Http\Controllers\PublicSubmission\PublicDashboardController;
@@ -125,6 +130,63 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                 Route::get('audits/privileges', PrivilegeAuditController::class)
                     ->middleware('can:'.PermissionName::ViewPrivilegeAudits->value)
                     ->name('privilege-audits.index');
+
+                Route::middleware('can:'.PermissionName::ViewOrganization->value)
+                    ->group(function (): void {
+                        Route::get('organization/structure', OrganizationStructureController::class)
+                            ->name('organization.structure.index');
+                        Route::get('organization/assignments', [PositionAssignmentController::class, 'index'])
+                            ->name('organization.assignments.index');
+                    });
+
+                Route::middleware([
+                    'mfa',
+                    RequirePassword::using(
+                        'back-office.password.confirm',
+                        AuthorizationMutationSecurity::PASSWORD_CONFIRMATION_TIMEOUT_SECONDS,
+                    ),
+                ])->group(function (): void {
+                    Route::get('organization/confirm', ActivateOrganizationMutationController::class)
+                        ->name('organization.mutation.confirm');
+                });
+
+                Route::middleware([
+                    'can:'.PermissionName::ManageOrganization->value,
+                    'mfa',
+                    RequirePassword::using(
+                        'back-office.password.confirm',
+                        AuthorizationMutationSecurity::PASSWORD_CONFIRMATION_TIMEOUT_SECONDS,
+                    ),
+                ])->group(function (): void {
+                    Route::post('organization/units', [OrganizationalUnitController::class, 'store'])
+                        ->name('organization.units.store');
+                    Route::patch('organization/units/{organizationalUnit}', [OrganizationalUnitController::class, 'update'])
+                        ->name('organization.units.update');
+                    Route::patch('organization/units/{organizationalUnit}/status', [OrganizationalUnitController::class, 'status'])
+                        ->name('organization.units.status');
+                    Route::post('organization/positions', [PositionController::class, 'store'])
+                        ->name('organization.positions.store');
+                    Route::patch('organization/positions/{position}', [PositionController::class, 'update'])
+                        ->name('organization.positions.update');
+                    Route::patch('organization/positions/{position}/status', [PositionController::class, 'status'])
+                        ->name('organization.positions.status');
+                });
+
+                Route::middleware([
+                    'can:'.PermissionName::ManagePositionAssignments->value,
+                    'mfa',
+                    RequirePassword::using(
+                        'back-office.password.confirm',
+                        AuthorizationMutationSecurity::PASSWORD_CONFIRMATION_TIMEOUT_SECONDS,
+                    ),
+                ])->group(function (): void {
+                    Route::post('organization/positions/{position}/assignments', [PositionAssignmentController::class, 'store'])
+                        ->name('organization.assignments.store');
+                    Route::post('organization/positions/{position}/assignment-replacements', [PositionAssignmentController::class, 'replace'])
+                        ->name('organization.assignments.replace');
+                    Route::patch('organization/position-assignments/{positionAssignment}/end', [PositionAssignmentController::class, 'end'])
+                        ->name('organization.assignments.end');
+                });
 
                 Route::middleware([
                     'can:'.PermissionName::ManageAuthorization->value,
