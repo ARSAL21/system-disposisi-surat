@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Building2, Plus } from '@lucide/vue';
 import { computed } from 'vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/InputError.vue';
 import type {
     RegisterApprovalPayload,
     SenderOrganizationOption,
@@ -48,7 +48,10 @@ function useNew(): void {
 }
 
 function updateNew(patch: Partial<NewSenderOrganization>): void {
-    if (props.modelValue.mode !== 'new') return;
+    if (props.modelValue.mode !== 'new') {
+return;
+}
+
     emit('update:modelValue', { ...props.modelValue, ...patch });
 }
 </script>
@@ -122,7 +125,9 @@ function updateNew(patch: Partial<NewSenderOrganization>): void {
                         updateNew({ address: String($event) || null })
                     "
                 />
-                <InputError :message="errors?.['sender_organization.address']" />
+                <InputError
+                    :message="errors?.['sender_organization.address']"
+                />
             </label>
             <label class="space-y-2">
                 <span class="text-sm font-medium">Kontak (opsional)</span>
@@ -133,7 +138,9 @@ function updateNew(patch: Partial<NewSenderOrganization>): void {
                         updateNew({ contact: String($event) || null })
                     "
                 />
-                <InputError :message="errors?.['sender_organization.contact']" />
+                <InputError
+                    :message="errors?.['sender_organization.contact']"
+                />
             </label>
         </div>
     </fieldset>

@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/vue3';
-import { ref, type Ref } from 'vue';
+import { ref  } from 'vue';
+import type {Ref} from 'vue';
 import { toast } from 'vue-sonner';
 import type {
     ApprovalDecision,
@@ -11,9 +12,7 @@ import type {
 } from '@/types';
 
 type DecisionPayload =
-    | ReturnApprovalPayload
-    | RejectApprovalPayload
-    | RegisterApprovalPayload;
+    ReturnApprovalPayload | RejectApprovalPayload | RegisterApprovalPayload;
 
 export function useApprovalDecisions(
     initialSubmission: ApprovalSubmission,
@@ -40,12 +39,16 @@ export function useApprovalDecisions(
         toast.success('Keputusan diterapkan pada data pratinjau.');
     }
 
-    function submit(payload: DecisionPayload, dialog: 'return' | 'reject' | 'register'): void {
+    function submit(
+        payload: DecisionPayload,
+        dialog: 'return' | 'reject' | 'register',
+    ): void {
         errors.value = {};
 
         if (previewMode.value) {
             applyPreviewPayload(payload);
             closeDialog(dialog);
+
             return;
         }
 
@@ -73,14 +76,16 @@ export function useApprovalDecisions(
             decided_at: decidedAt,
         });
 
-        if (payload.outcome !== 'REGISTERED') return;
+        if (payload.outcome !== 'REGISTERED') {
+return;
+}
 
+        const selection = payload.sender_organization;
         const senderName =
-            payload.sender_organization.mode === 'new'
-                ? payload.sender_organization.name
-                : (organizations().find(
-                      ({ id }) => id === payload.sender_organization.id,
-                  )?.name ?? submission.value.sender_organization_name);
+            selection.mode === 'new'
+                ? selection.name
+                : (organizations().find(({ id }) => id === selection.id)
+                      ?.name ?? submission.value.sender_organization_name);
         submission.value.registration = {
             agenda_number: payload.agenda_number,
             agenda_year: new Date().getFullYear(),
@@ -90,9 +95,17 @@ export function useApprovalDecisions(
     }
 
     function closeDialog(dialog: 'return' | 'reject' | 'register'): void {
-        if (dialog === 'return') returnDialogOpen.value = false;
-        if (dialog === 'reject') rejectDialogOpen.value = false;
-        if (dialog === 'register') registerDialogOpen.value = false;
+        if (dialog === 'return') {
+returnDialogOpen.value = false;
+}
+
+        if (dialog === 'reject') {
+rejectDialogOpen.value = false;
+}
+
+        if (dialog === 'register') {
+registerDialogOpen.value = false;
+}
     }
 
     return {
@@ -106,6 +119,7 @@ export function useApprovalDecisions(
             payload: ReturnApprovalPayload | RejectApprovalPayload,
             dialog: 'return' | 'reject',
         ) => submit(payload, dialog),
-        register: (payload: RegisterApprovalPayload) => submit(payload, 'register'),
+        register: (payload: RegisterApprovalPayload) =>
+            submit(payload, 'register'),
     };
 }

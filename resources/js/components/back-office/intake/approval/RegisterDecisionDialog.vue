@@ -2,6 +2,7 @@
 import { BadgeCheck, ShieldCheck } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import SenderOrganizationPicker from '@/components/back-office/intake/approval/SenderOrganizationPicker.vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -13,7 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/InputError.vue';
 import type {
     RegisterApprovalPayload,
     SenderOrganizationOption,
@@ -50,7 +50,10 @@ const canSubmit = computed(
 watch(
     () => props.open,
     (open) => {
-        if (!open) return;
+        if (!open) {
+return;
+}
+
         agendaNumber.value = '';
         note.value = '';
         const match = props.organizations.find(
@@ -68,7 +71,10 @@ watch(
 );
 
 function confirm(): void {
-    if (!canSubmit.value) return;
+    if (!canSubmit.value) {
+return;
+}
+
     emit('confirm', {
         outcome: 'REGISTERED',
         agenda_number: agendaNumber.value.trim(),

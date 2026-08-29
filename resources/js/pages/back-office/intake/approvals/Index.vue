@@ -7,11 +7,11 @@ import ApprovalPageHeader from '@/components/back-office/intake/approval/Approva
 import ApprovalPagination from '@/components/back-office/intake/approval/ApprovalPagination.vue';
 import ApprovalSubmissionList from '@/components/back-office/intake/approval/ApprovalSubmissionList.vue';
 import ApprovalSummaryCards from '@/components/back-office/intake/approval/ApprovalSummaryCards.vue';
+import { approvalRoutes } from '@/lib/intakeApprovalPresentation';
 import {
     previewApprovalSubmissions,
     previewApprovalSummary,
 } from '@/lib/intakeApprovalPreview';
-import { approvalRoutes } from '@/lib/intakeApprovalPresentation';
 import type {
     ApprovalFilters,
     ApprovalPagination as PaginationData,
@@ -99,7 +99,10 @@ const pagination = computed<PaginationData>(() =>
 );
 
 const refreshQueue = useDebounceFn(() => {
-    if (previewMode.value || !props.routes?.index) return;
+    if (previewMode.value || !props.routes?.index) {
+return;
+}
+
     router.get(
         props.routes.index,
         { ...filters },

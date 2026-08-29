@@ -17,11 +17,11 @@ import SubmissionOverviewCard from '@/components/back-office/intake/SubmissionOv
 import SubmissionTimeline from '@/components/back-office/intake/SubmissionTimeline.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useApprovalDecisions } from '@/composables/useApprovalDecisions';
+import { approvalRoutes } from '@/lib/intakeApprovalPresentation';
 import {
     previewApprovalDetail,
     previewSenderOrganizations,
 } from '@/lib/intakeApprovalPreview';
-import { approvalRoutes } from '@/lib/intakeApprovalPresentation';
 import type { ApprovalSubmission, SenderOrganizationOption } from '@/types';
 
 const props = defineProps<{
@@ -62,7 +62,9 @@ const {
 watch(
     () => props.submission,
     (submission) => {
-        if (submission && !previewMode.value) activeSubmission.value = submission;
+        if (submission && !previewMode.value) {
+activeSubmission.value = submission;
+}
     },
 );
 </script>

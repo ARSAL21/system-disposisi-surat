@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ArrowUpRight, Info, RotateCcw } from '@lucide/vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import InputError from '@/components/InputError.vue';
 
 defineProps<{
     note: string;

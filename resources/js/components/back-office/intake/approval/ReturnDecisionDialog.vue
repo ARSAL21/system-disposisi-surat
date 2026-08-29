@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RotateCcw } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -11,7 +12,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/InputError.vue';
 import type { ReturnApprovalPayload } from '@/types';
 
 const props = defineProps<{
@@ -30,12 +30,17 @@ const canSubmit = computed(() => note.value.trim().length >= 10);
 watch(
     () => props.open,
     (open) => {
-        if (open) note.value = '';
+        if (open) {
+note.value = '';
+}
     },
 );
 
 function confirm(): void {
-    if (!canSubmit.value) return;
+    if (!canSubmit.value) {
+return;
+}
+
     emit('confirm', {
         outcome: 'INTERNAL_REVISION_REQUIRED',
         note: note.value.trim(),

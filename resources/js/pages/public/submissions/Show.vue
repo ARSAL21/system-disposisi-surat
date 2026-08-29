@@ -47,7 +47,9 @@ defineOptions({
                     variant="destructive"
                 >
                     <MessageSquareWarning class="size-4" aria-hidden="true" />
-                    <AlertTitle>Alasan pengajuan tidak dapat dilanjutkan</AlertTitle>
+                    <AlertTitle
+                        >Alasan pengajuan tidak dapat dilanjutkan</AlertTitle
+                    >
                     <AlertDescription>{{
                         submission.rejection_note
                     }}</AlertDescription>
