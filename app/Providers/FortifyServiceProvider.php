@@ -132,12 +132,13 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::confirmPasswordView(function (Request $request) {
             $backOffice = $request->routeIs('back-office.password.confirm');
 
-            return Inertia::render(
-                $backOffice ? 'back-office/auth/ConfirmPassword' : 'auth/ConfirmPassword',
-                $backOffice
-                    ? ['confirmPasswordUrl' => route('back-office.password.confirm.store')]
-                    : [],
-            );
+            if ($backOffice) {
+                return Inertia::render('back-office/auth/ConfirmPassword', [
+                    'confirmPasswordUrl' => route('back-office.password.confirm.store'),
+                ]);
+            }
+
+            return redirect()->route('profile.edit');
         });
     }
 

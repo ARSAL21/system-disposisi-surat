@@ -7,6 +7,8 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
+    password_confirmed?: boolean;
+    confirm_password_url?: string;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
@@ -19,6 +21,7 @@ export type AuthCapabilities = {
     can_manage_organization: boolean;
     can_manage_position_assignments: boolean;
     can_view_privilege_audits: boolean;
+    can_view_letter_activities: boolean;
     can_view_intake: boolean;
     can_screen_intake: boolean;
     can_decide_intake: boolean;
