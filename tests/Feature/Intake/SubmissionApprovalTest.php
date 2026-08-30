@@ -4,7 +4,9 @@ use App\Actions\RecordAudit;
 use App\Actions\RegisterIncomingLetter;
 use App\Authorization\AuthorizationCatalog;
 use App\Enums\AuditAction;
+use App\Enums\IncomingLetterStatus;
 use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\Enums\SubmissionDecisionOutcome;
 use App\Enums\SubmissionReviewOutcome;
 use App\Enums\SubmissionSource;
@@ -275,6 +277,19 @@ it('returns a submission to staff and permits only an internal resubmission', fu
     ]);
 
     $staff = approvalStaff();
+    $this->actingAs($staff)
+        ->get(route('back-office.intake.submissions.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('filters.status', 'action_required')
+            ->where('summary.returned_to_staff', 1)
+            ->has('submissions.data', 1)
+            ->where('submissions.data.0.public_id', $submission->public_id)
+            ->where(
+                'submissions.data.0.status',
+                SubmissionStatus::InternalRevisionRequired->value,
+            ));
+
     $route = route('back-office.intake.submissions.screen', $submission);
     $this->actingAs($staff)->postJson($route, [
         'outcome' => SubmissionReviewOutcome::RevisionRequired->value,
@@ -324,6 +339,7 @@ it('registers an incoming letter, immutable document version, decision, and audi
     $organization->name = 'Forum Warga Kota';
     $organization->is_active = true;
     $organization->save();
+    $sourceDocument = $submission->document()->firstOrFail();
 
     $this->actingAs($head)
         ->postJson(
@@ -332,11 +348,24 @@ it('registers an incoming letter, immutable document version, decision, and audi
         )
         ->assertOk()
         ->assertJsonPath('data.status', SubmissionStatus::Registered->value)
-        ->assertJsonPath('data.registration.agenda_number', 'AG-0001');
+        ->assertJsonPath('data.registration.agenda_number', 'AG-0001')
+        ->assertJsonPath('data.registration.official_document.version_number', 1)
+        ->assertJsonPath('data.registration.official_document.sha256', $sourceDocument->sha256)
+        ->assertJsonPath('data.registration.official_document.source', 'SUBMISSION_DOCUMENT')
+        ->assertJsonMissingPath('data.registration.official_document.id')
+        ->assertJsonMissingPath('data.registration.official_document.storage_disk')
+        ->assertJsonMissingPath('data.registration.official_document.storage_path')
+        ->assertJsonMissingPath('data.registration.official_document.source_submission_document_id');
 
     $incomingLetter = IncomingLetter::query()->firstOrFail();
-    $sourceDocument = $submission->document()->firstOrFail();
     $letterDocument = LetterDocument::query()->firstOrFail();
+    $registrationAuditRequestIds = AuditLog::query()
+        ->whereIn('action', [
+            AuditAction::LetterRegistered->value,
+            AuditAction::DocumentVersionCreated->value,
+        ])
+        ->pluck('request_id')
+        ->unique();
 
     expect($submission->refresh()->status)->toBe(SubmissionStatus::Registered)
         ->and($incomingLetter->letter_submission_id)->toBe($submission->getKey())
@@ -346,7 +375,9 @@ it('registers an incoming letter, immutable document version, decision, and audi
         ->and($letterDocument->sha256)->toBe($sourceDocument->sha256)
         ->and(SubmissionDecision::query()->count())->toBe(1)
         ->and(AuditLog::query()->where('action', AuditAction::LetterRegistered->value)->count())->toBe(1)
-        ->and(AuditLog::query()->where('action', AuditAction::DocumentVersionCreated->value)->count())->toBe(1);
+        ->and(AuditLog::query()->where('action', AuditAction::DocumentVersionCreated->value)->count())->toBe(1)
+        ->and($registrationAuditRequestIds)->toHaveCount(1)
+        ->and($registrationAuditRequestIds->first())->not->toBeNull();
 
     expect(fn () => $letterDocument->delete())->toThrow(LogicException::class)
         ->and(fn () => SubmissionDecision::query()->firstOrFail()->delete())->toThrow(LogicException::class);
@@ -383,7 +414,18 @@ it('blocks tampered documents and rolls back registration when audit persistence
 
     $submission = approvalReadySubmission();
     $recordAudit = Mockery::mock(RecordAudit::class);
-    $recordAudit->shouldReceive('execute')->once()->andThrow(new RuntimeException('Audit unavailable.'));
+    $auditCall = 0;
+    $recordAudit->shouldReceive('execute')
+        ->twice()
+        ->andReturnUsing(function () use (&$auditCall): AuditLog {
+            $auditCall++;
+
+            if ($auditCall === 2) {
+                throw new RuntimeException('Audit unavailable.');
+            }
+
+            return new AuditLog;
+        });
     $this->app->instance(RecordAudit::class, $recordAudit);
 
     expect(fn () => $this->app->make(RegisterIncomingLetter::class)->execute(
@@ -420,4 +462,193 @@ it('protects approval document access with the same private resource boundary', 
     $this->actingAs(approvalHead(unitCode: 'BAGIAN_KEUANGAN'))
         ->get(route('back-office.intake.approvals.document.show', $submission))
         ->assertNotFound();
+});
+
+it('prohibits super-admin without active Kepala Bagian Umum position from deciding or registering', function (): void {
+    $submission = approvalReadySubmission();
+    $superAdmin = User::factory()->internal()->withTwoFactor()->create();
+    approvalGrant($superAdmin, RoleName::SuperAdmin->value, PermissionName::DecideIntake);
+
+    $this->actingAs($superAdmin)
+        ->get(route('back-office.intake.approvals.index'))
+        ->assertForbidden();
+
+    $this->actingAs($superAdmin)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $submission),
+            registerDecisionPayload('AG-0999'),
+        )
+        ->assertNotFound();
+
+    expect(IncomingLetter::query()->count())->toBe(0);
+});
+
+it('rejects registration attempts on invalid submission states (state invariants)', function (): void {
+    $head = approvalHead();
+    $owner = User::factory()->create();
+
+    $invalidStates = [
+        SubmissionStatus::Draft,
+        SubmissionStatus::Submitted,
+        SubmissionStatus::RevisionRequired,
+    ];
+
+    foreach ($invalidStates as $invalidState) {
+        $sub = new LetterSubmission;
+        $sub->public_id = (string) Str::ulid();
+        $sub->source = SubmissionSource::Online;
+        $sub->status = $invalidState;
+        $sub->submitted_by_user_id = $owner->getKey();
+        $sub->sender_organization_name = 'Forum Warga';
+        $sub->contact_name = 'Budi';
+        $sub->contact_email = 'budi@example.com';
+        $sub->subject = 'Uji Status';
+        $sub->save();
+
+        $this->actingAs($head)
+            ->postJson(
+                route('back-office.intake.approvals.decisions.store', $sub),
+                registerDecisionPayload('AG-STATE-'.$invalidState->value),
+            )
+            ->assertNotFound();
+    }
+
+    $internalRevSub = approvalReadySubmission();
+    $internalRevSub->status = SubmissionStatus::InternalRevisionRequired;
+    $internalRevSub->save();
+
+    $this->actingAs($head)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $internalRevSub),
+            registerDecisionPayload('AG-STATE-INTREV'),
+        )
+        ->assertConflict();
+
+    $registeredSub = approvalReadySubmission();
+    $this->actingAs($head)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $registeredSub),
+            registerDecisionPayload('AG-STATE-REG-1'),
+        )
+        ->assertOk();
+
+    $this->actingAs($head)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $registeredSub),
+            registerDecisionPayload('AG-STATE-REG-2'),
+        )
+        ->assertConflict();
+
+    $rejectedSub = approvalReadySubmission();
+    $rejectedSub->status = SubmissionStatus::Rejected;
+    $rejectedSub->save();
+
+    $this->actingAs($head)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $rejectedSub),
+            registerDecisionPayload('AG-STATE-REJ'),
+        )
+        ->assertConflict();
+});
+
+it('allows same agenda number in different years but enforces strict format validation', function (): void {
+    $submission1 = approvalReadySubmission();
+    $submission2 = approvalReadySubmission();
+    $head = approvalHead();
+    $assignment = $head->activePositionAssignments()->firstOrFail();
+
+    $org = new SenderOrganization;
+    $org->name = 'Organisasi Lintas Tahun';
+    $org->is_active = true;
+    $org->save();
+
+    $pastLetter = new IncomingLetter;
+    $pastLetter->letter_submission_id = $submission1->getKey();
+    $pastLetter->agenda_number = 'AG-REPEAT';
+    $pastLetter->agenda_year = 2025;
+    $pastLetter->sender_organization_id = $org->getKey();
+    $pastLetter->subject = 'Surat Tahun Lalu';
+    $pastLetter->received_at = now()->subYear();
+    $pastLetter->status = IncomingLetterStatus::Registered;
+    $pastLetter->registered_by_user_id = $head->getKey();
+    $pastLetter->registered_by_position_assignment_id = $assignment->getKey();
+    $pastLetter->save();
+
+    $this->actingAs($head)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $submission2),
+            registerDecisionPayload('AG-REPEAT', $org->getKey()),
+        )
+        ->assertOk()
+        ->assertJsonPath('data.registration.agenda_number', 'AG-REPEAT');
+
+    expect(IncomingLetter::query()->where('agenda_number', 'AG-REPEAT')->count())->toBe(2);
+
+    $invalidFormatSub = approvalReadySubmission();
+    $this->actingAs($head)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $invalidFormatSub),
+            registerDecisionPayload('AG INVALID <script>', $org->getKey()),
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('agenda_number');
+});
+
+it('guarantees server-owned fields and metadata are safely copied from server submission data', function (): void {
+    $submission = approvalReadySubmission();
+    $head = approvalHead();
+
+    $payload = registerDecisionPayload('AG-SECURE-01');
+    $payload['status'] = IncomingLetterStatus::Completed->value;
+    $payload['received_at'] = '2020-01-01 00:00:00';
+    $payload['subject'] = 'Manipulated Subject by Client';
+    $payload['registered_by_user_id'] = 99999;
+
+    $this->actingAs($head)
+        ->postJson(route('back-office.intake.approvals.decisions.store', $submission), $payload)
+        ->assertOk();
+
+    $letter = IncomingLetter::query()->where('agenda_number', 'AG-SECURE-01')->firstOrFail();
+
+    expect($letter->status)->toBe(IncomingLetterStatus::Registered)
+        ->and($letter->subject)->toBe('Permohonan audiensi warga')
+        ->and($letter->registered_by_user_id)->toBe($head->getKey())
+        ->and($letter->received_at->year)->toBe((int) now()->year);
+});
+
+it('rejects inactive sender organizations in existing mode', function (): void {
+    $submission = approvalReadySubmission();
+    $head = approvalHead();
+
+    $inactiveOrg = new SenderOrganization;
+    $inactiveOrg->name = 'Instansi Non-Aktif';
+    $inactiveOrg->is_active = false;
+    $inactiveOrg->save();
+
+    $this->actingAs($head)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $submission),
+            registerDecisionPayload('AG-INACTIVE-ORG', $inactiveOrg->getKey()),
+        )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('sender_organization.id');
+
+    expect(IncomingLetter::query()->count())->toBe(0);
+});
+
+it('rejects registration when actor position assignment has ended', function (): void {
+    $submission = approvalReadySubmission();
+    $head = approvalHead();
+    $assignment = $head->activePositionAssignments()->firstOrFail();
+    $assignment->ended_at = now()->subSecond();
+    $assignment->save();
+
+    $this->actingAs($head)
+        ->postJson(
+            route('back-office.intake.approvals.decisions.store', $submission),
+            registerDecisionPayload('AG-EXPIRED-POS'),
+        )
+        ->assertNotFound();
+
+    expect(IncomingLetter::query()->count())->toBe(0);
 });

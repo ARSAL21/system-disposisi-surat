@@ -136,6 +136,15 @@ export const previewApprovalSubmissions: ApprovalSubmission[] = [
             agenda_year: 2026,
             sender_organization_name: 'Kantor Pertanahan Kota',
             registered_at: '2026-08-26T01:45:00.000Z',
+            official_document: {
+                version_number: 1,
+                original_filename: 'koordinasi-penataan-aset.pdf',
+                mime_type: 'application/pdf',
+                size_bytes: 2483200,
+                sha256: 'e6bc97d1256ba2110ab49160ad5a21d31b500f05b7a518044f17a7a4bcaef870',
+                recorded_at: '2026-08-26T01:45:00.000Z',
+                source: 'SUBMISSION_DOCUMENT',
+            },
         },
         capabilities: {
             can_decide: false,

@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/vue3';
-import { ref  } from 'vue';
-import type {Ref} from 'vue';
+import { ref } from 'vue';
+import type { Ref } from 'vue';
 import { toast } from 'vue-sonner';
 import type {
     ApprovalDecision,
@@ -77,8 +77,8 @@ export function useApprovalDecisions(
         });
 
         if (payload.outcome !== 'REGISTERED') {
-return;
-}
+            return;
+        }
 
         const selection = payload.sender_organization;
         const senderName =
@@ -91,21 +91,33 @@ return;
             agenda_year: new Date().getFullYear(),
             sender_organization_name: senderName,
             registered_at: decidedAt,
+            official_document: submission.value.document
+                ? {
+                      version_number: 1,
+                      original_filename:
+                          submission.value.document.original_filename,
+                      mime_type: submission.value.document.mime_type,
+                      size_bytes: submission.value.document.size_bytes,
+                      sha256: submission.value.document.sha256,
+                      recorded_at: decidedAt,
+                      source: 'SUBMISSION_DOCUMENT',
+                  }
+                : null,
         };
     }
 
     function closeDialog(dialog: 'return' | 'reject' | 'register'): void {
         if (dialog === 'return') {
-returnDialogOpen.value = false;
-}
+            returnDialogOpen.value = false;
+        }
 
         if (dialog === 'reject') {
-rejectDialogOpen.value = false;
-}
+            rejectDialogOpen.value = false;
+        }
 
         if (dialog === 'register') {
-registerDialogOpen.value = false;
-}
+            registerDialogOpen.value = false;
+        }
     }
 
     return {

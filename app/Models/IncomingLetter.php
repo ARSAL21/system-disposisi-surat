@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -31,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property-read User $registeredBy
  * @property-read PositionAssignment|null $registeredByPositionAssignment
  * @property-read Collection<int, LetterDocument> $documents
+ * @property-read LetterDocument|null $initialDocument
  */
 class IncomingLetter extends Model
 {
@@ -73,5 +75,12 @@ class IncomingLetter extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(LetterDocument::class);
+    }
+
+    /** @return HasOne<LetterDocument, $this> */
+    public function initialDocument(): HasOne
+    {
+        return $this->hasOne(LetterDocument::class)
+            ->where('version_number', 1);
     }
 }

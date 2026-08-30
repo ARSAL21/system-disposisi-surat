@@ -6,6 +6,7 @@ use App\Enums\SubmissionStatus;
 use App\Intake\IntakeApprovalTimeline;
 use App\Intake\SubmissionScreeningChecklist;
 use App\Models\IncomingLetter;
+use App\Models\LetterDocument;
 use App\Models\LetterSubmission;
 use App\Models\SubmissionDecision;
 use App\Models\SubmissionDocument;
@@ -114,11 +115,32 @@ class IntakeApprovalSubmissionResource extends JsonResource
             return null;
         }
 
+        $officialDocument = $incomingLetter->relationLoaded('initialDocument')
+            ? $incomingLetter->initialDocument
+            : null;
+
         return [
             'agenda_number' => $incomingLetter->agenda_number,
             'agenda_year' => $incomingLetter->agenda_year,
             'sender_organization_name' => $incomingLetter->senderOrganization->name,
             'registered_at' => $incomingLetter->received_at->toISOString(),
+            'official_document' => $officialDocument instanceof LetterDocument
+                ? $this->officialDocumentData($officialDocument)
+                : null,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function officialDocumentData(LetterDocument $document): array
+    {
+        return [
+            'version_number' => $document->version_number,
+            'original_filename' => $document->original_filename,
+            'mime_type' => $document->mime_type,
+            'size_bytes' => $document->size_bytes,
+            'sha256' => $document->sha256,
+            'recorded_at' => $document->created_at->toISOString(),
+            'source' => 'SUBMISSION_DOCUMENT',
         ];
     }
 }

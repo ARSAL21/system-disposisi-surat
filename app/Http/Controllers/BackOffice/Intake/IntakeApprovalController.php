@@ -74,6 +74,7 @@ class IntakeApprovalController extends Controller
             'decisions.createdBy',
             'latestDecision.createdBy',
             'incomingLetter.senderOrganization',
+            'incomingLetter.initialDocument',
         ];
     }
 }

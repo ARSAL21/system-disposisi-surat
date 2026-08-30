@@ -62,7 +62,7 @@ function updateFilters(patch: Partial<IntakeFilters>): void {
 function resetFilters(): void {
     Object.assign(filters, {
         search: '',
-        status: 'SUBMITTED',
+        status: 'action_required',
         source: 'all',
         date_from: '',
         date_to: '',

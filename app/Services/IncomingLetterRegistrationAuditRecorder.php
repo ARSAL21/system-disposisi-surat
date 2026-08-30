@@ -11,6 +11,7 @@ use App\Models\LetterDocument;
 use App\Models\LetterSubmission;
 use App\Models\PositionAssignment;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 class IncomingLetterRegistrationAuditRecorder
 {
@@ -26,6 +27,8 @@ class IncomingLetterRegistrationAuditRecorder
         LetterDocument $letterDocument,
         int $decisionId,
     ): void {
+        $requestId = Str::uuid()->toString();
+
         $this->recordAudit->execute(
             actor: $actor,
             action: AuditAction::LetterRegistered,
@@ -43,6 +46,7 @@ class IncomingLetterRegistrationAuditRecorder
                 'submission_public_id' => $submission->public_id,
                 'submission_decision_id' => $decisionId,
             ],
+            requestId: $requestId,
             actorPositionAssignment: $positionAssignment,
         );
 
@@ -57,6 +61,7 @@ class IncomingLetterRegistrationAuditRecorder
                 'sha256' => $letterDocument->sha256,
                 'source_submission_document_id' => $letterDocument->source_submission_document_id,
             ],
+            requestId: $requestId,
             actorPositionAssignment: $positionAssignment,
         );
     }

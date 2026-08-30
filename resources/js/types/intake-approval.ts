@@ -32,11 +32,22 @@ export type ApprovalDecision = {
     decided_at: string;
 };
 
+export type OfficialLetterDocument = {
+    version_number: number;
+    original_filename: string;
+    mime_type: string;
+    size_bytes: number;
+    sha256: string;
+    recorded_at: string;
+    source: 'SUBMISSION_DOCUMENT';
+};
+
 export type IncomingLetterRegistration = {
     agenda_number: string;
     agenda_year: number;
     sender_organization_name: string;
     registered_at: string;
+    official_document?: OfficialLetterDocument | null;
 };
 
 export type ApprovalSubmission = {

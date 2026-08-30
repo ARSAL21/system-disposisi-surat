@@ -14,7 +14,7 @@ class GetIntakeSubmissionWorkspace
      * @param  array{search: string, status: string, source: string, date_from: string, date_to: string}  $filters
      * @return array{
      *     submissions: LengthAwarePaginator<int, LetterSubmission>,
-     *     summary: array{awaiting_screening: int, revision_required: int, ready_for_approval: int, processed_today: int}
+     *     summary: array{awaiting_screening: int, returned_to_staff: int, revision_required: int, ready_for_approval: int, processed_today: int}
      * }
      */
     public function execute(array $filters): array
@@ -32,8 +32,15 @@ class GetIntakeSubmissionWorkspace
                     ->orWhere('external_letter_number', 'like', "%{$search}%")
                     ->orWhere('public_id', 'like', "%{$search}%"));
             })
-            ->when($filters['status'] !== 'all', fn (Builder $query) => $query
-                ->where('status', $filters['status']))
+            ->when($filters['status'] === 'action_required', fn (Builder $query) => $query
+                ->whereIn('status', [
+                    SubmissionStatus::Submitted->value,
+                    SubmissionStatus::InternalRevisionRequired->value,
+                ]))
+            ->when(
+                ! in_array($filters['status'], ['all', 'action_required'], true),
+                fn (Builder $query) => $query->where('status', $filters['status']),
+            )
             ->when($filters['source'] !== 'all', fn (Builder $query) => $query
                 ->where('source', $filters['source']))
             ->when($filters['date_from'], fn (Builder $query, string $date) => $query
@@ -49,6 +56,9 @@ class GetIntakeSubmissionWorkspace
             'summary' => [
                 'awaiting_screening' => (clone $baseQuery)
                     ->where('status', SubmissionStatus::Submitted->value)
+                    ->count(),
+                'returned_to_staff' => (clone $baseQuery)
+                    ->where('status', SubmissionStatus::InternalRevisionRequired->value)
                     ->count(),
                 'revision_required' => (clone $baseQuery)
                     ->where('status', SubmissionStatus::RevisionRequired->value)

@@ -66,7 +66,7 @@ export type IntakeSubmission = {
 
 export type IntakeFilters = {
     search: string;
-    status: IntakeSubmissionStatus | 'all';
+    status: IntakeSubmissionStatus | 'all' | 'action_required';
     source: IntakeSubmissionSource | 'all';
     date_from: string;
     date_to: string;
@@ -74,6 +74,7 @@ export type IntakeFilters = {
 
 export type IntakeSummary = {
     awaiting_screening: number;
+    returned_to_staff: number;
     revision_required: number;
     ready_for_approval: number;
     processed_today: number;

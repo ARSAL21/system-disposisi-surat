@@ -35,6 +35,7 @@ class GetIntakeApprovalWorkspace
                 'decisions.createdBy',
                 'latestDecision.createdBy',
                 'incomingLetter.senderOrganization',
+                'incomingLetter.initialDocument',
             ])
             ->whereIn('status', $filters['tab'] === 'pending'
                 ? [SubmissionStatus::ReadyForApproval->value]

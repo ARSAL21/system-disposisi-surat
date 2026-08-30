@@ -20,7 +20,7 @@ class IntakeSubmissionController extends Controller
     ): Response {
         $filters = [
             'search' => trim((string) $request->validated('search', '')),
-            'status' => (string) $request->validated('status', 'SUBMITTED'),
+            'status' => (string) $request->validated('status', 'action_required'),
             'source' => (string) $request->validated('source', 'all'),
             'date_from' => (string) $request->validated('date_from', ''),
             'date_to' => (string) $request->validated('date_to', ''),

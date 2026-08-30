@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { FileWarning } from '@lucide/vue';
 import { computed, watch } from 'vue';
 import ApprovalAuthorityCard from '@/components/back-office/intake/approval/ApprovalAuthorityCard.vue';
 import ApprovalDecisionPanel from '@/components/back-office/intake/approval/ApprovalDecisionPanel.vue';
 import ApprovalDetailHeader from '@/components/back-office/intake/approval/ApprovalDetailHeader.vue';
 import LatestDecisionCard from '@/components/back-office/intake/approval/LatestDecisionCard.vue';
+import OfficialDocumentAssociationCard from '@/components/back-office/intake/approval/OfficialDocumentAssociationCard.vue';
 import RegisterDecisionDialog from '@/components/back-office/intake/approval/RegisterDecisionDialog.vue';
 import RegistrationSummaryCard from '@/components/back-office/intake/approval/RegistrationSummaryCard.vue';
 import RejectDecisionDialog from '@/components/back-office/intake/approval/RejectDecisionDialog.vue';
@@ -20,6 +21,7 @@ import { useApprovalDecisions } from '@/composables/useApprovalDecisions';
 import { approvalRoutes } from '@/lib/intakeApprovalPresentation';
 import {
     previewApprovalDetail,
+    previewApprovalSubmissions,
     previewSenderOrganizations,
 } from '@/lib/intakeApprovalPreview';
 import type { ApprovalSubmission, SenderOrganizationOption } from '@/types';
@@ -41,6 +43,13 @@ defineOptions({
 });
 
 const previewMode = computed(() => props.preview ?? !props.submission);
+const page = usePage();
+const previewSubmission = computed(
+    () =>
+        previewApprovalSubmissions.find(
+            ({ links }) => links.show === page.url.split('?')[0],
+        ) ?? previewApprovalDetail,
+);
 const senderOrganizations = computed(
     () => props.senderOrganizations ?? previewSenderOrganizations,
 );
@@ -54,7 +63,7 @@ const {
     decide,
     register,
 } = useApprovalDecisions(
-    props.submission ?? previewApprovalDetail,
+    props.submission ?? previewSubmission.value,
     previewMode,
     () => senderOrganizations.value,
 );
@@ -63,10 +72,16 @@ watch(
     () => props.submission,
     (submission) => {
         if (submission && !previewMode.value) {
-activeSubmission.value = submission;
-}
+            activeSubmission.value = submission;
+        }
     },
 );
+
+watch(previewSubmission, (submission) => {
+    if (previewMode.value) {
+        activeSubmission.value = submission;
+    }
+});
 </script>
 
 <template>
@@ -115,6 +130,12 @@ activeSubmission.value = submission;
                 <RegistrationSummaryCard
                     v-if="activeSubmission.registration"
                     :registration="activeSubmission.registration"
+                />
+                <OfficialDocumentAssociationCard
+                    v-if="activeSubmission.registration"
+                    :document="
+                        activeSubmission.registration.official_document ?? null
+                    "
                 />
                 <LatestDecisionCard
                     v-else-if="activeSubmission.latest_decision"

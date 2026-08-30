@@ -28,7 +28,7 @@ class ListIntakeSubmissionsRequest extends FormRequest
 
         return [
             'search' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'status' => ['sometimes', Rule::in(['all', ...$statuses])],
+            'status' => ['sometimes', Rule::in(['all', 'action_required', ...$statuses])],
             'source' => ['sometimes', Rule::in([
                 'all',
                 SubmissionSource::Online->value,

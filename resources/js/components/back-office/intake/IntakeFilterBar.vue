@@ -84,6 +84,7 @@ const statuses: Array<{ value: IntakeSubmissionStatus; label: string }> = [
                     })
                 "
             >
+                <option value="action_required">Perlu tindakan petugas</option>
                 <option value="all">Semua status</option>
                 <option
                     v-for="status in statuses"

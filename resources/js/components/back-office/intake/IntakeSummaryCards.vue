@@ -13,6 +13,12 @@ const items = [
         class: 'bg-blue-500/10 text-blue-700 dark:text-blue-300',
     },
     {
+        key: 'returned_to_staff' as const,
+        label: 'Dikembalikan ke petugas',
+        icon: RotateCcw,
+        class: 'bg-orange-500/10 text-orange-700 dark:text-orange-300',
+    },
+    {
         key: 'revision_required' as const,
         label: 'Perbaikan pengirim',
         icon: RotateCcw,
@@ -35,7 +41,7 @@ const items = [
 
 <template>
     <section
-        class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
         aria-label="Ringkasan antrean"
     >
         <Card

@@ -53,6 +53,7 @@ class SubmissionDecisionController extends Controller
             'decisions.createdBy',
             'latestDecision.createdBy',
             'incomingLetter.senderOrganization',
+            'incomingLetter.initialDocument',
         ]);
 
         if ($request->expectsJson()) {
