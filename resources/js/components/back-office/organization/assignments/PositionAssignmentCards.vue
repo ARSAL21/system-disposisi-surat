@@ -10,7 +10,10 @@ const emit = defineEmits<{
     history: [position: OrganizationPosition];
 }>();
 function status(position: OrganizationPosition): string {
-    if (!position.is_active) return 'Nonaktif';
+    if (!position.is_active) {
+return 'Nonaktif';
+}
+
     return position.active_assignment ? 'Terisi' : 'Lowong';
 }
 </script>

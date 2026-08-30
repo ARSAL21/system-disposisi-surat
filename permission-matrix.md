@@ -93,6 +93,23 @@ pada level `SECTION_HEAD` di Organizational Unit berkode `BAGIAN_UMUM`.
 `super-admin` yang tidak menduduki Position tersebut tetap tidak dapat membaca
 atau memutuskan submission pada meja Kepala Bagian Umum.
 
+## Penambahan M3.5 Aktivitas Surat
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `letter-activities.view` | Membuka console read-only aktivitas intake dan registrasi dalam bentuk ringkasan tersanitasi. |
+
+Permission ini dapat diberikan kepada custom role. Permission tidak otomatis
+memberikan akses detail bisnis. Detail hanya diberikan jika account juga
+memiliki Position Assignment aktif sebagai Wali Kota/Sekda pada level
+`EXECUTIVE_ENTRY`, atau sebagai Kepala Bagian Umum pada level `SECTION_HEAD` di
+unit `BAGIAN_UMUM`.
+
+Super-admin tanpa Position bisnis tersebut tetap tidak menerima identitas
+surat, pengirim, isi perubahan, dokumen, identitas pelaksana, atau jejak teknis.
+Frontend capability hanya mengatur visibilitas menu; Policy, authorized query,
+Position resolver, dan presenter allowlist menjadi security boundary.
+
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
 Alur administrative console:

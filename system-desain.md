@@ -924,6 +924,13 @@ Dokumen asli tidak ditimpa tanpa histori.
 
 Audit trail bersifat application-level append-only.
 
+`audit_logs` hanya dapat dibuat dan dibaca melalui jalur aplikasi. Model audit
+menolak update/delete termasuk operasi quiet, sedangkan Eloquent Builder menolak
+mass mutation seperti update, delete, upsert, increment, dan truncate. Tidak ada
+database trigger pada tahap ini. Raw SQL atau Query Builder langsung terhadap
+`audit_logs` tidak boleh digunakan oleh application code; akses SQL penuh tetap
+merupakan boundary operasional database, bukan authorization aplikasi.
+
 Audit harus mencakup aktivitas penting pada kedua boundary.
 
 Contoh public:
@@ -987,6 +994,50 @@ metadata audit mentah. Actor console ditampilkan sebagai sistem. Jika subject
 sudah tidak tersedia, identitas target dibentuk dari snapshot aman pada audit.
 
 Tidak terdapat endpoint update atau delete untuk `audit_logs`.
+
+## Aktivitas Surat M3
+
+Back-office menyediakan console read-only untuk memantau aktivitas intake dan
+registrasi melalui:
+
+```text
+GET /back-office/audits/letters
+```
+
+Akses awal memerlukan account `INTERNAL` yang aktif, terverifikasi, dan
+permission eksplisit `letter-activities.view`. Permission hanya membuka fitur.
+Kedalaman informasi tetap ditentukan oleh Position Assignment aktif:
+
+* Wali Kota/Sekda pada level `EXECUTIVE_ENTRY` memperoleh detail bisnis;
+* Kepala Bagian Umum pada level `SECTION_HEAD` dan unit `BAGIAN_UMUM`
+  memperoleh detail bisnis;
+* pemegang permission tanpa Position bisnis tersebut, termasuk super-admin
+  teknis, hanya memperoleh ringkasan tersanitasi.
+
+Ringkasan tersanitasi tidak memuat identitas surat, pengirim, isi perubahan,
+dokumen, identitas pelaksana, request ID, IP, atau user agent. Filter yang dapat
+mengungkap identitas juga diabaikan server pada mode ringkasan. Collection,
+filter, rentang tanggal, dan pagination dibatasi pada query server.
+
+Scope M3 hanya memuat:
+
+```text
+SUBMISSION_SUBMITTED
+SUBMISSION_RESUBMITTED
+SUBMISSION_REVISION_REQUESTED
+SUBMISSION_READY_FOR_APPROVAL
+SUBMISSION_RETURNED_TO_STAFF
+SUBMISSION_REJECTED
+LETTER_REGISTERED
+DOCUMENT_VERSION_CREATED
+```
+
+Aktivitas draft, pembaruan draft, dan penggantian dokumen sebelum submit tidak
+ditampilkan agar pekerjaan privat pemohon tidak menjadi noise operasional.
+Rentang hari menggunakan zona waktu kantor yang configurable, dengan nilai awal
+`Asia/Makassar`; timestamp audit tetap disimpan dalam UTC. Audit registrasi
+surat dan penciptaan versi dokumen memakai request ID yang sama karena merupakan
+satu operasi bisnis transactional.
 
 ---
 

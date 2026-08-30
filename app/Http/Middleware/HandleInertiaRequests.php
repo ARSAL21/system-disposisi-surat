@@ -72,6 +72,8 @@ class HandleInertiaRequests extends Middleware
             'is_active' => $user->is_active,
             'email_verified_at' => $user->email_verified_at?->toISOString(),
             'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
+            'password_confirmed' => (time() - (int) request()->session()->get('auth.password_confirmed_at', 0)) < (int) config('auth.password_timeout', 10800),
+            'confirm_password_url' => $user->isInternalAccount() ? route('back-office.password.confirm.store') : route('password.confirm.store'),
             'created_at' => $user->created_at?->toISOString(),
             'updated_at' => $user->updated_at?->toISOString(),
         ];
@@ -92,6 +94,7 @@ class HandleInertiaRequests extends Middleware
                 'can_manage_organization' => false,
                 'can_manage_position_assignments' => false,
                 'can_view_privilege_audits' => false,
+                'can_view_letter_activities' => false,
                 'can_view_intake' => false,
                 'can_screen_intake' => false,
                 'can_decide_intake' => false,
@@ -113,6 +116,7 @@ class HandleInertiaRequests extends Middleware
             'can_manage_organization' => $user->can(PermissionName::ManageOrganization->value),
             'can_manage_position_assignments' => $user->can(PermissionName::ManagePositionAssignments->value),
             'can_view_privilege_audits' => $user->can(PermissionName::ViewPrivilegeAudits->value),
+            'can_view_letter_activities' => $user->can(PermissionName::ViewLetterActivities->value),
             'can_view_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ViewIntake->value),
             'can_screen_intake' => $hasIntakePosition

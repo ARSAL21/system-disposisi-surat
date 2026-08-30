@@ -52,6 +52,12 @@ final class AuthorizationCatalog
                     'description' => 'Melihat riwayat pembuatan akun pegawai serta perubahan peran dan hak akses.',
                     'group' => 'Audit dan Keamanan',
                 ],
+                PermissionName::ViewLetterActivities => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat aktivitas surat',
+                    'description' => 'Melihat jejak penerimaan dan registrasi surat sesuai kewenangan jabatan aktif.',
+                    'group' => 'Audit dan Keamanan',
+                ],
                 PermissionName::ViewIntake => [
                     'name' => $permission->value,
                     'label' => 'Lihat antrean penerimaan surat',
@@ -109,6 +115,7 @@ final class AuthorizationCatalog
                 PermissionName::ManageOrganization->value,
                 PermissionName::ManagePositionAssignments->value,
                 PermissionName::ViewPrivilegeAudits->value,
+                PermissionName::ViewLetterActivities->value,
                 PermissionName::ViewIntake->value,
                 PermissionName::ScreenIntake->value,
                 PermissionName::DecideIntake->value,

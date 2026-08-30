@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
+    Activity,
     ClipboardCheck,
     History,
     Inbox,
@@ -58,6 +59,16 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: approvalPath,
             icon: ClipboardCheck,
             isActive: currentPath.value.startsWith(approvalPath),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_letter_activities) {
+        const activityPath = '/back-office/audits/letters';
+        items.push({
+            title: 'Aktivitas Surat',
+            href: activityPath,
+            icon: Activity,
+            isActive: currentPath.value === activityPath,
         });
     }
 

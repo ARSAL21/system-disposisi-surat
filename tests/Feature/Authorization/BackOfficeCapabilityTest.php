@@ -36,7 +36,8 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_view_organization', false)
             ->where('auth.capabilities.can_manage_organization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
-            ->where('auth.capabilities.can_view_privilege_audits', false),
+            ->where('auth.capabilities.can_view_privilege_audits', false)
+            ->where('auth.capabilities.can_view_letter_activities', false),
         );
 
     $publicUser = User::factory()->create();
@@ -60,6 +61,7 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_manage_organization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
             ->where('auth.capabilities.can_view_privilege_audits', false)
+            ->where('auth.capabilities.can_view_letter_activities', false)
             ->missing('auth.user.roles')
             ->missing('auth.user.permissions'),
         );
@@ -77,7 +79,8 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_view_organization', false)
             ->where('auth.capabilities.can_manage_organization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
-            ->where('auth.capabilities.can_view_privilege_audits', false),
+            ->where('auth.capabilities.can_view_privilege_audits', false)
+            ->where('auth.capabilities.can_view_letter_activities', false),
         );
 
     $viewer = User::factory()->internal()->create();
@@ -96,6 +99,7 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_manage_organization', false)
             ->where('auth.capabilities.can_manage_position_assignments', false)
             ->where('auth.capabilities.can_view_privilege_audits', false)
+            ->where('auth.capabilities.can_view_letter_activities', false)
             ->missing('auth.user.roles')
             ->missing('auth.user.permissions'),
         );
@@ -160,7 +164,8 @@ test('critical administrator capabilities remain protected by MFA', function ():
             ->where('auth.capabilities.can_view_organization', true)
             ->where('auth.capabilities.can_manage_organization', true)
             ->where('auth.capabilities.can_manage_position_assignments', true)
-            ->where('auth.capabilities.can_view_privilege_audits', true),
+            ->where('auth.capabilities.can_view_privilege_audits', true)
+            ->where('auth.capabilities.can_view_letter_activities', true),
         );
 
     $this->actingAs($mfaAdministrator)

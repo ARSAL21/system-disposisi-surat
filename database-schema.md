@@ -970,6 +970,12 @@ created_at
 
 Audit log bersifat **application-level append-only**.
 
+Enforcement aplikasi menolak perubahan/penghapusan record melalui model,
+quiet model operation, dan Eloquent Builder mass mutation. Audit baru tetap
+ditulis oleh `RecordAudit` agar dapat berada pada transaction bisnis yang sama.
+Raw SQL atau `DB::table('audit_logs')` bukan jalur aplikasi yang diizinkan dan
+harus dibatasi pula oleh privilege akun database runtime saat deployment.
+
 | Column                       | Type         | Constraint                            |
 | ---------------------------- | ------------ | ------------------------------------- |
 | id                           | bigint       | PK                                    |

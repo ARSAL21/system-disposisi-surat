@@ -3,6 +3,7 @@
 use App\Authorization\AuthorizationMutationSecurity;
 use App\Enums\AccountType;
 use App\Enums\PermissionName;
+use App\Http\Controllers\BackOffice\Audit\LetterActivityController;
 use App\Http\Controllers\BackOffice\Audit\PrivilegeAuditController;
 use App\Http\Controllers\BackOffice\Authorization\ActivateAuthorizationMutationController;
 use App\Http\Controllers\BackOffice\Authorization\AuthorizationRoleController;
@@ -129,6 +130,10 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.intake-approvals.index');
                     Route::inertia('previews/intake-approvals/{submission}', 'back-office/intake/approvals/Show')
                         ->name('previews.intake-approvals.show');
+                    Route::inertia('previews/letter-activities', 'back-office/letter-activities/Index')
+                        ->name('previews.letter-activities.index');
+                    Route::inertia('previews/letter-activities/summary', 'back-office/letter-activities/Index')
+                        ->name('previews.letter-activities.summary');
                 }
 
                 Route::prefix('intake')
@@ -177,6 +182,10 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                 Route::get('audits/privileges', PrivilegeAuditController::class)
                     ->middleware('can:'.PermissionName::ViewPrivilegeAudits->value)
                     ->name('privilege-audits.index');
+
+                Route::get('audits/letters', LetterActivityController::class)
+                    ->middleware('can:'.PermissionName::ViewLetterActivities->value)
+                    ->name('letter-activities.index');
 
                 Route::middleware('can:'.PermissionName::ViewOrganization->value)
                     ->group(function (): void {

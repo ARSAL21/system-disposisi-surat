@@ -6,6 +6,8 @@ final class OrganizationCatalog
 {
     public const string GENERAL_AFFAIRS_LEVEL = 'GENERAL_AFFAIRS';
 
+    public const string EXECUTIVE_ENTRY_LEVEL = 'EXECUTIVE_ENTRY';
+
     public const string SECTION_HEAD_LEVEL = 'SECTION_HEAD';
 
     public const string GENERAL_AFFAIRS_UNIT = 'BAGIAN_UMUM';
@@ -23,7 +25,7 @@ final class OrganizationCatalog
                 'is_active' => true,
             ],
             [
-                'code' => 'EXECUTIVE_ENTRY',
+                'code' => self::EXECUTIVE_ENTRY_LEVEL,
                 'name' => 'Wali Kota / Sekretaris Daerah',
                 'hierarchy_order' => 20,
                 'is_active' => true,
