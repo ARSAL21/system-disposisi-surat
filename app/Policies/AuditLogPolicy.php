@@ -12,4 +12,12 @@ class AuditLogPolicy
         return $user->isInternalAccount()
             && $user->can(PermissionName::ViewPrivilegeAudits->value);
     }
+
+    public function viewLetterActivities(User $user): bool
+    {
+        return $user->isInternalAccount()
+            && $user->is_active
+            && $user->hasVerifiedEmail()
+            && $user->can(PermissionName::ViewLetterActivities->value);
+    }
 }

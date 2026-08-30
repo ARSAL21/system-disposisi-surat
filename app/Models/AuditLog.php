@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Auditing\AuditLogBuilder;
+use App\Exceptions\AuditLogMutationDenied;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
-use LogicException;
 
 /**
  * @property int $id
@@ -24,9 +27,15 @@ use LogicException;
  * @property-read User|null $actor
  * @property-read PositionAssignment|null $actorPositionAssignment
  */
+#[UseEloquentBuilder(AuditLogBuilder::class)]
 class AuditLog extends Model
 {
     public const UPDATED_AT = null;
+
+    /**
+     * @var list<string>
+     */
+    protected $guarded = [];
 
     /**
      * @return array<string, string>
@@ -41,10 +50,15 @@ class AuditLog extends Model
         ];
     }
 
-    protected static function booted(): void
+    /** @param Builder<static> $query */
+    final protected function performUpdate(Builder $query): bool
     {
-        static::updating(fn () => throw new LogicException('Audit logs are append-only.'));
-        static::deleting(fn () => throw new LogicException('Audit logs are append-only.'));
+        throw AuditLogMutationDenied::forAppendOnlyRecord();
+    }
+
+    final protected function performDeleteOnModel(): void
+    {
+        throw AuditLogMutationDenied::forAppendOnlyRecord();
     }
 
     /** @return BelongsTo<User, $this> */
