@@ -8,9 +8,9 @@ use App\Http\Requests\PublicSubmission\ReplaceSubmissionDocumentRequest;
 use App\Http\Resources\LetterSubmissionResource;
 use App\Models\LetterSubmission;
 use App\Models\User;
+use App\Services\PrivateDocumentResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -39,19 +39,14 @@ class SubmissionDocumentController extends Controller
         return to_route('public.submissions.edit', $submission);
     }
 
-    public function download(LetterSubmission $submission): StreamedResponse
-    {
+    public function download(
+        LetterSubmission $submission,
+        PrivateDocumentResponse $privateDocumentResponse,
+    ): StreamedResponse {
         Gate::authorize('downloadDocument', $submission);
 
-        $document = $submission->document()->firstOrFail();
+        $document = $submission->document()->first();
 
-        return Storage::disk($document->storage_disk)->download(
-            $document->storage_path,
-            $document->original_filename,
-            [
-                'Content-Type' => 'application/pdf',
-                'X-Content-Type-Options' => 'nosniff',
-            ],
-        );
+        return $privateDocumentResponse->download($submission, $document);
     }
 }

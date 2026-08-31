@@ -41,6 +41,15 @@ return [
         'submission-documents' => [
             'driver' => 'local',
             'root' => storage_path('app/private/submissions'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+        ],
+
+        'letter-documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/letters'),
+            'visibility' => 'private',
             'throw' => true,
             'report' => true,
         ],

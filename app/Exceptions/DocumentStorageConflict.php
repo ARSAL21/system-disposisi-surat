@@ -5,16 +5,11 @@ namespace App\Exceptions;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
-class DocumentIntegrityConflict extends RuntimeException
+class DocumentStorageConflict extends RuntimeException
 {
     public static function unavailable(): self
     {
         return new self('Dokumen sumber tidak tersedia atau tidak dapat dibaca pada penyimpanan privat.');
-    }
-
-    public static function fingerprintMismatch(): self
-    {
-        return new self('Integritas dokumen tidak dapat diverifikasi (sidik jari atau ukuran berkas tidak cocok).');
     }
 
     public static function invalidDisk(): self
@@ -27,9 +22,14 @@ class DocumentIntegrityConflict extends RuntimeException
         return new self('Lokasi dokumen tidak valid.');
     }
 
+    public static function invalidMime(): self
+    {
+        return new self('Tipe MIME dokumen tidak valid.');
+    }
+
     public static function invalidMetadata(): self
     {
-        return new self('Metadata integritas dokumen pada basis data tidak valid.');
+        return new self('Metadata dokumen tidak valid.');
     }
 
     public function render(): Response
