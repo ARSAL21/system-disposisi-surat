@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-    Check,
     ClipboardList,
     Info,
     Send,
@@ -9,19 +8,12 @@ import {
     UsersRound,
 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import FirstDispositionConfirmationDialog from '@/components/back-office/dispositions/FirstDispositionConfirmationDialog.vue';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -30,7 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import type {
     CreateFirstDispositionPayload,
     DispositionInstructionLabelOption,
@@ -267,9 +258,7 @@ function confirmDisposition(): void {
 
                 <div
                     class="grid gap-2"
-                    :aria-invalid="
-                        Boolean(mergedErrors.instruction_label_ids)
-                    "
+                    :aria-invalid="Boolean(mergedErrors.instruction_label_ids)"
                 >
                     <label
                         v-for="label in instructionLabels"
@@ -331,7 +320,7 @@ function confirmDisposition(): void {
                     :disabled="!canCreate || processing"
                     :aria-invalid="Boolean(mergedErrors.instruction_note)"
                     aria-describedby="disposition-note-help disposition-note-error"
-                    class="min-h-28 w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm leading-6 shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="min-h-28 w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm leading-6 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="Tambahkan konteks khusus jika diperlukan..."
                     @input="delete localErrors.instruction_note"
                 />
@@ -339,7 +328,8 @@ function confirmDisposition(): void {
                     id="disposition-note-help"
                     class="text-xs leading-5 text-muted-foreground"
                 >
-                    Opsional. Jangan menuliskan kredensial atau data autentikasi.
+                    Opsional. Jangan menuliskan kredensial atau data
+                    autentikasi.
                 </p>
                 <InputError
                     id="disposition-note-error"
@@ -399,88 +389,12 @@ function confirmDisposition(): void {
         </CardContent>
     </Card>
 
-    <Dialog
-        :open="confirmationOpen"
-        @update:open="!processing ? (confirmationOpen = $event) : undefined"
-    >
-        <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
-            <DialogHeader>
-                <DialogTitle>Kirim disposisi kepada Asisten?</DialogTitle>
-                <DialogDescription class="leading-6">
-                    Pastikan penerima dan instruksi sudah sesuai. Keputusan ini
-                    akan menjadi bagian dari histori surat.
-                </DialogDescription>
-            </DialogHeader>
-
-            <div v-if="selectedPosition" class="grid gap-4">
-                <div class="rounded-2xl border bg-muted/35 p-4">
-                    <p class="text-xs font-medium text-muted-foreground">
-                        Asisten penerima
-                    </p>
-                    <p class="mt-1 font-semibold">
-                        {{ selectedPosition.name }}
-                    </p>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        {{ selectedPosition.holder_name }}
-                    </p>
-                </div>
-
-                <div class="rounded-2xl border p-4">
-                    <p class="text-xs font-medium text-muted-foreground">
-                        Instruksi
-                    </p>
-                    <ul class="mt-2 flex flex-wrap gap-2">
-                        <li
-                            v-for="instruction in selectedInstructions"
-                            :key="instruction.id"
-                            class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300"
-                        >
-                            {{ instruction.name }}
-                        </li>
-                    </ul>
-                    <p
-                        v-if="instructionNote.trim()"
-                        class="mt-4 whitespace-pre-wrap text-sm leading-6 text-muted-foreground"
-                    >
-                        {{ instructionNote.trim() }}
-                    </p>
-                </div>
-            </div>
-
-            <Alert class="border-amber-200 bg-amber-50/75 dark:border-amber-900 dark:bg-amber-950/25">
-                <Info class="size-4" aria-hidden="true" />
-                <AlertTitle>Tindakan tidak dapat dibatalkan</AlertTitle>
-                <AlertDescription>
-                    Penerima akan memperoleh cabang disposisi resmi pada inbox
-                    jabatannya.
-                </AlertDescription>
-            </Alert>
-
-            <DialogFooter class="gap-2 sm:gap-0">
-                <Button
-                    type="button"
-                    variant="outline"
-                    class="min-h-11"
-                    :disabled="processing"
-                    @click="confirmationOpen = false"
-                >
-                    Periksa kembali
-                </Button>
-                <Button
-                    type="button"
-                    class="min-h-11 bg-blue-700 hover:bg-blue-800"
-                    :disabled="processing || !selectedPosition"
-                    @click="confirmDisposition"
-                >
-                    <Spinner v-if="processing" />
-                    <Check v-else class="size-4" aria-hidden="true" />
-                    {{
-                        processing
-                            ? 'Mengirim disposisi...'
-                            : 'Ya, kirim disposisi'
-                    }}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+    <FirstDispositionConfirmationDialog
+        v-model:open="confirmationOpen"
+        :recipient="selectedPosition"
+        :instructions="selectedInstructions"
+        :note="instructionNote"
+        :processing="processing"
+        @confirm="confirmDisposition"
+    />
 </template>

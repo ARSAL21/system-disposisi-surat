@@ -94,7 +94,7 @@ defineProps<{ disposition: FirstDispositionReceipt }>();
                         aria-hidden="true"
                     />
                     <p
-                        class="whitespace-pre-wrap text-sm leading-6 text-muted-foreground"
+                        class="text-sm leading-6 whitespace-pre-wrap text-muted-foreground"
                     >
                         {{ disposition.instruction_note }}
                     </p>

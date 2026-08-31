@@ -7,9 +7,7 @@ import type {
 import type { MutationSecurityState } from './organization';
 
 export type DispositionRecipientStatus =
-    | 'PENDING'
-    | 'IN_PROGRESS'
-    | 'COMPLETED';
+    'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 
 export type DispositionPositionOption = {
     id: number;
@@ -101,17 +99,16 @@ export type InstructionLabelFilters = {
     status: InstructionLabelStatus;
 };
 
-export type DispositionInstructionLabel =
-    DispositionInstructionLabelOption & {
-        sort_order: number;
-        is_active: boolean;
-        created_at: string;
-        updated_at: string;
-        links: {
-            update: string;
-            status: string;
-        };
+export type DispositionInstructionLabel = DispositionInstructionLabelOption & {
+    sort_order: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    links: {
+        update: string;
+        status: string;
     };
+};
 
 export type InstructionLabelRoutes = {
     index: string;
