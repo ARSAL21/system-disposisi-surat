@@ -14,6 +14,7 @@ use App\Models\SubmissionDecision;
 use App\Models\SubmissionDocument;
 use App\Models\User;
 use App\Organization\OrganizationCatalog;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -85,10 +86,55 @@ function createDashboardIntakeStaff(bool $withPosition = true, bool $withPermiss
     return $user;
 }
 
+function createKabagPositionAssignment(User $kabag): PositionAssignment
+{
+    $level = PositionLevel::query()
+        ->where('code', OrganizationCatalog::SECTION_HEAD_LEVEL)
+        ->first();
+
+    if (! $level instanceof PositionLevel) {
+        $level = new PositionLevel;
+        $level->code = OrganizationCatalog::SECTION_HEAD_LEVEL;
+        $level->name = 'Kepala Bagian';
+        $level->hierarchy_order = 40;
+        $level->is_active = true;
+        $level->save();
+    }
+
+    $unit = OrganizationalUnit::query()
+        ->where('code', OrganizationCatalog::GENERAL_AFFAIRS_UNIT)
+        ->first();
+
+    if (! $unit instanceof OrganizationalUnit) {
+        $unit = new OrganizationalUnit;
+        $unit->code = OrganizationCatalog::GENERAL_AFFAIRS_UNIT;
+        $unit->name = 'Bagian Umum';
+        $unit->is_active = true;
+        $unit->save();
+    }
+
+    $position = new Position;
+    $position->name = 'Kepala Bagian Umum';
+    $position->code = 'KABAG-UMUM-'.Str::upper(Str::random(6));
+    $position->organizational_unit_id = $unit->getKey();
+    $position->position_level_id = $level->getKey();
+    $position->is_active = true;
+    $position->save();
+
+    $assignment = new PositionAssignment;
+    $assignment->user_id = $kabag->getKey();
+    $assignment->position_id = $position->getKey();
+    $assignment->started_at = now()->subMonth();
+    $assignment->save();
+
+    return $assignment;
+}
+
 function createDashboardSubmissionWithDocument(
     SubmissionStatus $status,
     string $subject = 'Surat Permohonan Kerja Sama',
     ?string $kabagNote = null,
+    ?CarbonInterface $submittedAt = null,
 ): LetterSubmission {
     $submitter = User::factory()->create();
 
@@ -105,7 +151,7 @@ function createDashboardSubmissionWithDocument(
     $submission->external_letter_date = now()->subDays(2)->toDateString();
     $submission->subject = $subject;
     $submission->summary = 'Ringkasan surat permohonan kerja sama program daerah.';
-    $submission->submitted_at = now()->subHours(rand(1, 48));
+    $submission->submitted_at = $submittedAt ?? now()->subHours(2);
     $submission->save();
 
     $path = $submission->public_id.'/'.Str::uuid().'.pdf';
@@ -124,12 +170,14 @@ function createDashboardSubmissionWithDocument(
 
     if ($kabagNote !== null) {
         $kabag = User::factory()->internal()->create();
+        $kabagAssignment = createKabagPositionAssignment($kabag);
+
         $decision = new SubmissionDecision;
         $decision->letter_submission_id = $submission->getKey();
         $decision->outcome = SubmissionDecisionOutcome::InternalRevisionRequired;
         $decision->note = $kabagNote;
         $decision->created_by_user_id = $kabag->getKey();
-        $decision->created_by_position_assignment_id = 1;
+        $decision->created_by_position_assignment_id = $kabagAssignment->getKey();
         $decision->created_at = now();
         $decision->saveQuietly();
     }
@@ -141,11 +189,16 @@ test('authorized intake staff receives real metrics and submissions on dashboard
     $staff = createDashboardIntakeStaff();
 
     // Create 1 submitted, 1 internal revision, 1 ready for approval, 1 registered, 1 draft
-    $sub1 = createDashboardSubmissionWithDocument(SubmissionStatus::Submitted, 'Surat Masuk 1');
+    $sub1 = createDashboardSubmissionWithDocument(
+        SubmissionStatus::Submitted,
+        'Surat Masuk 1',
+        submittedAt: now()->subHours(2),
+    );
     $sub2 = createDashboardSubmissionWithDocument(
         SubmissionStatus::InternalRevisionRequired,
         'Surat Perbaikan 2',
         'Lengkapi stempel basah',
+        submittedAt: now()->subHour(),
     );
     createDashboardSubmissionWithDocument(SubmissionStatus::ReadyForApproval, 'Surat Siap Putus');
     createDashboardSubmissionWithDocument(SubmissionStatus::Registered, 'Surat Sudah Diregistrasi');
@@ -164,17 +217,44 @@ test('authorized intake staff receives real metrics and submissions on dashboard
     $response = $this->actingAs($staff)->get(route('back-office.dashboard'));
 
     $response->assertOk();
-    $response->assertInertia(fn (Assert $page) => $page
-        ->component('back-office/Dashboard')
-        ->where('preview', false)
-        ->where('intakeDashboard.metrics.submitted_count', 1)
-        ->where('intakeDashboard.metrics.internal_revision_count', 1)
-        ->where('intakeDashboard.metrics.ready_for_approval_count', 1)
-        ->where('intakeDashboard.metrics.registered_count', 1)
-        ->has('intakeDashboard.recent_submissions', 2)
-        ->where('intakeDashboard.recent_submissions.0.public_id', fn ($id) => in_array($id, [$sub1->public_id, $sub2->public_id], true))
-        ->where('intakeDashboard.recent_submissions.0.links.show', fn ($url) => str_contains($url, '/back-office/intake/submissions/'))
-    );
+
+    $recentSubmissions = [];
+    $response->assertInertia(function (Assert $page) use ($sub1, $sub2, &$recentSubmissions): void {
+        $page
+            ->component('back-office/Dashboard')
+            ->where('preview', false)
+            ->where('intakeDashboard.metrics.submitted_count', 1)
+            ->where('intakeDashboard.metrics.internal_revision_count', 1)
+            ->where('intakeDashboard.metrics.ready_for_approval_count', 1)
+            ->where('intakeDashboard.metrics.registered_count', 1)
+            ->has('intakeDashboard.recent_submissions', 2)
+            ->where('intakeDashboard.recent_submissions.0.public_id', $sub2->public_id)
+            ->where('intakeDashboard.recent_submissions.1.public_id', $sub1->public_id);
+
+        $recentSubmissions = $page->toArray()['props']['intakeDashboard']['recent_submissions'];
+    });
+
+    // Test that the exact URLs returned in the payload resolve successfully
+    $showUrl = $recentSubmissions[0]['links']['show'];
+    $previewUrl = $recentSubmissions[0]['links']['document_preview'];
+    $downloadUrl = $recentSubmissions[0]['links']['document_download'];
+
+    expect($showUrl)->toBeString()->and($previewUrl)->toBeString()->and($downloadUrl)->toBeString();
+
+    $showResponse = $this->actingAs($staff)->get($showUrl);
+    $showResponse->assertOk();
+
+    $previewResponse = $this->actingAs($staff)->get($previewUrl);
+    $previewResponse->assertOk();
+    $previewResponse->assertHeader('Content-Type', 'application/pdf');
+    $previewResponse->assertHeader('X-Content-Type-Options', 'nosniff');
+
+    $downloadResponse = $this->actingAs($staff)->get($downloadUrl);
+    $downloadResponse->assertOk();
+    $downloadResponse->assertHeader('Content-Type', 'application/pdf');
+    $downloadResponse->assertHeader('X-Content-Type-Options', 'nosniff');
+
+    expect(json_encode($recentSubmissions))->not->toContain('01K3QW4N8X6M2H7R9T5V0C3B1A');
 });
 
 test('worklist items include internal_revision_note and do not leak internal database IDs or storage paths', function (): void {
@@ -196,6 +276,9 @@ test('worklist items include internal_revision_note and do not leak internal dat
         ->missing('intakeDashboard.recent_submissions.0.id')
         ->missing('intakeDashboard.recent_submissions.0.storage_disk')
         ->missing('intakeDashboard.recent_submissions.0.storage_path')
+        ->missing('intakeDashboard.recent_submissions.0.document.id')
+        ->missing('intakeDashboard.recent_submissions.0.document.storage_disk')
+        ->missing('intakeDashboard.recent_submissions.0.document.storage_path')
     );
 });
 
@@ -225,14 +308,30 @@ test('user with intake permission but without active position receives null inta
     );
 });
 
-test('worklist limits results to maximum 10 items in stable chronological order', function (): void {
+test('worklist limits results to maximum 10 items in stable chronological order with id tie breaker', function (): void {
     $staff = createDashboardIntakeStaff();
 
-    // Create 15 submitted submissions with staggered times
-    for ($i = 1; $i <= 15; $i++) {
-        $sub = createDashboardSubmissionWithDocument(SubmissionStatus::Submitted, "Surat {$i}");
-        $sub->submitted_at = now()->subMinutes(15 - $i);
-        $sub->save();
+    $sameTime = now()->subHours(5);
+
+    // Create 2 submissions with the EXACT same submitted_at timestamp
+    $subSameTime1 = createDashboardSubmissionWithDocument(
+        SubmissionStatus::Submitted,
+        'Surat Waktu Sama 1',
+        submittedAt: $sameTime,
+    );
+    $subSameTime2 = createDashboardSubmissionWithDocument(
+        SubmissionStatus::Submitted,
+        'Surat Waktu Sama 2',
+        submittedAt: $sameTime,
+    );
+
+    // Create 10 more submissions with earlier timestamps
+    for ($i = 1; $i <= 10; $i++) {
+        createDashboardSubmissionWithDocument(
+            SubmissionStatus::Submitted,
+            "Surat Lama {$i}",
+            submittedAt: now()->subHours(10 + $i),
+        );
     }
 
     $response = $this->actingAs($staff)->get(route('back-office.dashboard'));
@@ -240,8 +339,11 @@ test('worklist limits results to maximum 10 items in stable chronological order'
     $response->assertOk();
     $response->assertInertia(fn (Assert $page) => $page
         ->component('back-office/Dashboard')
-        ->where('intakeDashboard.metrics.submitted_count', 15)
+        ->where('intakeDashboard.metrics.submitted_count', 12)
         ->has('intakeDashboard.recent_submissions', 10)
+        // subSameTime2 was created after subSameTime1, so its ID is greater; with id DESC it must appear first
+        ->where('intakeDashboard.recent_submissions.0.public_id', $subSameTime2->public_id)
+        ->where('intakeDashboard.recent_submissions.1.public_id', $subSameTime1->public_id)
     );
 });
 
@@ -271,15 +373,28 @@ test('submission without document has null document and null preview download li
     );
 });
 
-test('document preview link from dashboard returns 200 with security headers', function (): void {
+test('submission without submitted_at returns null submitted_at without fallback to now', function (): void {
     $staff = createDashboardIntakeStaff();
-    $submission = createDashboardSubmissionWithDocument(SubmissionStatus::Submitted);
 
-    $response = $this->actingAs($staff)->get(route('back-office.intake.submissions.document.show', $submission));
+    $submission = new LetterSubmission;
+    $submission->public_id = (string) Str::ulid();
+    $submission->source = SubmissionSource::Online;
+    $submission->status = SubmissionStatus::Submitted;
+    $submission->submitted_by_user_id = User::factory()->create()->getKey();
+    $submission->sender_organization_name = 'Lembaga Tanpa Waktu';
+    $submission->contact_name = 'Kontak Person';
+    $submission->contact_email = 'kontak@lembaga.test';
+    $submission->subject = 'Surat Tanpa Waktu Kirim';
+    $submission->submitted_at = null;
+    $submission->save();
+
+    $response = $this->actingAs($staff)->get(route('back-office.dashboard'));
 
     $response->assertOk();
-    $response->assertHeader('Content-Type', 'application/pdf');
-    $response->assertHeader('X-Content-Type-Options', 'nosniff');
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('back-office/Dashboard')
+        ->where('intakeDashboard.recent_submissions.0.submitted_at', null)
+    );
 });
 
 test('local preview dashboard route renders with preview true', function (): void {
