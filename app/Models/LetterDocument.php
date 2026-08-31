@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use LogicException;
 
@@ -25,6 +27,7 @@ use LogicException;
  * @property-read IncomingLetter $incomingLetter
  * @property-read SubmissionDocument|null $sourceSubmissionDocument
  * @property-read LetterDocument|null $replacesDocument
+ * @property-read Collection<int, LetterDocument> $replacementDocuments
  * @property-read User $uploadedBy
  */
 class LetterDocument extends Model
@@ -53,6 +56,12 @@ class LetterDocument extends Model
     public function replacesDocument(): BelongsTo
     {
         return $this->belongsTo(self::class, 'replaces_document_id');
+    }
+
+    /** @return HasMany<LetterDocument, $this> */
+    public function replacementDocuments(): HasMany
+    {
+        return $this->hasMany(self::class, 'replaces_document_id');
     }
 
     /** @return BelongsTo<User, $this> */

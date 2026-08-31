@@ -188,6 +188,35 @@ Correction atau reopening belum menjadi bagian MVP dan tidak boleh diimplementas
 
 ---
 
+## 6.1 Koreksi Versi Dokumen pada State `REGISTERED`
+
+Pembuatan versi koreksi dokumen resmi bukan state transition surat. Operasi ini
+hanya diperbolehkan selama:
+
+```text
+incoming_letters.status = REGISTERED
+```
+
+Setelah surat berubah menjadi `ROUTED`, `IN_PROGRESS`, atau `COMPLETED`, dokumen
+acuan tidak dapat diganti pada MVP. Koreksi menghasilkan `letter_documents`
+baru yang immutable dan menunjuk versi sebelumnya; status surat tetap
+`REGISTERED` dan seluruh versi lama dipertahankan.
+
+Operasi wajib menolak:
+
+* actor tanpa permission `document-versions.create`;
+* actor tanpa Position Assignment aktif sebagai Kepala Bagian Umum;
+* surat yang tidak lagi `REGISTERED`;
+* berkas non-PDF, terlalu besar, atau SHA-256 identik;
+* hubungan versi, disk, path, MIME, hash, atau ukuran yang tidak konsisten.
+
+Pembuatan metadata versi dan audit `DOCUMENT_VERSION_CREATED` harus atomic.
+Karena filesystem tidak transactional, file baru wajib dibersihkan jika
+transaction database gagal. Tidak ada transition baru, reopening, atau
+perubahan status yang diperkenalkan oleh versioning.
+
+---
+
 # 7. Initial Route State
 
 Routing Bagian Umum ke Wali Kota/Sekda menggunakan:

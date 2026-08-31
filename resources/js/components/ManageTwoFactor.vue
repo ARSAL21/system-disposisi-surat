@@ -64,7 +64,8 @@ onUnmounted(() => clearTwoFactorAuthData());
                     </Badge>
                 </div>
                 <p class="text-xs text-muted-foreground">
-                    Tingkatkan keamanan akun Anda dengan verifikasi kode OTP berbasis aplikasi
+                    Tingkatkan keamanan akun Anda dengan verifikasi kode OTP
+                    berbasis aplikasi
                 </p>
             </div>
         </div>
@@ -73,15 +74,24 @@ onUnmounted(() => clearTwoFactorAuthData());
             v-if="!twoFactorEnabled"
             class="space-y-5 rounded-2xl border border-indigo-100/80 bg-gradient-to-br from-indigo-50/40 via-white to-neutral-50/40 p-5 sm:p-6 dark:border-indigo-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20"
         >
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div
+                class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+            >
                 <div class="space-y-2">
-                    <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <Smartphone class="size-4 text-indigo-600 dark:text-indigo-400" />
+                    <div
+                        class="flex items-center gap-2 text-sm font-semibold text-foreground"
+                    >
+                        <Smartphone
+                            class="size-4 text-indigo-600 dark:text-indigo-400"
+                        />
                         <span>Gunakan Aplikasi Autentikator (TOTP)</span>
                     </div>
-                    <p class="max-w-xl text-xs leading-relaxed text-muted-foreground">
-                        Saat 2FA aktif, Anda akan diminta memasukkan 6 digit kode PIN acak dari
-                        aplikasi seperti Google Authenticator, Microsoft Authenticator, atau Authy
+                    <p
+                        class="max-w-xl text-xs leading-relaxed text-muted-foreground"
+                    >
+                        Saat 2FA aktif, Anda akan diminta memasukkan 6 digit
+                        kode PIN acak dari aplikasi seperti Google
+                        Authenticator, Microsoft Authenticator, atau Authy
                         setiap kali login.
                     </p>
                 </div>
@@ -118,15 +128,22 @@ onUnmounted(() => clearTwoFactorAuthData());
             v-else
             class="space-y-6 rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/40 via-white to-neutral-50/40 p-5 sm:p-6 dark:border-emerald-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/20"
         >
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div
+                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div class="space-y-1">
-                    <div class="flex items-center gap-2 text-sm font-semibold text-emerald-950 dark:text-emerald-200">
+                    <div
+                        class="flex items-center gap-2 text-sm font-semibold text-emerald-950 dark:text-emerald-200"
+                    >
                         <CheckCircle2 class="size-4.5 text-emerald-600" />
                         <span>Autentikasi Dua Faktor Aktif</span>
                     </div>
-                    <p class="max-w-xl text-xs leading-relaxed text-muted-foreground">
-                        Akun Anda telah terlindungi dengan verifikasi dua langkah. Kode keamanan
-                        wajib dimasukkan saat proses masuk.
+                    <p
+                        class="max-w-xl text-xs leading-relaxed text-muted-foreground"
+                    >
+                        Akun Anda telah terlindungi dengan verifikasi dua
+                        langkah. Kode keamanan wajib dimasukkan saat proses
+                        masuk.
                     </p>
                 </div>
 
@@ -145,7 +162,9 @@ onUnmounted(() => clearTwoFactorAuthData());
                 </div>
             </div>
 
-            <div class="border-t border-emerald-100 pt-4 dark:border-emerald-900/40">
+            <div
+                class="border-t border-emerald-100 pt-4 dark:border-emerald-900/40"
+            >
                 <TwoFactorRecoveryCodes />
             </div>
         </div>

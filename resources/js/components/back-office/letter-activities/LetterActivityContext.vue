@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { Clock3, FileKey2, UserRound } from '@lucide/vue';
 import { formatLetterActivityDateTime } from '@/lib/letterActivityPresentation';
-import type {
-    LetterActivityRecord,
-    LetterActivityVisibility,
-} from '@/types';
+import type { LetterActivityRecord, LetterActivityVisibility } from '@/types';
 
 defineProps<{
     activity: LetterActivityRecord;
@@ -25,7 +22,9 @@ defineProps<{
                     <p class="text-xs font-medium text-muted-foreground">
                         Pelaksana
                     </p>
-                    <p class="mt-1 font-semibold text-slate-950 dark:text-white">
+                    <p
+                        class="mt-1 font-semibold text-slate-950 dark:text-white"
+                    >
                         {{ activity.actor.name }}
                     </p>
                     <p class="mt-0.5 text-sm text-muted-foreground">
@@ -50,7 +49,9 @@ defineProps<{
                     <p class="text-xs font-medium text-muted-foreground">
                         Waktu aktivitas
                     </p>
-                    <p class="mt-1 font-semibold text-slate-950 dark:text-white">
+                    <p
+                        class="mt-1 font-semibold text-slate-950 dark:text-white"
+                    >
                         {{
                             formatLetterActivityDateTime(
                                 activity.occurred_at,
@@ -86,7 +87,8 @@ defineProps<{
                 <p class="mt-1 text-sm text-muted-foreground">
                     {{ activity.target.sender }} ·
                     {{
-                        activity.target.agenda_number ?? activity.target.public_id
+                        activity.target.agenda_number ??
+                        activity.target.public_id
                     }}
                 </p>
             </div>

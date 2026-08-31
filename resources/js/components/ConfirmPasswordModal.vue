@@ -109,7 +109,7 @@ const submit = () => {
 
 <template>
     <Dialog :open="isOpen" @update:open="emit('update:isOpen', $event)">
-        <DialogContent class="sm:max-w-md overflow-hidden">
+        <DialogContent class="overflow-hidden sm:max-w-md">
             <!-- Header with Glowing Icon Badge -->
             <DialogHeader class="space-y-3 text-left">
                 <div
@@ -117,10 +117,14 @@ const submit = () => {
                 >
                     <KeyRound class="size-6" />
                 </div>
-                <DialogTitle class="text-xl font-bold tracking-tight text-foreground">
+                <DialogTitle
+                    class="text-xl font-bold tracking-tight text-foreground"
+                >
                     {{ title }}
                 </DialogTitle>
-                <DialogDescription class="text-xs leading-relaxed text-muted-foreground">
+                <DialogDescription
+                    class="text-xs leading-relaxed text-muted-foreground"
+                >
                     {{ description }}
                 </DialogDescription>
             </DialogHeader>
@@ -141,7 +145,10 @@ const submit = () => {
             <!-- Password Form -->
             <form @submit.prevent="submit" class="space-y-5">
                 <div class="space-y-2">
-                    <Label for="confirm-modal-password" class="text-xs font-semibold text-foreground">
+                    <Label
+                        for="confirm-modal-password"
+                        class="text-xs font-semibold text-foreground"
+                    >
                         Kata Sandi Akun
                     </Label>
                     <PasswordInput
@@ -161,9 +168,12 @@ const submit = () => {
                 <div
                     class="flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-[11px] text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200"
                 >
-                    <ShieldCheck class="size-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                    <ShieldCheck
+                        class="size-4 shrink-0 text-indigo-600 dark:text-indigo-400"
+                    />
                     <span>
-                        Konfirmasi ini membuka mode akses keamanan selama sesi aktif.
+                        Konfirmasi ini membuka mode akses keamanan selama sesi
+                        aktif.
                     </span>
                 </div>
 
@@ -185,7 +195,11 @@ const submit = () => {
                     >
                         <Spinner v-if="form.processing" />
                         <KeyRound v-else class="size-4" />
-                        {{ form.processing ? 'Memverifikasi...' : 'Konfirmasi & Lanjutkan' }}
+                        {{
+                            form.processing
+                                ? 'Memverifikasi...'
+                                : 'Konfirmasi & Lanjutkan'
+                        }}
                     </Button>
                 </DialogFooter>
             </form>

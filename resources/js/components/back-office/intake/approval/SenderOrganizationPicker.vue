@@ -49,8 +49,8 @@ function useNew(): void {
 
 function updateNew(patch: Partial<NewSenderOrganization>): void {
     if (props.modelValue.mode !== 'new') {
-return;
-}
+        return;
+    }
 
     emit('update:modelValue', { ...props.modelValue, ...patch });
 }

@@ -17,6 +17,8 @@ test('authorization catalog exposes unique role and permission names', function 
             PermissionName::ManagePositionAssignments->value,
             PermissionName::ViewPrivilegeAudits->value,
             PermissionName::ViewLetterActivities->value,
+            PermissionName::ViewDocumentVersions->value,
+            PermissionName::CreateDocumentVersions->value,
             PermissionName::ViewIntake->value,
             PermissionName::ScreenIntake->value,
             PermissionName::DecideIntake->value,

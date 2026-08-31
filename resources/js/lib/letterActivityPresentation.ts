@@ -4,16 +4,17 @@ import type {
     LetterActivityValue,
 } from '@/types';
 
-export const letterActivityActionLabels: Record<LetterActivityAction, string> = {
-    SUBMISSION_SUBMITTED: 'Surat diajukan',
-    SUBMISSION_RESUBMITTED: 'Surat diajukan kembali',
-    SUBMISSION_REVISION_REQUESTED: 'Perbaikan diminta',
-    SUBMISSION_READY_FOR_APPROVAL: 'Siap ditinjau Kabag',
-    SUBMISSION_RETURNED_TO_STAFF: 'Dikembalikan ke petugas',
-    SUBMISSION_REJECTED: 'Surat ditolak',
-    LETTER_REGISTERED: 'Surat diregistrasi',
-    DOCUMENT_VERSION_CREATED: 'Dokumen resmi dikunci',
-};
+export const letterActivityActionLabels: Record<LetterActivityAction, string> =
+    {
+        SUBMISSION_SUBMITTED: 'Surat diajukan',
+        SUBMISSION_RESUBMITTED: 'Surat diajukan kembali',
+        SUBMISSION_REVISION_REQUESTED: 'Perbaikan diminta',
+        SUBMISSION_READY_FOR_APPROVAL: 'Siap ditinjau Kabag',
+        SUBMISSION_RETURNED_TO_STAFF: 'Dikembalikan ke petugas',
+        SUBMISSION_REJECTED: 'Surat ditolak',
+        LETTER_REGISTERED: 'Surat diregistrasi',
+        DOCUMENT_VERSION_CREATED: 'Dokumen resmi dikunci',
+    };
 
 export const letterActivityActionDescriptions: Record<
     LetterActivityAction,
@@ -21,7 +22,8 @@ export const letterActivityActionDescriptions: Record<
 > = {
     SUBMISSION_SUBMITTED: 'Pengajuan baru masuk dari portal publik.',
     SUBMISSION_RESUBMITTED: 'Pemohon mengirim kembali surat setelah perbaikan.',
-    SUBMISSION_REVISION_REQUESTED: 'Petugas meminta pemohon melengkapi pengajuan.',
+    SUBMISSION_REVISION_REQUESTED:
+        'Petugas meminta pemohon melengkapi pengajuan.',
     SUBMISSION_READY_FOR_APPROVAL:
         'Hasil pemeriksaan petugas diteruskan kepada Kepala Bagian Umum.',
     SUBMISSION_RETURNED_TO_STAFF:
@@ -32,7 +34,9 @@ export const letterActivityActionDescriptions: Record<
         'Versi dokumen resmi dan sidik jari SHA-256 dicatat.',
 };
 
-export function letterActivityActionClass(action: LetterActivityAction): string {
+export function letterActivityActionClass(
+    action: LetterActivityAction,
+): string {
     if (action === 'LETTER_REGISTERED') {
         return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300';
     }
@@ -90,7 +94,9 @@ export function formatLetterActivityValue(value: LetterActivityValue): string {
     return String(value);
 }
 
-export function letterActivitySearchText(activity: LetterActivityRecord): string {
+export function letterActivitySearchText(
+    activity: LetterActivityRecord,
+): string {
     return [
         activity.target?.public_id,
         activity.target?.agenda_number,

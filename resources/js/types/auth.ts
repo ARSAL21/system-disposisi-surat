@@ -22,6 +22,7 @@ export type AuthCapabilities = {
     can_manage_position_assignments: boolean;
     can_view_privilege_audits: boolean;
     can_view_letter_activities: boolean;
+    can_view_document_versions: boolean;
     can_view_intake: boolean;
     can_screen_intake: boolean;
     can_decide_intake: boolean;

@@ -43,7 +43,9 @@ function labelFor(key: string): string {
                 <dt class="text-xs font-medium text-muted-foreground">
                     {{ labelFor(String(key)) }}
                 </dt>
-                <dd class="mt-0.5 text-sm leading-6 text-slate-900 dark:text-white">
+                <dd
+                    class="mt-0.5 text-sm leading-6 text-slate-900 dark:text-white"
+                >
                     {{ formatLetterActivityValue(value) }}
                 </dd>
             </div>

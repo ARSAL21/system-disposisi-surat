@@ -49,10 +49,14 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
         <div
             class="relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-white to-violet-50/40 p-5 shadow-xs sm:p-6 dark:border-indigo-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20"
         >
-            <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div
+                class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div class="flex items-center gap-4">
                     <div class="relative">
-                        <Avatar class="size-16 rounded-2xl border-2 border-white shadow-md dark:border-slate-800">
+                        <Avatar
+                            class="size-16 rounded-2xl border-2 border-white shadow-md dark:border-slate-800"
+                        >
                             <AvatarImage
                                 v-if="user.avatar"
                                 :src="user.avatar"
@@ -75,7 +79,9 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                                 variant="outline"
                                 class="border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
                             >
-                                <CheckCircle2 class="mr-1 size-3 text-emerald-600" />
+                                <CheckCircle2
+                                    class="mr-1 size-3 text-emerald-600"
+                                />
                                 Terverifikasi
                             </Badge>
                             <Badge
@@ -83,7 +89,9 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                                 variant="outline"
                                 class="border-amber-200 bg-amber-50/80 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
                             >
-                                <AlertCircle class="mr-1 size-3 text-amber-600" />
+                                <AlertCircle
+                                    class="mr-1 size-3 text-amber-600"
+                                />
                                 Belum Terverifikasi
                             </Badge>
                         </div>
@@ -93,7 +101,9 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                <div
+                    class="flex flex-wrap items-center gap-2 self-start sm:self-center"
+                >
                     <Badge
                         variant="secondary"
                         :class="[
@@ -104,7 +114,11 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                         ]"
                     >
                         <Shield class="mr-1.5 size-3.5" />
-                        {{ isInternal ? 'Akun Internal Pemkot' : 'Akun Publik Eksternal' }}
+                        {{
+                            isInternal
+                                ? 'Akun Internal Pemkot'
+                                : 'Akun Publik Eksternal'
+                        }}
                     </Badge>
                 </div>
             </div>
@@ -134,7 +148,10 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                 v-slot="{ errors, processing }"
             >
                 <div class="grid gap-2">
-                    <Label for="name" class="text-sm font-medium text-foreground">
+                    <Label
+                        for="name"
+                        class="text-sm font-medium text-foreground"
+                    >
                         Nama Lengkap
                     </Label>
                     <div class="relative">
@@ -148,14 +165,17 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                             placeholder="Masukkan nama lengkap Anda"
                         />
                         <UserIcon
-                            class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                            class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
                         />
                     </div>
                     <InputError class="mt-1" :message="errors.name" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="email" class="text-sm font-medium text-foreground">
+                    <Label
+                        for="email"
+                        class="text-sm font-medium text-foreground"
+                    >
                         Alamat Email
                     </Label>
                     <div class="relative">
@@ -170,7 +190,7 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                             placeholder="nama@domain.com"
                         />
                         <Mail
-                            class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                            class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
                         />
                     </div>
                     <InputError class="mt-1" :message="errors.email" />
@@ -182,19 +202,27 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                     class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/40 dark:bg-amber-950/30"
                 >
                     <div class="flex items-start gap-3">
-                        <AlertCircle class="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                        <div class="space-y-1 text-sm text-amber-900 dark:text-amber-200">
+                        <AlertCircle
+                            class="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
+                        />
+                        <div
+                            class="space-y-1 text-sm text-amber-900 dark:text-amber-200"
+                        >
                             <p class="font-medium">
                                 Alamat email Anda belum diverifikasi.
                             </p>
-                            <p class="text-xs text-amber-800/90 dark:text-amber-300/80">
-                                Harap verifikasi email Anda agar dapat menggunakan seluruh layanan.
+                            <p
+                                class="text-xs text-amber-800/90 dark:text-amber-300/80"
+                            >
+                                Harap verifikasi email Anda agar dapat
+                                menggunakan seluruh layanan.
                                 <Link
                                     :href="send()"
                                     as="button"
                                     class="font-semibold underline decoration-amber-400 underline-offset-2 transition-colors hover:text-amber-950 dark:hover:text-white"
                                 >
-                                    Klik di sini untuk mengirim ulang tautan verifikasi.
+                                    Klik di sini untuk mengirim ulang tautan
+                                    verifikasi.
                                 </Link>
                             </p>
                         </div>
@@ -204,8 +232,11 @@ const isInternal = computed(() => user.value.account_type === 'INTERNAL');
                         v-if="page.props.status === 'verification-link-sent'"
                         class="mt-3 flex items-center gap-2 rounded-lg bg-emerald-100/70 px-3 py-2 text-xs font-medium text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
                     >
-                        <CheckCircle2 class="size-4 text-emerald-600 dark:text-emerald-400" />
-                        Tautan verifikasi baru telah berhasil dikirim ke alamat email Anda.
+                        <CheckCircle2
+                            class="size-4 text-emerald-600 dark:text-emerald-400"
+                        />
+                        Tautan verifikasi baru telah berhasil dikirim ke alamat
+                        email Anda.
                     </div>
                 </div>
 

@@ -11,6 +11,8 @@ enum PermissionName: string
     case ManagePositionAssignments = 'position-assignments.manage';
     case ViewPrivilegeAudits = 'privilege-audits.view';
     case ViewLetterActivities = 'letter-activities.view';
+    case ViewDocumentVersions = 'document-versions.view';
+    case CreateDocumentVersions = 'document-versions.create';
     case ViewIntake = 'intake.view';
     case ScreenIntake = 'intake.screen';
     case DecideIntake = 'intake.decide';

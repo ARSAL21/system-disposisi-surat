@@ -11,8 +11,8 @@ const emit = defineEmits<{
 }>();
 function status(position: OrganizationPosition): string {
     if (!position.is_active) {
-return 'Nonaktif';
-}
+        return 'Nonaktif';
+    }
 
     return position.active_assignment ? 'Terisi' : 'Lowong';
 }

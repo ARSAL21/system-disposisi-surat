@@ -100,8 +100,8 @@ const pagination = computed<PaginationData>(() =>
 
 const refreshQueue = useDebounceFn(() => {
     if (previewMode.value || !props.routes?.index) {
-return;
-}
+        return;
+    }
 
     router.get(
         props.routes.index,

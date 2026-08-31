@@ -9,7 +9,12 @@ use App\Http\Controllers\BackOffice\Authorization\ActivateAuthorizationMutationC
 use App\Http\Controllers\BackOffice\Authorization\AuthorizationRoleController;
 use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
 use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
+use App\Http\Controllers\BackOffice\BackOfficeDashboardController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
+use App\Http\Controllers\BackOffice\Documents\DocumentArchiveController;
+use App\Http\Controllers\BackOffice\Documents\LetterDocumentFileController;
+use App\Http\Controllers\BackOffice\Documents\LetterDocumentHistoryController;
+use App\Http\Controllers\BackOffice\Documents\LetterDocumentVersionController;
 use App\Http\Controllers\BackOffice\Intake\IntakeApprovalController;
 use App\Http\Controllers\BackOffice\Intake\IntakeApprovalDocumentController;
 use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionController;
@@ -105,7 +110,7 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                 ->middleware('throttle:public-submission-upload')
                 ->name('document.replace');
             Route::get('/{submission}/document', [SubmissionDocumentController::class, 'download'])
-                ->middleware('throttle:public-submission-read')
+                ->middleware('throttle:private-document-access')
                 ->name('document.download');
             Route::post('/{submission}/submit', SubmitLetterSubmissionController::class)
                 ->middleware('throttle:public-submission-submit')
@@ -123,9 +128,11 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                 ->name('password.confirm.store');
 
             Route::middleware('critical-mfa')->group(function (): void {
-                Route::inertia('dashboard', 'back-office/Dashboard')->name('dashboard');
+                Route::get('dashboard', BackOfficeDashboardController::class)->name('dashboard');
 
-                if (app()->isLocal()) {
+                if (app()->environment('local', 'testing')) {
+                    Route::inertia('previews/dashboard', 'back-office/Dashboard', ['preview' => true])
+                        ->name('previews.dashboard');
                     Route::inertia('previews/intake-approvals', 'back-office/intake/approvals/Index')
                         ->name('previews.intake-approvals.index');
                     Route::inertia('previews/intake-approvals/{submission}', 'back-office/intake/approvals/Show')
@@ -134,7 +141,39 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.letter-activities.index');
                     Route::inertia('previews/letter-activities/summary', 'back-office/letter-activities/Index')
                         ->name('previews.letter-activities.summary');
+                    Route::inertia('previews/documents', 'back-office/documents/Index', ['preview' => true])
+                        ->name('previews.documents.index');
+                    Route::inertia('previews/letters/{incomingLetter}/documents', 'back-office/letters/documents/Index', ['preview' => true])
+                        ->name('previews.documents.show');
                 }
+
+                Route::get('documents', DocumentArchiveController::class)
+                    ->middleware('can:'.PermissionName::ViewDocumentVersions->value)
+                    ->name('documents.index');
+
+                Route::scopeBindings()->group(function (): void {
+                    Route::get('letters/{incomingLetter}/documents', LetterDocumentHistoryController::class)
+                        ->middleware('can:'.PermissionName::ViewDocumentVersions->value)
+                        ->name('letters.documents.index');
+                    Route::post('letters/{incomingLetter}/documents', [LetterDocumentVersionController::class, 'store'])
+                        ->middleware([
+                            'can:'.PermissionName::CreateDocumentVersions->value,
+                            'throttle:document-version-upload',
+                        ])
+                        ->name('letters.documents.store');
+                    Route::get('letters/{incomingLetter}/documents/{letterDocument}/preview', [LetterDocumentFileController::class, 'preview'])
+                        ->middleware([
+                            'can:'.PermissionName::ViewDocumentVersions->value,
+                            'throttle:private-document-access',
+                        ])
+                        ->name('letters.documents.preview');
+                    Route::get('letters/{incomingLetter}/documents/{letterDocument}/download', [LetterDocumentFileController::class, 'download'])
+                        ->middleware([
+                            'can:'.PermissionName::ViewDocumentVersions->value,
+                            'throttle:private-document-access',
+                        ])
+                        ->name('letters.documents.download');
+                });
 
                 Route::prefix('intake')
                     ->name('intake.')
@@ -145,8 +184,10 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         Route::get('submissions/{submission}', [IntakeSubmissionController::class, 'show'])
                             ->name('submissions.show');
                         Route::get('submissions/{submission}/document', [IntakeSubmissionDocumentController::class, 'show'])
+                            ->middleware('throttle:private-document-access')
                             ->name('submissions.document.show');
                         Route::get('submissions/{submission}/document/download', [IntakeSubmissionDocumentController::class, 'download'])
+                            ->middleware('throttle:private-document-access')
                             ->name('submissions.document.download');
                         Route::post('submissions/{submission}/screenings', ScreenSubmissionController::class)
                             ->middleware('can:'.PermissionName::ScreenIntake->value)
@@ -162,8 +203,10 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         Route::get('{submission}', [IntakeApprovalController::class, 'show'])
                             ->name('show');
                         Route::get('{submission}/document', [IntakeApprovalDocumentController::class, 'show'])
+                            ->middleware('throttle:private-document-access')
                             ->name('document.show');
                         Route::get('{submission}/document/download', [IntakeApprovalDocumentController::class, 'download'])
+                            ->middleware('throttle:private-document-access')
                             ->name('document.download');
                         Route::post('{submission}/decisions', SubmissionDecisionController::class)
                             ->middleware('throttle:30,1')

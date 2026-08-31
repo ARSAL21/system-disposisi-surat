@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
 use App\Models\User;
+use App\Services\DocumentVersionPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\IntakePositionAssignmentResolver;
 use Illuminate\Http\Request;
@@ -95,6 +96,7 @@ class HandleInertiaRequests extends Middleware
                 'can_manage_position_assignments' => false,
                 'can_view_privilege_audits' => false,
                 'can_view_letter_activities' => false,
+                'can_view_document_versions' => false,
                 'can_view_intake' => false,
                 'can_screen_intake' => false,
                 'can_decide_intake' => false,
@@ -108,6 +110,9 @@ class HandleInertiaRequests extends Middleware
         $hasApprovalPermission = $user->can(PermissionName::DecideIntake->value);
         $hasApprovalPosition = $hasApprovalPermission
             && app(IntakeApprovalPositionAssignmentResolver::class)->hasActiveAssignment($user);
+        $hasDocumentVersionPermission = $user->can(PermissionName::ViewDocumentVersions->value);
+        $hasDocumentVersionPosition = $hasDocumentVersionPermission
+            && app(DocumentVersionPositionAssignmentResolver::class)->hasViewingAssignment($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -117,6 +122,7 @@ class HandleInertiaRequests extends Middleware
             'can_manage_position_assignments' => $user->can(PermissionName::ManagePositionAssignments->value),
             'can_view_privilege_audits' => $user->can(PermissionName::ViewPrivilegeAudits->value),
             'can_view_letter_activities' => $user->can(PermissionName::ViewLetterActivities->value),
+            'can_view_document_versions' => $hasDocumentVersionPosition,
             'can_view_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ViewIntake->value),
             'can_screen_intake' => $hasIntakePosition

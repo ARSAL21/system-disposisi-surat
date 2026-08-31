@@ -3,10 +3,7 @@ import LetterActivityCards from '@/components/back-office/letter-activities/Lett
 import LetterActivityEmptyState from '@/components/back-office/letter-activities/LetterActivityEmptyState.vue';
 import LetterActivityTable from '@/components/back-office/letter-activities/LetterActivityTable.vue';
 import { Card } from '@/components/ui/card';
-import type {
-    LetterActivityRecord,
-    LetterActivityVisibility,
-} from '@/types';
+import type { LetterActivityRecord, LetterActivityVisibility } from '@/types';
 
 defineProps<{
     activities: LetterActivityRecord[];

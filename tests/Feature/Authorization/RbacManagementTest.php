@@ -116,10 +116,7 @@ test('back office password confirmation is isolated and expires after fifteen mi
 
     $this->actingAs($manager)
         ->get(route('back-office.password.confirm'))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('back-office/auth/ConfirmPassword')
-            ->where('confirmPasswordUrl', route('back-office.password.confirm.store')));
+        ->assertRedirect(route('back-office.dashboard'));
 
     $this->actingAs($manager)
         ->withSession(['auth.password_confirmed_at' => time() - 901])

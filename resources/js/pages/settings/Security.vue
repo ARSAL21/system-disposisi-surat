@@ -64,7 +64,9 @@ const hasNumbersOrSymbols = computed(() =>
         <div
             class="relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 via-white to-violet-50/40 p-5 shadow-xs sm:p-6 dark:border-indigo-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20"
         >
-            <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div
+                class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div class="flex items-center gap-4">
                     <div
                         class="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20"
@@ -73,7 +75,9 @@ const hasNumbersOrSymbols = computed(() =>
                     </div>
                     <div class="space-y-1">
                         <div class="flex items-center gap-2">
-                            <h2 class="text-base font-bold text-foreground sm:text-lg">
+                            <h2
+                                class="text-base font-bold text-foreground sm:text-lg"
+                            >
                                 Status Keamanan Akun
                             </h2>
                             <Badge
@@ -81,7 +85,9 @@ const hasNumbersOrSymbols = computed(() =>
                                 variant="outline"
                                 class="border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
                             >
-                                <CheckCircle2 class="mr-1 size-3 text-emerald-600" />
+                                <CheckCircle2
+                                    class="mr-1 size-3 text-emerald-600"
+                                />
                                 Sangat Baik
                             </Badge>
                             <Badge
@@ -89,12 +95,15 @@ const hasNumbersOrSymbols = computed(() =>
                                 variant="outline"
                                 class="border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
                             >
-                                <ShieldAlert class="mr-1 size-3 text-amber-600" />
+                                <ShieldAlert
+                                    class="mr-1 size-3 text-amber-600"
+                                />
                                 2FA Disarankan
                             </Badge>
                         </div>
                         <p class="text-xs text-muted-foreground">
-                            Lindungi akun Anda dengan kata sandi kuat, 2FA, dan kunci sandi (Passkeys).
+                            Lindungi akun Anda dengan kata sandi kuat, 2FA, dan
+                            kunci sandi (Passkeys).
                         </p>
                     </div>
                 </div>
@@ -110,8 +119,20 @@ const hasNumbersOrSymbols = computed(() =>
                         v-if="props.canManageTwoFactor"
                         class="flex items-center gap-1.5 rounded-lg border border-border/80 bg-white/70 px-3 py-1.5 font-medium backdrop-blur-xs dark:bg-slate-800/80"
                     >
-                        <Shield class="size-3.5" :class="props.twoFactorEnabled ? 'text-emerald-500' : 'text-amber-500'" />
-                        <span>2FA: {{ props.twoFactorEnabled ? 'Aktif' : 'Nonaktif' }}</span>
+                        <Shield
+                            class="size-3.5"
+                            :class="
+                                props.twoFactorEnabled
+                                    ? 'text-emerald-500'
+                                    : 'text-amber-500'
+                            "
+                        />
+                        <span
+                            >2FA:
+                            {{
+                                props.twoFactorEnabled ? 'Aktif' : 'Nonaktif'
+                            }}</span
+                        >
                     </div>
                     <div
                         v-if="props.canManagePasskeys"
@@ -137,7 +158,8 @@ const hasNumbersOrSymbols = computed(() =>
                         Perbarui Kata Sandi
                     </h3>
                     <p class="text-xs text-muted-foreground">
-                        Gunakan kata sandi yang unik, acak, dan panjang untuk melindungi akun
+                        Gunakan kata sandi yang unik, acak, dan panjang untuk
+                        melindungi akun
                     </p>
                 </div>
             </div>
@@ -157,7 +179,10 @@ const hasNumbersOrSymbols = computed(() =>
                 v-slot="{ errors, processing }"
             >
                 <div class="grid gap-2">
-                    <Label for="current_password" class="text-sm font-medium text-foreground">
+                    <Label
+                        for="current_password"
+                        class="text-sm font-medium text-foreground"
+                    >
                         Kata Sandi Saat Ini
                     </Label>
                     <PasswordInput
@@ -171,7 +196,10 @@ const hasNumbersOrSymbols = computed(() =>
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password" class="text-sm font-medium text-foreground">
+                    <Label
+                        for="password"
+                        class="text-sm font-medium text-foreground"
+                    >
                         Kata Sandi Baru
                     </Label>
                     <PasswordInput
@@ -181,7 +209,11 @@ const hasNumbersOrSymbols = computed(() =>
                         autocomplete="new-password"
                         placeholder="Masukkan kata sandi baru"
                         :passwordrules="props.passwordRules"
-                        @input="newPasswordValue = ($event.target as HTMLInputElement).value"
+                        @input="
+                            newPasswordValue = (
+                                $event.target as HTMLInputElement
+                            ).value
+                        "
                     />
                     <InputError :message="errors.password" />
 
@@ -192,30 +224,62 @@ const hasNumbersOrSymbols = computed(() =>
                     >
                         <div
                             class="flex items-center gap-1.5 font-medium transition-colors"
-                            :class="hasMinLength ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'"
+                            :class="
+                                hasMinLength
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-muted-foreground'
+                            "
                         >
-                            <CheckCircle2 class="size-3.5" :class="hasMinLength ? 'opacity-100' : 'opacity-30'" />
+                            <CheckCircle2
+                                class="size-3.5"
+                                :class="
+                                    hasMinLength ? 'opacity-100' : 'opacity-30'
+                                "
+                            />
                             <span>Minimal 8 karakter</span>
                         </div>
                         <div
                             class="flex items-center gap-1.5 font-medium transition-colors"
-                            :class="hasMixedCase ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'"
+                            :class="
+                                hasMixedCase
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-muted-foreground'
+                            "
                         >
-                            <CheckCircle2 class="size-3.5" :class="hasMixedCase ? 'opacity-100' : 'opacity-30'" />
+                            <CheckCircle2
+                                class="size-3.5"
+                                :class="
+                                    hasMixedCase ? 'opacity-100' : 'opacity-30'
+                                "
+                            />
                             <span>Huruf besar & kecil</span>
                         </div>
                         <div
                             class="flex items-center gap-1.5 font-medium transition-colors"
-                            :class="hasNumbersOrSymbols ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'"
+                            :class="
+                                hasNumbersOrSymbols
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-muted-foreground'
+                            "
                         >
-                            <CheckCircle2 class="size-3.5" :class="hasNumbersOrSymbols ? 'opacity-100' : 'opacity-30'" />
+                            <CheckCircle2
+                                class="size-3.5"
+                                :class="
+                                    hasNumbersOrSymbols
+                                        ? 'opacity-100'
+                                        : 'opacity-30'
+                                "
+                            />
                             <span>Angka atau simbol</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password_confirmation" class="text-sm font-medium text-foreground">
+                    <Label
+                        for="password_confirmation"
+                        class="text-sm font-medium text-foreground"
+                    >
                         Konfirmasi Kata Sandi Baru
                     </Label>
                     <PasswordInput
@@ -244,7 +308,10 @@ const hasNumbersOrSymbols = computed(() =>
         </div>
 
         <!-- Two-Factor Authentication Section -->
-        <div v-if="props.canManageTwoFactor" class="border-t border-border/60 pt-8">
+        <div
+            v-if="props.canManageTwoFactor"
+            class="border-t border-border/60 pt-8"
+        >
             <ManageTwoFactor
                 :canManageTwoFactor="props.canManageTwoFactor"
                 :requiresConfirmation="props.requiresConfirmation"
@@ -253,7 +320,10 @@ const hasNumbersOrSymbols = computed(() =>
         </div>
 
         <!-- Passkeys Section -->
-        <div v-if="props.canManagePasskeys" class="border-t border-border/60 pt-8">
+        <div
+            v-if="props.canManagePasskeys"
+            class="border-t border-border/60 pt-8"
+        >
             <ManagePasskeys
                 :canManagePasskeys="props.canManagePasskeys"
                 :passkeys="props.passkeys"

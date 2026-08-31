@@ -110,6 +110,40 @@ surat, pengirim, isi perubahan, dokumen, identitas pelaksana, atau jejak teknis.
 Frontend capability hanya mengatur visibilitas menu; Policy, authorized query,
 Position resolver, dan presenter allowlist menjadi security boundary.
 
+## Penambahan M4.5 Histori Versi Dokumen
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `document-versions.view` | Katalog capability untuk membuka arsip dan histori versi dokumen resmi. |
+| `super-admin` | `document-versions.create` | Katalog capability untuk membuat versi koreksi dokumen resmi sebelum surat diteruskan. |
+
+Permission di atas dapat diberikan kepada custom role operasional, tetapi tidak
+pernah menjadi bypass akses surat. `document-versions.view` tetap memerlukan
+account `INTERNAL` aktif dan terverifikasi serta salah satu Position Assignment
+aktif berikut:
+
+```text
+GENERAL_AFFAIRS + unit BAGIAN_UMUM
+SECTION_HEAD + unit BAGIAN_UMUM
+EXECUTIVE_ENTRY
+```
+
+`document-versions.create` hanya dapat dijalankan oleh Kepala Bagian Umum
+(`SECTION_HEAD` pada unit `BAGIAN_UMUM`) dan hanya saat surat masih berstatus
+`REGISTERED`. Asisten, Kepala Bagian lain, dan super-admin tanpa Position bisnis
+tidak memperoleh visibility. Capability Inertia `can_view_document_versions`
+hanya bernilai benar jika permission dan konteks Position sama-sama terpenuhi.
+
+Setelah deployment M4.5, jalankan:
+
+```text
+php artisan authorization:sync
+```
+
+Kemudian berikan kedua permission baru kepada custom role operasional yang
+sesuai melalui UI RBAC. Exact-sync `super-admin` memasukkan kedua permission ini,
+tetapi tetap tidak memberikan global business visibility tanpa Position.
+
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
 Alur administrative console:

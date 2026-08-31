@@ -112,9 +112,11 @@ const handlePasswordConfirmed = () => {
                     <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
                         Pengaturan & Preferensi
                     </h1>
-                    <p class="max-w-xl text-sm leading-relaxed text-muted-foreground">
-                        Kelola data profil, tingkatkan keamanan akun, dan sesuaikan
-                        tampilan sesuai kenyamanan kerja Anda.
+                    <p
+                        class="max-w-xl text-sm leading-relaxed text-muted-foreground"
+                    >
+                        Kelola data profil, tingkatkan keamanan akun, dan
+                        sesuaikan tampilan sesuai kenyamanan kerja Anda.
                     </p>
                 </div>
 
@@ -123,7 +125,9 @@ const handlePasswordConfirmed = () => {
                     class="flex items-center gap-3.5 self-start rounded-xl border border-black/5 bg-white/80 p-3 shadow-xs backdrop-blur-md sm:self-center dark:border-white/10 dark:bg-slate-900/80"
                 >
                     <div class="relative">
-                        <Avatar class="size-11 rounded-xl border-2 border-indigo-200 dark:border-indigo-800">
+                        <Avatar
+                            class="size-11 rounded-xl border-2 border-indigo-200 dark:border-indigo-800"
+                        >
                             <AvatarImage
                                 v-if="user.avatar"
                                 :src="user.avatar"
@@ -136,14 +140,16 @@ const handlePasswordConfirmed = () => {
                             </AvatarFallback>
                         </Avatar>
                         <span
-                            class="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900"
+                            class="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900"
                         />
                     </div>
                     <div class="space-y-0.5 text-left">
-                        <div class="font-medium text-sm text-foreground">
+                        <div class="text-sm font-medium text-foreground">
                             {{ user.name }}
                         </div>
-                        <div class="text-xs text-muted-foreground truncate max-w-[160px]">
+                        <div
+                            class="max-w-[160px] truncate text-xs text-muted-foreground"
+                        >
                             {{ user.email }}
                         </div>
                     </div>
@@ -163,7 +169,7 @@ const handlePasswordConfirmed = () => {
                     type="button"
                     @click="isConfirmPasswordOpen = true"
                     :class="[
-                        'group relative flex items-center gap-3.5 rounded-xl p-3.5 transition-all duration-200 cursor-pointer text-left focus:outline-none',
+                        'group relative flex cursor-pointer items-center gap-3.5 rounded-xl p-3.5 text-left transition-all duration-200 focus:outline-none',
                         isCurrentOrParentUrl(item.href)
                             ? 'bg-white shadow-xs ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10'
                             : 'hover:bg-white/60 dark:hover:bg-slate-800/50',
@@ -204,7 +210,7 @@ const handlePasswordConfirmed = () => {
                         </div>
                         <p
                             v-if="item.description"
-                            class="mt-0.5 text-xs text-muted-foreground/80 truncate"
+                            class="mt-0.5 truncate text-xs text-muted-foreground/80"
                         >
                             {{ item.description }}
                         </p>
@@ -216,7 +222,7 @@ const handlePasswordConfirmed = () => {
                     v-else
                     :href="item.href"
                     :class="[
-                        'group relative flex items-center gap-3.5 rounded-xl p-3.5 transition-all duration-200 cursor-pointer text-left',
+                        'group relative flex cursor-pointer items-center gap-3.5 rounded-xl p-3.5 text-left transition-all duration-200',
                         isCurrentOrParentUrl(item.href)
                             ? 'bg-white shadow-xs ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10'
                             : 'hover:bg-white/60 dark:hover:bg-slate-800/50',
@@ -255,12 +261,12 @@ const handlePasswordConfirmed = () => {
                             </span>
                             <Sparkles
                                 v-if="isCurrentOrParentUrl(item.href)"
-                                class="size-3.5 text-indigo-500 animate-pulse"
+                                class="size-3.5 animate-pulse text-indigo-500"
                             />
                         </div>
                         <p
                             v-if="item.description"
-                            class="mt-0.5 text-xs text-muted-foreground/80 truncate"
+                            class="mt-0.5 truncate text-xs text-muted-foreground/80"
                         >
                             {{ item.description }}
                         </p>

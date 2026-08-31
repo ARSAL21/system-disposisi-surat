@@ -4,44 +4,29 @@ namespace App\Http\Controllers\BackOffice\Intake;
 
 use App\Http\Controllers\Controller;
 use App\Models\LetterSubmission;
+use App\Services\PrivateDocumentResponse;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IntakeApprovalDocumentController extends Controller
 {
-    public function show(LetterSubmission $submission): StreamedResponse
-    {
-        Gate::authorize('downloadApprovalDocument', $submission);
-        $document = $submission->document()->firstOrFail();
+    public function show(
+        LetterSubmission $submission,
+        PrivateDocumentResponse $privateDocumentResponse,
+    ): StreamedResponse {
+        Gate::authorize('viewApprovalDocument', $submission);
+        $document = $submission->document()->first();
 
-        return Storage::disk($document->storage_disk)->response(
-            $document->storage_path,
-            $document->original_filename,
-            $this->securityHeaders(),
-        );
+        return $privateDocumentResponse->preview($submission, $document);
     }
 
-    public function download(LetterSubmission $submission): StreamedResponse
-    {
+    public function download(
+        LetterSubmission $submission,
+        PrivateDocumentResponse $privateDocumentResponse,
+    ): StreamedResponse {
         Gate::authorize('downloadApprovalDocument', $submission);
-        $document = $submission->document()->firstOrFail();
+        $document = $submission->document()->first();
 
-        return Storage::disk($document->storage_disk)->download(
-            $document->storage_path,
-            $document->original_filename,
-            $this->securityHeaders(),
-        );
-    }
-
-    /** @return array<string, string> */
-    private function securityHeaders(): array
-    {
-        return [
-            'Content-Type' => 'application/pdf',
-            'X-Content-Type-Options' => 'nosniff',
-            'Cache-Control' => 'private, no-store, max-age=0',
-            'Content-Security-Policy' => "default-src 'none'; frame-ancestors 'self'; sandbox",
-        ];
+        return $privateDocumentResponse->download($submission, $document);
     }
 }
