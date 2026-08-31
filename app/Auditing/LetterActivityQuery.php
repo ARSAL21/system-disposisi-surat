@@ -7,6 +7,7 @@ use App\Enums\AuditAction;
 use App\Models\AuditLog;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
+use App\Models\LetterRoute;
 use App\Models\LetterSubmission;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -108,6 +109,11 @@ final class LetterActivityQuery
                     $documents
                         ->where('subject_type', 'letter_document')
                         ->where('action', AuditAction::DocumentVersionCreated->value);
+                })
+                ->orWhere(function (Builder $routes): void {
+                    $routes
+                        ->where('subject_type', 'letter_route')
+                        ->where('action', AuditAction::LetterRouted->value);
                 });
         });
     }
@@ -138,8 +144,11 @@ final class LetterActivityQuery
         $documentIds = LetterDocument::query()
             ->select('id')
             ->whereIn('incoming_letter_id', clone $letterIds);
+        $routeIds = LetterRoute::query()
+            ->select('id')
+            ->whereIn('incoming_letter_id', clone $letterIds);
 
-        $query->where(function (Builder $target) use ($submissionIds, $letterIds, $documentIds): void {
+        $query->where(function (Builder $target) use ($submissionIds, $letterIds, $documentIds, $routeIds): void {
             $target
                 ->where(function (Builder $submission) use ($submissionIds): void {
                     $submission
@@ -155,6 +164,11 @@ final class LetterActivityQuery
                     $document
                         ->where('subject_type', 'letter_document')
                         ->whereIn('subject_id', $documentIds);
+                })
+                ->orWhere(function (Builder $route) use ($routeIds): void {
+                    $route
+                        ->where('subject_type', 'letter_route')
+                        ->whereIn('subject_id', $routeIds);
                 });
         });
     }
