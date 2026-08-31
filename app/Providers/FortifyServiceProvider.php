@@ -6,8 +6,11 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Authentication\LoginAccountTypeResolver;
 use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -15,6 +18,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Timebox;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\PasswordConfirmedResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use Laravel\Passkeys\Contracts\PasskeyUser;
@@ -28,7 +32,10 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(
+            PasswordConfirmedResponse::class,
+            \App\Http\Responses\PasswordConfirmedResponse::class,
+        );
     }
 
     /**
@@ -39,6 +46,7 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureAuthentication();
         $this->configureActions();
         $this->configureViews();
+        $this->configureNotifications();
         $this->configureRateLimiting();
     }
 
@@ -137,6 +145,40 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             return redirect()->route('profile.edit');
+        });
+    }
+
+    /**
+     * Configure customized modern notification emails.
+     */
+    private function configureNotifications(): void
+    {
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url): MailMessage {
+            return (new MailMessage)
+                ->subject('Verifikasi Alamat Email - '.config('app.name', 'Sistem Disposisi Surat'))
+                ->view('emails.auth.verify-email', [
+                    'user' => $notifiable,
+                    'url' => $url,
+                ]);
+        });
+
+        ResetPassword::toMailUsing(function (object $notifiable, string $token): MailMessage {
+            $email = method_exists($notifiable, 'getEmailForPasswordReset')
+                ? $notifiable->getEmailForPasswordReset()
+                : (property_exists($notifiable, 'email') ? (string) $notifiable->email : '');
+
+            $url = route('password.reset', [
+                'token' => $token,
+                'email' => $email,
+            ]);
+
+            return (new MailMessage)
+                ->subject('Atur Ulang Kata Sandi Akun - '.config('app.name', 'Sistem Disposisi Surat'))
+                ->view('emails.auth.reset-password', [
+                    'user' => $notifiable,
+                    'url' => $url,
+                    'count' => config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60),
+                ]);
         });
     }
 

@@ -36,6 +36,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property CarbonInterface|null $updated_at
  * @property-read Collection<int, PositionAssignment> $positionAssignments
  * @property-read Collection<int, PositionAssignment> $activePositionAssignments
+ * @property-read Collection<int, LetterRoute> $routedLetterRoutes
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -99,5 +100,11 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function activePositionAssignments(): HasMany
     {
         return $this->positionAssignments()->whereNull('ended_at');
+    }
+
+    /** @return HasMany<LetterRoute, $this> */
+    public function routedLetterRoutes(): HasMany
+    {
+        return $this->hasMany(LetterRoute::class, 'routed_by_user_id');
     }
 }
