@@ -162,7 +162,7 @@ export function getSubmissionStatusMeta(status: string): {
     }
 }
 
-export function formatSubmissionDate(isoDate: string): string {
+export function formatSubmissionDate(isoDate?: string | null): string {
     if (!isoDate) {
         return '-';
     }

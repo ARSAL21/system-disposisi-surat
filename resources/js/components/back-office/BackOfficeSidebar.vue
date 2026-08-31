@@ -6,8 +6,10 @@ import {
     ClipboardCheck,
     History,
     Inbox,
+    Landmark,
     LayoutDashboard,
     Network,
+    Route as RouteIcon,
     ShieldCheck,
     UserRoundCog,
 } from '@lucide/vue';
@@ -60,6 +62,26 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: approvalPath,
             icon: ClipboardCheck,
             isActive: currentPath.value.startsWith(approvalPath),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_letter_routing) {
+        const routingPath = '/back-office/letter-routing';
+        items.push({
+            title: 'Routing Surat',
+            href: routingPath,
+            icon: RouteIcon,
+            isActive: currentPath.value.startsWith(routingPath),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_executive_inbox) {
+        const executiveInboxPath = '/back-office/executive/inbox';
+        items.push({
+            title: 'Inbox Pimpinan',
+            href: executiveInboxPath,
+            icon: Landmark,
+            isActive: currentPath.value.startsWith(executiveInboxPath),
         });
     }
 

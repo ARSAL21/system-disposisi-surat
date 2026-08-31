@@ -7,8 +7,10 @@ import {
     ClipboardCheck,
     History,
     Inbox,
+    Landmark,
     Lock,
     Network,
+    Route as RouteIcon,
     Shield,
     ShieldCheck,
     UserRoundCog,
@@ -94,6 +96,34 @@ const letterOperationModules = computed(() => {
             bgLight: 'bg-cyan-50 dark:bg-cyan-950/50',
             textLight: 'text-cyan-600 dark:text-cyan-300',
             badge: 'Arsip & Integritas',
+        });
+    }
+
+    if (capabilities.value.can_view_letter_routing) {
+        list.push({
+            title: 'Routing Surat',
+            description:
+                'Tinjau dokumen resmi terkini dan arahkan surat terdaftar kepada satu pimpinan tujuan.',
+            href: '/back-office/letter-routing',
+            icon: RouteIcon,
+            color: 'from-violet-500 to-fuchsia-600',
+            bgLight: 'bg-violet-50 dark:bg-violet-950/50',
+            textLight: 'text-violet-600 dark:text-violet-300',
+            badge: 'Routing Awal',
+        });
+    }
+
+    if (capabilities.value.can_view_executive_inbox) {
+        list.push({
+            title: 'Inbox Pimpinan',
+            description:
+                'Baca surat resmi yang diarahkan kepada jabatan Wali Kota atau Sekretaris Daerah aktif.',
+            href: '/back-office/executive/inbox',
+            icon: Landmark,
+            color: 'from-amber-500 to-orange-600',
+            bgLight: 'bg-amber-50 dark:bg-amber-950/50',
+            textLight: 'text-amber-700 dark:text-amber-300',
+            badge: 'Meja Pimpinan',
         });
     }
 
@@ -211,9 +241,7 @@ const totalActiveModules = computed(() => {
                             Portal Internal Pemkot
                         </Badge>
                         <Badge
-                            v-if="
-                                user?.two_factor_confirmed_at || user?.has_mfa
-                            "
+                            v-if="user?.two_factor_enabled"
                             variant="secondary"
                             class="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                         >
@@ -284,7 +312,7 @@ const totalActiveModules = computed(() => {
 
         <!-- Petugas Surat (General Affairs) Operational Workspace -->
         <section
-            v-if="capabilities.can_view_intake && intakeData"
+            v-if="(capabilities.can_view_intake || preview) && intakeData"
             class="space-y-5"
             aria-label="Workspace Operasional Petugas Surat"
         >
