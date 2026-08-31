@@ -90,7 +90,7 @@ function createDashboardSubmissionWithDocument(
     string $subject = 'Surat Permohonan Kerja Sama',
     ?string $kabagNote = null,
 ): LetterSubmission {
-    $submitter = User::factory()->public()->create();
+    $submitter = User::factory()->create();
 
     $submission = new LetterSubmission;
     $submission->public_id = (string) Str::ulid();
@@ -108,11 +108,12 @@ function createDashboardSubmissionWithDocument(
     $submission->submitted_at = now()->subHours(rand(1, 48));
     $submission->save();
 
-    $path = 'submissions/'.$submission->public_id.'/surat.pdf';
+    $path = $submission->public_id.'/'.Str::uuid().'.pdf';
     Storage::disk('submission-documents')->put($path, '%PDF-1.4 Mock content');
 
     $doc = new SubmissionDocument;
     $doc->letter_submission_id = $submission->getKey();
+    $doc->uploaded_by_user_id = $submitter->getKey();
     $doc->original_filename = 'surat.pdf';
     $doc->storage_disk = 'submission-documents';
     $doc->storage_path = $path;
@@ -125,7 +126,7 @@ function createDashboardSubmissionWithDocument(
         $kabag = User::factory()->internal()->create();
         $decision = new SubmissionDecision;
         $decision->letter_submission_id = $submission->getKey();
-        $decision->outcome = SubmissionDecisionOutcome::ReturnedForInternalRevision;
+        $decision->outcome = SubmissionDecisionOutcome::InternalRevisionRequired;
         $decision->note = $kabagNote;
         $decision->created_by_user_id = $kabag->getKey();
         $decision->created_by_position_assignment_id = 1;
@@ -153,7 +154,7 @@ test('authorized intake staff receives real metrics and submissions on dashboard
     $draft->public_id = (string) Str::ulid();
     $draft->source = SubmissionSource::Online;
     $draft->status = SubmissionStatus::Draft;
-    $draft->submitted_by_user_id = User::factory()->public()->create()->getKey();
+    $draft->submitted_by_user_id = User::factory()->create()->getKey();
     $draft->sender_organization_name = 'Draft Org';
     $draft->contact_name = 'Draft Contact';
     $draft->contact_email = 'draft@test.com';
@@ -243,3 +244,53 @@ test('worklist limits results to maximum 10 items in stable chronological order'
         ->has('intakeDashboard.recent_submissions', 10)
     );
 });
+
+test('submission without document has null document and null preview download links', function (): void {
+    $staff = createDashboardIntakeStaff();
+
+    $submission = new LetterSubmission;
+    $submission->public_id = (string) Str::ulid();
+    $submission->source = SubmissionSource::Online;
+    $submission->status = SubmissionStatus::Submitted;
+    $submission->submitted_by_user_id = User::factory()->create()->getKey();
+    $submission->sender_organization_name = 'Lembaga Tanpa Dokumen';
+    $submission->contact_name = 'Kontak Person';
+    $submission->contact_email = 'kontak@lembaga.test';
+    $submission->subject = 'Surat Tanpa Dokumen';
+    $submission->submitted_at = now();
+    $submission->save();
+
+    $response = $this->actingAs($staff)->get(route('back-office.dashboard'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('back-office/Dashboard')
+        ->where('intakeDashboard.recent_submissions.0.document', null)
+        ->where('intakeDashboard.recent_submissions.0.links.document_preview', null)
+        ->where('intakeDashboard.recent_submissions.0.links.document_download', null)
+    );
+});
+
+test('document preview link from dashboard returns 200 with security headers', function (): void {
+    $staff = createDashboardIntakeStaff();
+    $submission = createDashboardSubmissionWithDocument(SubmissionStatus::Submitted);
+
+    $response = $this->actingAs($staff)->get(route('back-office.intake.submissions.document.show', $submission));
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'application/pdf');
+    $response->assertHeader('X-Content-Type-Options', 'nosniff');
+});
+
+test('local preview dashboard route renders with preview true', function (): void {
+    $user = User::factory()->internal()->create();
+
+    $response = $this->actingAs($user)->get(route('back-office.previews.dashboard'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('back-office/Dashboard')
+        ->where('preview', true)
+    );
+});
+
