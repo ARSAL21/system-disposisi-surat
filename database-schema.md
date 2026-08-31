@@ -460,7 +460,7 @@ Menyimpan tepat satu dokumen PDF aktif untuk satu submission.
 
 Dokumen dapat diganti selama submission berstatus `DRAFT` atau `REVISION_REQUIRED`. Penggantian memperbarui satu active document dan wajib menghasilkan audit. Pada state lain, metadata serta file immutable bagi Public User.
 
-File disimpan di private storage menggunakan nama server-generated. Nama file asli hanya metadata download, bukan bagian storage path. SHA-256 dihitung saat upload sebagai fingerprint integritas.
+File disimpan di private storage (`storage_disk` allowlist: `submission-documents`) menggunakan nama server-generated berformat `{$submission->public_id}/{uuid}.pdf`. Nama file asli hanya metadata download yang disanitasi saat response Content-Disposition, bukan bagian storage path fisik. SHA-256 dihitung saat upload sebagai fingerprint integritas berkas. Akses streaming/download divalidasi oleh `PrivateDocumentResponse` dengan penolakan traversal path, null byte, dan disk publik.
 
 ## `submission_reviews`
 
@@ -633,6 +633,43 @@ created_at
 File tidak pernah disimpan pada public webroot.
 
 `storage_path` menggunakan nama internal yang dihasilkan server.
+
+## Invariant Operasional Versioning M4.5
+
+Schema `letter_documents` yang ada sudah mencukupi histori versi dan tidak
+memerlukan migration tambahan. Invariant berikut ditegakkan melalui Policy,
+Form Request, Action, storage guard, transaction, dan automated test:
+
+* versi pertama mempunyai `source_submission_document_id`, `version_number = 1`,
+  dan `replaces_document_id = null`;
+* disk/path, MIME, ukuran, dan SHA-256 versi pertama harus sama dengan
+  `submission_documents` milik `letter_submission_id` surat induk;
+* versi koreksi mempunyai `source_submission_document_id = null`, disimpan pada
+  disk `letter-documents`, dan path diawali
+  `letter-documents/{incoming_letter_id}/`;
+* versi koreksi menunjuk versi sebelumnya dari surat yang sama melalui
+  `replaces_document_id` dan menggunakan nomor versi sebelumnya ditambah satu;
+* versi terkini diturunkan dari `MAX(version_number)`, bukan kolom `is_current`;
+* `UNIQUE (incoming_letter_id, version_number)` menjaga nomor versi dan
+  `UNIQUE (incoming_letter_id, sha256)` menolak berkas identik;
+* metadata versi immutable setelah dibuat dan tidak tersedia endpoint update
+  atau delete;
+* pembuatan versi mengunci `incoming_letters`, versi terakhir, dan Position
+  Assignment aktif dalam transaction yang sama dengan audit;
+* file baru yang sudah tersimpan dihapus jika transaction database gagal.
+
+Query arsip mengurutkan `received_at DESC, id DESC` dan melakukan pagination 20
+surat. Summary dihitung dari seluruh authorized scope tanpa dipengaruhi filter:
+
+```text
+total_letters
+corrected_letters
+total_versions
+updated_this_month
+```
+
+`updated_this_month` menghitung `incoming_letter_id` berbeda yang memperoleh
+versi pada bulan berjalan menurut zona waktu kantor.
 
 ---
 
@@ -1009,9 +1046,13 @@ created_at
 request_id
 ```
 
-Contoh action:
+Katalog action resmi (M1–M3):
 
 ```text
+INTERNAL_ACCOUNT_PROVISIONED
+ROLE_CHANGED
+PERMISSION_CHANGED
+
 SUBMISSION_CREATED
 SUBMISSION_UPDATED
 SUBMISSION_DOCUMENT_REPLACED
@@ -1024,20 +1065,23 @@ SUBMISSION_REJECTED
 SUBMISSION_DRAFT_DELETED
 
 LETTER_REGISTERED
-LETTER_ROUTED
 DOCUMENT_VERSION_CREATED
-DISPOSITION_CREATED
-DISPOSITION_RECEIVED
-DISPOSITION_STARTED
-DISPOSITION_COMPLETED
-FOLLOW_UP_ADDED
 
-ROLE_CHANGED
-PERMISSION_CHANGED
-INTERNAL_ACCOUNT_PROVISIONED
 POSITION_ASSIGNED
-POSITION_ENDED
+POSITION_HOLDER_REPLACED
+POSITION_ASSIGNMENT_ENDED
+POSITION_LEVEL_CATALOG_SYNCHRONIZED
+
+ORGANIZATIONAL_UNIT_CREATED
+ORGANIZATIONAL_UNIT_UPDATED
+ORGANIZATIONAL_UNIT_STATUS_CHANGED
+
+POSITION_CREATED
+POSITION_UPDATED
+POSITION_STATUS_CHANGED
 ```
+
+Event M5–M7 (seperti `LETTER_ROUTED`, `DISPOSITION_CREATED`, `DISPOSITION_COMPLETED`, `FOLLOW_UP_ADDED`) akan ditambahkan bersamaan dengan implementasi fiturnya.
 
 Untuk operasi bootstrap atau provisioning melalui trusted console,
 `actor_user_id` dapat bernilai `null`. Audit tetap wajib memiliki `request_id`

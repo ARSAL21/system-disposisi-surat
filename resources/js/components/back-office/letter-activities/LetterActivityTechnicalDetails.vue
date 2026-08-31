@@ -25,7 +25,7 @@ defineProps<{
                 {{ activity.document.version_number }}
             </dd>
             <dt class="text-sm text-muted-foreground">SHA-256</dt>
-            <dd class="break-all font-mono text-xs leading-5">
+            <dd class="font-mono text-xs leading-5 break-all">
                 {{ activity.document.sha256 }}
             </dd>
         </dl>
@@ -33,11 +33,9 @@ defineProps<{
 
     <section class="rounded-2xl border p-4">
         <h3 class="text-sm font-semibold">Jejak teknis</h3>
-        <dl
-            class="mt-3 grid gap-x-4 gap-y-3 text-sm sm:grid-cols-[8rem_1fr]"
-        >
+        <dl class="mt-3 grid gap-x-4 gap-y-3 text-sm sm:grid-cols-[8rem_1fr]">
             <dt class="text-muted-foreground">Request ID</dt>
-            <dd class="break-all font-mono text-xs">
+            <dd class="font-mono text-xs break-all">
                 {{ activity.request_id ?? 'Tidak tersedia' }}
             </dd>
             <dt class="text-muted-foreground">Alamat IP</dt>

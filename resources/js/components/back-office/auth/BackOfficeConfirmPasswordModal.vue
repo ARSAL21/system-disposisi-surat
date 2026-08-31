@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { router, useForm, usePage } from '@inertiajs/vue3';
-import { KeyRound, ShieldCheck } from '@lucide/vue';
-import { computed, nextTick, ref, watch } from 'vue';
-import {
-    index as confirmOptions,
-    store as confirmStore,
-} from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
+import { useForm } from '@inertiajs/vue3';
+import { KeyRound } from '@lucide/vue';
+import { nextTick, ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import InputError from '@/components/InputError.vue';
-import PasskeyVerify from '@/components/PasskeyVerify.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -21,41 +18,26 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { store as defaultConfirmStore } from '@/routes/password/confirm';
 
-export type Props = {
-    isOpen: boolean;
-    confirmPasswordUrl?: string;
-    targetUrl?: string;
-    title?: string;
-    description?: string;
-};
-
-const props = withDefaults(defineProps<Props>(), {
-    title: 'Konfirmasi Kata Sandi',
-    description:
-        'Area pengaturan keamanan memerlukan verifikasi kata sandi akun Anda sebelum dapat diakses.',
-});
+const props = withDefaults(
+    defineProps<{
+        open: boolean;
+        confirmPasswordUrl?: string;
+        title?: string;
+        description?: string;
+    }>(),
+    {
+        confirmPasswordUrl: '/back-office/confirm-password',
+        title: 'Konfirmasi akses administratif',
+        description:
+            'Area ini memerlukan verifikasi ulang sebelum data administratif sensitif dapat diubah.',
+    },
+);
 
 const emit = defineEmits<{
-    'update:isOpen': [value: boolean];
+    'update:open': [value: boolean];
     confirmed: [];
 }>();
-
-const page = usePage();
-const user = computed(() => page.props.auth?.user);
-
-const resolvedUrl = computed(() => {
-    if (props.confirmPasswordUrl) {
-        return props.confirmPasswordUrl;
-    }
-
-    if (user.value?.confirm_password_url) {
-        return user.value.confirm_password_url;
-    }
-
-    return defaultConfirmStore.url();
-});
 
 const form = useForm({
     password: '',
@@ -64,9 +46,9 @@ const form = useForm({
 const passwordInputRef = ref<InstanceType<typeof PasswordInput> | null>(null);
 
 watch(
-    () => props.isOpen,
-    (open) => {
-        if (open) {
+    () => props.open,
+    (isOpen) => {
+        if (isOpen) {
             form.reset('password');
             form.clearErrors();
             nextTick(() => {
@@ -76,26 +58,22 @@ watch(
     },
 );
 
-const handleClose = () => {
-    emit('update:isOpen', false);
+function handleClose(): void {
+    emit('update:open', false);
     form.reset('password');
     form.clearErrors();
-};
+}
 
-const submit = () => {
-    form.post(resolvedUrl.value, {
+function submit(): void {
+    form.post(props.confirmPasswordUrl, {
         preserveScroll: true,
         onSuccess: () => {
-            if (user.value) {
-                user.value.password_confirmed = true;
-            }
-
             emit('confirmed');
-            emit('update:isOpen', false);
-
-            if (props.targetUrl) {
-                router.visit(props.targetUrl);
-            }
+            emit('update:open', false);
+            form.reset('password');
+            toast.success(
+                'Mode perubahan administratif aktif selama 15 menit.',
+            );
         },
         onError: () => {
             form.reset('password');
@@ -104,16 +82,15 @@ const submit = () => {
             });
         },
     });
-};
+}
 </script>
 
 <template>
-    <Dialog :open="isOpen" @update:open="emit('update:isOpen', $event)">
+    <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent class="overflow-hidden sm:max-w-md">
-            <!-- Header with Glowing Icon Badge -->
             <DialogHeader class="space-y-3 text-left">
                 <div
-                    class="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20"
+                    class="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white shadow-md shadow-violet-500/20"
                 >
                     <KeyRound class="size-6" />
                 </div>
@@ -129,33 +106,35 @@ const submit = () => {
                 </DialogDescription>
             </DialogHeader>
 
-            <!-- Optional Passkey Verification for supported devices -->
-            <div class="pt-1">
-                <PasskeyVerify
-                    :routes="{
-                        options: confirmOptions(),
-                        submit: confirmStore(),
-                    }"
-                    label="Konfirmasi dengan Passkey / Biometrik"
-                    loading-label="Memverifikasi Passkey..."
-                    separator="Atau konfirmasi dengan kata sandi"
-                />
-            </div>
+            <Alert
+                class="border-violet-200 bg-violet-50/70 dark:border-violet-900/60 dark:bg-violet-950/25"
+            >
+                <KeyRound class="size-4 text-violet-700 dark:text-violet-300" />
+                <AlertTitle class="text-violet-950 dark:text-violet-100">
+                    Step-up security
+                </AlertTitle>
+                <AlertDescription
+                    class="leading-6 text-violet-800 dark:text-violet-200"
+                >
+                    Konfirmasi ini membuka mode perubahan administratif selama
+                    15 menit. MFA dan authorization tetap diverifikasi pada
+                    setiap request.
+                </AlertDescription>
+            </Alert>
 
-            <!-- Password Form -->
             <form @submit.prevent="submit" class="space-y-5">
                 <div class="space-y-2">
                     <Label
-                        for="confirm-modal-password"
+                        for="back-office-modal-password"
                         class="text-xs font-semibold text-foreground"
                     >
-                        Kata Sandi Akun
+                        Kata sandi saat ini
                     </Label>
                     <PasswordInput
-                        id="confirm-modal-password"
+                        id="back-office-modal-password"
                         ref="passwordInputRef"
-                        name="password"
                         v-model="form.password"
+                        name="password"
                         required
                         autofocus
                         autocomplete="current-password"
@@ -163,18 +142,6 @@ const submit = () => {
                         :aria-invalid="Boolean(form.errors.password)"
                     />
                     <InputError :message="form.errors.password" />
-                </div>
-
-                <div
-                    class="flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-[11px] text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200"
-                >
-                    <ShieldCheck
-                        class="size-4 shrink-0 text-indigo-600 dark:text-indigo-400"
-                    />
-                    <span>
-                        Konfirmasi ini membuka mode akses keamanan selama sesi
-                        aktif.
-                    </span>
                 </div>
 
                 <DialogFooter class="gap-2 pt-2 sm:justify-end">
@@ -191,10 +158,10 @@ const submit = () => {
                     <Button
                         type="submit"
                         :disabled="form.processing || !form.password"
-                        class="gap-2 bg-indigo-600 font-medium text-white shadow-xs hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                        class="gap-2 bg-violet-700 font-medium text-white shadow-xs hover:bg-violet-800 dark:bg-violet-600 dark:hover:bg-violet-500"
                     >
                         <Spinner v-if="form.processing" />
-                        <KeyRound v-else class="size-4" />
+                        <KeyRound v-else class="size-4" aria-hidden="true" />
                         {{
                             form.processing
                                 ? 'Memverifikasi...'

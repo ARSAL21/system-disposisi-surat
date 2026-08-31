@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { CheckCircle2, KeyRound, LockKeyhole, ShieldAlert } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import BackOfficeConfirmPasswordModal from '@/components/back-office/auth/BackOfficeConfirmPasswordModal.vue';
 import { Button } from '@/components/ui/button';
 import type { AuthorizationMutationSecurity } from '@/types';
 
 const props = defineProps<{
     security: AuthorizationMutationSecurity;
 }>();
+
+const isConfirmModalOpen = ref(false);
 
 const confirmedUntil = computed(() => {
     if (!props.security.password_confirmed_until) {
@@ -103,13 +106,12 @@ const confirmedUntil = computed(() => {
             </div>
         </div>
         <Button
-            as-child
+            type="button"
             class="min-h-11 shrink-0 bg-violet-700 hover:bg-violet-800"
+            @click="isConfirmModalOpen = true"
         >
-            <Link :href="security.activation_url">
-                <KeyRound class="size-4" aria-hidden="true" />
-                Aktifkan mode perubahan
-            </Link>
+            <KeyRound class="size-4" aria-hidden="true" />
+            Aktifkan mode perubahan
         </Button>
     </section>
 
@@ -138,4 +140,9 @@ const confirmedUntil = computed(() => {
             </p>
         </div>
     </section>
+
+    <BackOfficeConfirmPasswordModal
+        v-model:open="isConfirmModalOpen"
+        title="Konfirmasi akses manage role"
+    />
 </template>

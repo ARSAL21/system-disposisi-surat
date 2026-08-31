@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Authorization\AuthorizationCatalog;
 use App\Enums\AccountType;
 use App\Models\AuditLog;
+use App\Models\IncomingLetter;
 use App\Models\User;
 use App\Policies\AuditLogPolicy;
+use App\Policies\IncomingLetterPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use Carbon\CarbonImmutable;
@@ -45,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
     private function configureAuthorizationPolicies(): void
     {
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
+        Gate::policy(IncomingLetter::class, IncomingLetterPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
     }
@@ -109,6 +112,16 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('public-submission-submit', fn (Request $request): array => [
             Limit::perHour(10)->by('public-submission-submit:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perHour(30)->by('public-submission-submit:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('private-document-access', fn (Request $request): array => [
+            Limit::perMinute(60)->by('private-document-access:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(120)->by('private-document-access:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('document-version-upload', fn (Request $request): array => [
+            Limit::perHour(10)->by('document-version-upload:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perHour(30)->by('document-version-upload:ip:'.$request->ip()),
         ]);
     }
 }

@@ -7,10 +7,7 @@ import {
     letterActivityActionClass,
     letterActivityActionLabels,
 } from '@/lib/letterActivityPresentation';
-import type {
-    LetterActivityRecord,
-    LetterActivityVisibility,
-} from '@/types';
+import type { LetterActivityRecord, LetterActivityVisibility } from '@/types';
 
 defineProps<{
     activities: LetterActivityRecord[];
@@ -51,8 +48,10 @@ defineEmits<{
                     :key="activity.id"
                     class="transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-900/40"
                 >
-                    <td class="whitespace-nowrap px-5 py-4 align-top">
-                        <p class="font-semibold text-slate-900 tabular-nums dark:text-white">
+                    <td class="px-5 py-4 align-top whitespace-nowrap">
+                        <p
+                            class="font-semibold text-slate-900 tabular-nums dark:text-white"
+                        >
                             {{
                                 formatLetterActivityTime(
                                     activity.occurred_at,
@@ -87,7 +86,10 @@ defineEmits<{
                                 · {{ activity.target.sender }}
                             </p>
                         </template>
-                        <div v-else class="flex items-center gap-2 text-muted-foreground">
+                        <div
+                            v-else
+                            class="flex items-center gap-2 text-muted-foreground"
+                        >
                             <FileKey2 class="size-4" aria-hidden="true" />
                             <span>Identitas surat dilindungi</span>
                         </div>

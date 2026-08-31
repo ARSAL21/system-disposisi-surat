@@ -21,10 +21,7 @@ import {
     letterActivityActionDescriptions,
     letterActivityActionLabels,
 } from '@/lib/letterActivityPresentation';
-import type {
-    LetterActivityRecord,
-    LetterActivityVisibility,
-} from '@/types';
+import type { LetterActivityRecord, LetterActivityVisibility } from '@/types';
 
 const props = defineProps<{
     open: boolean;
@@ -60,7 +57,9 @@ const dialogOpen = computed({
                             {{ letterActivityActionLabels[activity.action] }}
                         </Badge>
                     </div>
-                    <DialogTitle>Detail aktivitas #{{ activity.id }}</DialogTitle>
+                    <DialogTitle
+                        >Detail aktivitas #{{ activity.id }}</DialogTitle
+                    >
                     <DialogDescription class="leading-6">
                         {{ letterActivityActionDescriptions[activity.action] }}
                         Catatan aktivitas ini hanya dapat dibaca dan tidak dapat
@@ -101,7 +100,11 @@ const dialogOpen = computed({
 
                 <DialogFooter>
                     <DialogClose as-child>
-                        <Button type="button" variant="outline" class="min-h-11">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="min-h-11"
+                        >
                             Tutup
                         </Button>
                     </DialogClose>

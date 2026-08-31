@@ -50,7 +50,8 @@ const handleRegisterSuccess = () => {
                     </Badge>
                 </div>
                 <p class="text-xs text-muted-foreground">
-                    Masuk secara instan dan aman menggunakan biometrik perangkat atau kunci fisik
+                    Masuk secara instan dan aman menggunakan biometrik perangkat
+                    atau kunci fisik
                 </p>
             </div>
         </div>
@@ -58,7 +59,7 @@ const handleRegisterSuccess = () => {
         <div class="space-y-4">
             <div
                 v-if="passkeys.length"
-                class="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-xs divide-y divide-border/60 dark:border-white/10 dark:bg-slate-900"
+                class="divide-y divide-border/60 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-xs dark:border-white/10 dark:bg-slate-900"
             >
                 <PasskeyItem
                     v-for="passkey in passkeys"
@@ -80,8 +81,11 @@ const handleRegisterSuccess = () => {
                 <h4 class="text-sm font-semibold text-foreground">
                     Belum Ada Passkey Terdaftar
                 </h4>
-                <p class="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
-                    Tambahkan Touch ID, Face ID, Windows Hello, atau security key fisik untuk masuk tanpa perlu mengingat kata sandi.
+                <p
+                    class="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground"
+                >
+                    Tambahkan Touch ID, Face ID, Windows Hello, atau security
+                    key fisik untuk masuk tanpa perlu mengingat kata sandi.
                 </p>
             </div>
 

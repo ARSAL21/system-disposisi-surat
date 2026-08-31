@@ -910,13 +910,112 @@ Tidak menggunakan ENUM per label.
 
 # 24. Document Storage dan Integrity
 
-Semua dokumen berada di private storage.
+Semua dokumen berada di private storage (`storage_disk` allowlist: `submission-documents`, dan kelak `letter-documents`).
 
-Akses dokumen selalu melalui authorization.
+Akses dokumen selalu melalui server-side authorization (Policy & Position Assignment).
 
 SHA-256 digunakan untuk document integrity, bukan confidentiality.
 
 Dokumen asli tidak ditimpa tanpa histori.
+
+## 24.1 File Access Policy Hardening (M4.3)
+
+Akses berkas PDF privat (preview *inline* maupun download *attachment*) dikontrol secara terpusat oleh `PrivateDocumentResponse` dengan invariant keamanan:
+
+### Matriks Otorisasi Akses Dokumen
+
+| Boundary Pengguna | Kebutuhan Permission | Kebutuhan Position Assignment | Status Submission yang Diizinkan | Hasil Penolakan |
+| :--- | :--- | :--- | :--- | :--- |
+| **Public Applicant** | Kepemilikan akun publik terverifikasi (`submitted_by_user_id === actor.id`) | Tidak ada (dilarang) | Seluruh status (Draft, Submitted, Revision, Ready, Registered, Rejected) | **404 Not Found** (anti-enumeration) |
+| **Intake Staff (Bagian Umum)** | `intake.view` | Aktif pada level `GENERAL_AFFAIRS` | Semua status kecuali `DRAFT` | Missing permission: **403 Forbidden**<br>Missing position / status draft: **404 Not Found** |
+| **Kepala Bagian Umum** | `intake.decide` | Aktif pada level `SECTION_HEAD` di unit `BAGIAN_UMUM` | `READY_FOR_APPROVAL`, `INTERNAL_REVISION_REQUIRED`, `REGISTERED`, `REJECTED` | Missing permission: **403 Forbidden**<br>Missing position / status tidak sah: **404 Not Found** |
+| **System Super-Admin** | Semua permission | Tanpa penugasan bisnis | Tidak ada bypass | **404 Not Found** |
+
+### Invariant Keamanan Private Streaming
+
+1. **Strict Path Sanitization**: Menolak null byte (`\0`), path traversal (`..`), absolute path marker, ekstensi selain `.pdf`, dan path yang tidak diawali direktori `{$submission->public_id}/`.
+2. **Physical Existence & Readability Check**: Memverifikasi fisik file di disk privat sebelum memulai stream response.
+3. **No Storage Leakage**: `storage_disk` dan `storage_path` tidak pernah diekspos dalam header HTTP, metadata response, atau pesan error.
+4. **Uniform Security Headers**:
+   - `Content-Type: application/pdf`
+   - `X-Content-Type-Options: nosniff`
+   - `Cache-Control: private, no-store, max-age=0`
+   - `Content-Security-Policy: default-src 'none'; frame-ancestors 'self'; sandbox`
+   - `X-Frame-Options: SAMEORIGIN`
+   - `Referrer-Policy: no-referrer`
+   - `Cross-Origin-Resource-Policy: same-origin`
+   - `Content-Disposition`: `inline; filename="safe.pdf"` (preview) atau `attachment; filename="safe.pdf"` (download).
+5. **Rate Limiting**: Rate limiter bersama `private-document-access` (60 req/menit per user, 120 req/menit per IP) aktif di seluruh endpoint dokumen.
+6. **HTTP Error Contracts**:
+   - `403 Forbidden`: Permission rute tidak dimiliki.
+   - `404 Not Found`: Konteks jabatan tidak cocok, status tidak visible, atau non-owner.
+   - `409 Conflict`: Kerusakan berkas, path/disk tidak valid, atau file hilang di private storage.
+   - `429 Too Many Requests`: Melebihi kuota akses rate limit.
+
+## 24.2 Hash Verification & Cryptographic Integrity (M4.4)
+
+Integritas fisik seluruh berkas dokumen privat (`submission_documents` dan `letter_documents`) dijamin melalui verifikasi sidik jari kriptografi SHA-256 dan ukuran byte yang dikelola secara terpusat oleh `DocumentIntegrityVerifier`:
+
+### Invariant Verifikasi Kriptografi
+
+1. **Streaming Hash Calculation**:
+   - Penghitungan hash SHA-256 dilakukan secara bertahap melalui stream chunking (`hash_init('sha256')`, `hash_update_stream()`, `hash_final()`) untuk mencegah konsumsi memori berlebih (*out of memory*) pada berkas PDF besar.
+2. **Timing-Attack Safe Comparison**:
+   - Perbandingan sidik jari SHA-256 selalu menggunakan `hash_equals()` terhadap string lowercase 64-karakter heksadesimal (`/^[a-f0-9]{64}$/`).
+3. **Exact Byte Matching**:
+   - Jumlah byte yang terbaca dari stream penyimpanan privat wajib persis sama dengan kolom `size_bytes` pada basis data. Ketidakcocokan byte (akibat pemotongan berkas atau penambahan *payload*) ditandai sebagai `SIZE_MISMATCH`.
+4. **Fail-Secure Pre-Registration Gate**:
+   - Pada saat proses registrasi surat masuk (`RegisterIncomingLetter`), integritas dokumen diverifikasi secara wajib di dalam *database transaction*.
+   - Jika terdeteksi indikasi manipulasi berkas (*tampering*), kerusakan file (*corruption*), atau file tidak ditemukan di storage, operasi langsung dibatalkan secara atomik (`DocumentIntegrityConflict`) dan me-rollback seluruh mutasi basis data.
+5. **On-Demand & Diagnostic Integrity Scanner (`documents:verify-integrity`)**:
+   - Tersedia perintah artisan `php artisan documents:verify-integrity` dengan opsi `--submissions`, `--letters`, `--all`, dan `--fail-fast` untuk mengaudit kesehatan seluruh berkas fisik pada penyimpanan privat dan menghasilkan laporan diagnostik `DocumentIntegrityResult`.
+
+## 24.3 Arsip dan Histori Versi Dokumen Resmi (M4.5)
+
+Back-office menyediakan arsip dokumen resmi pada:
+
+```text
+GET /back-office/documents
+GET /back-office/letters/{incomingLetter}/documents
+```
+
+Akses selalu membutuhkan permission `document-versions.view` dan Position
+Assignment aktif yang memenuhi salah satu konteks bisnis berikut:
+
+* staf `GENERAL_AFFAIRS` pada unit `BAGIAN_UMUM`;
+* Kepala Bagian Umum (`SECTION_HEAD` pada unit `BAGIAN_UMUM`);
+* Wali Kota atau Sekda pada level `EXECUTIVE_ENTRY`.
+
+Permission tidak menjadi bypass terhadap Position. Asisten, Kepala Bagian lain,
+dan super-admin teknis tanpa Position bisnis tersebut menerima `404` dan tidak
+melihat menu arsip. Collection dibatasi melalui authorized query sejak database,
+bukan difilter setelah row dimuat.
+
+Versi terkini selalu diturunkan dari `MAX(letter_documents.version_number)`.
+Tidak ada kolom atau flag `is_current` yang menjadi source of truth. Arsip dapat
+dicari berdasarkan nomor agenda, perihal, instansi, dan nama berkas pada seluruh
+versi. Filter tanggal `received_at` memakai zona waktu kantor, sedangkan timestamp
+tetap disimpan dalam UTC.
+
+Kepala Bagian Umum dengan permission `document-versions.create` dapat membuat
+versi koreksi hanya ketika surat masih `REGISTERED`:
+
+```text
+POST /back-office/letters/{incomingLetter}/documents
+```
+
+Operasi menyimpan file baru pada disk privat `letter-documents`, mengunci surat,
+versi terakhir, dan Position Assignment aktif, lalu membuat metadata versi serta
+audit `DOCUMENT_VERSION_CREATED` dalam satu database transaction. SHA-256 yang
+identik ditolak. File baru dihapus sebagai kompensasi jika transaction gagal.
+Versi sebelumnya tidak diubah atau dihapus dan tidak tersedia endpoint
+`PATCH`, `PUT`, atau `DELETE` untuk `letter_documents`.
+
+Preview dan download setiap versi menggunakan scoped nested binding, storage
+guard M4.3, header keamanan private, dan limiter `private-document-access`.
+Upload koreksi dibatasi 10 request/jam per user dan 30 request/jam per IP.
+Presenter response menggunakan allowlist dan tidak mengirim `storage_disk`,
+`storage_path`, email, IP, metadata audit mentah, atau data autentikasi ke Vue.
 
 ---
 
@@ -933,35 +1032,39 @@ merupakan boundary operasional database, bukan authorization aplikasi.
 
 Audit harus mencakup aktivitas penting pada kedua boundary.
 
-Contoh public:
+## Kontrak Audit Terpusat (M4.2)
 
-```text
-SUBMISSION_CREATED
-SUBMISSION_SUBMITTED
-SUBMISSION_RESUBMITTED
-SUBMISSION_REVISION_REQUESTED
-SUBMISSION_READY_FOR_APPROVAL
-SUBMISSION_RETURNED_TO_STAFF
-SUBMISSION_REJECTED
-```
+Setiap event audit didefinisikan secara deklaratif pada `AuditActionContractRegistry` dan divalidasi saat penulisan (*write-time guard*) oleh `AuditLogGuard`:
 
-Contoh Bagian Umum:
+| `AuditAction` Enum | Domain | Allowed `subject_type` | `subject_id` | `MutationType` | `PositionAssignment` |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `INTERNAL_ACCOUNT_PROVISIONED` | Account | `user` | Wajib | Create | Optional |
+| `ROLE_CHANGED` | Authorization | `user`, `role` | Wajib | Flexible | Optional |
+| `PERMISSION_CHANGED` | Authorization | `role`, `permission` | Wajib | Flexible | Optional |
+| `SUBMISSION_CREATED` | Submission | `letter_submission` | Wajib | Create | Forbidden |
+| `SUBMISSION_UPDATED` | Submission | `letter_submission` | Wajib | Update | Forbidden |
+| `SUBMISSION_DOCUMENT_REPLACED` | Submission | `letter_submission` | Wajib | Flexible | Forbidden |
+| `SUBMISSION_SUBMITTED` | Submission | `letter_submission` | Wajib | Update | Forbidden |
+| `SUBMISSION_RESUBMITTED` | Submission | `letter_submission` | Wajib | Update | Forbidden |
+| `SUBMISSION_REVISION_REQUESTED` | Intake Review | `letter_submission` | Wajib | Update | Required |
+| `SUBMISSION_READY_FOR_APPROVAL` | Intake Review | `letter_submission` | Wajib | Update | Required |
+| `SUBMISSION_RETURNED_TO_STAFF` | Intake Decision | `letter_submission` | Wajib | Update | Required |
+| `SUBMISSION_REJECTED` | Intake Decision | `letter_submission` | Wajib | Update | Required |
+| `SUBMISSION_DRAFT_DELETED` | Submission | `letter_submission` | Wajib | Delete | Forbidden |
+| `LETTER_REGISTERED` | Registration | `incoming_letter` | Wajib | Update | Required |
+| `DOCUMENT_VERSION_CREATED` | Document | `letter_document` | Wajib | Create | Required |
+| `POSITION_ASSIGNED` | Organization | `position`, `position_assignment` | Wajib | Create | Optional |
+| `POSITION_HOLDER_REPLACED` | Organization | `position`, `position_assignment` | Wajib | Update | Optional |
+| `POSITION_ASSIGNMENT_ENDED` | Organization | `position`, `position_assignment` | Wajib | Update | Optional |
+| `POSITION_LEVEL_CATALOG_SYNCHRONIZED` | Organization | `position_level_catalog` | Null | Update | Optional |
+| `ORGANIZATIONAL_UNIT_CREATED` | Organization | `organizational_unit` | Wajib | Create | Optional |
+| `ORGANIZATIONAL_UNIT_UPDATED` | Organization | `organizational_unit` | Wajib | Update | Optional |
+| `ORGANIZATIONAL_UNIT_STATUS_CHANGED` | Organization | `organizational_unit` | Wajib | Update | Optional |
+| `POSITION_CREATED` | Organization | `position` | Wajib | Create | Optional |
+| `POSITION_UPDATED` | Organization | `position` | Wajib | Update | Optional |
+| `POSITION_STATUS_CHANGED` | Organization | `position` | Wajib | Update | Optional |
 
-```text
-MANUAL_SUBMISSION_CREATED
-LETTER_REGISTERED
-DOCUMENT_VERSION_CREATED
-LETTER_ROUTED
-```
-
-Contoh internal:
-
-```text
-DISPOSITION_CREATED
-DISPOSITION_COMPLETED
-```
-
-Audit juga wajib terhadap privilege dan Position changes.
+Guard memindai seluruh kedalaman payload (`old_values`, `new_values`, `metadata`) dan menolak secara otomatis jika ditemukan key sensitif (`password`, `token`, `secret`, `recovery_code`, `cookie`, `authorization`, `private_key`) atau tipe data non-serializable. Penolakan audit melempar `AuditContractViolationException` dan memicu *database rollback* agar mutasi bisnis tidak pernah tersimpan tanpa audit yang sah.
 
 ## Audit Perubahan Privilege
 

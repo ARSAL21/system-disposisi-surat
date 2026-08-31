@@ -7,11 +7,8 @@ import LetterActivityList from '@/components/back-office/letter-activities/Lette
 import LetterActivityPagination from '@/components/back-office/letter-activities/LetterActivityPagination.vue';
 import LetterActivitySummaryCards from '@/components/back-office/letter-activities/LetterActivitySummaryCards.vue';
 import LetterActivityVisibilityNotice from '@/components/back-office/letter-activities/LetterActivityVisibilityNotice.vue';
-import {
-    
-    useLetterActivityWorkspace
-} from '@/composables/useLetterActivityWorkspace';
-import type {LetterActivityPageProps} from '@/composables/useLetterActivityWorkspace';
+import { useLetterActivityWorkspace } from '@/composables/useLetterActivityWorkspace';
+import type { LetterActivityPageProps } from '@/composables/useLetterActivityWorkspace';
 
 const props = defineProps<LetterActivityPageProps>();
 

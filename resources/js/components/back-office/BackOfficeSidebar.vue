@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     Activity,
+    Archive,
     ClipboardCheck,
     History,
     Inbox,
@@ -59,6 +60,20 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: approvalPath,
             icon: ClipboardCheck,
             isActive: currentPath.value.startsWith(approvalPath),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_document_versions) {
+        const archivePath = '/back-office/documents';
+        items.push({
+            title: 'Arsip Dokumen',
+            href: archivePath,
+            icon: Archive,
+            isActive:
+                currentPath.value === archivePath ||
+                /^\/back-office\/letters\/[^/]+\/documents$/.test(
+                    currentPath.value,
+                ),
         });
     }
 

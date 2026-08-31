@@ -49,8 +49,8 @@ export function sanitizeLetterActivity(
     visibility: LetterActivityVisibility,
 ): LetterActivityRecord {
     if (visibility === 'details') {
-return activity;
-}
+        return activity;
+    }
 
     return {
         ...activity,
@@ -121,10 +121,12 @@ export function paginateLetterActivities(
     };
 }
 
-export function letterActivityDateLabel(filters: LetterActivityFilters): string {
+export function letterActivityDateLabel(
+    filters: LetterActivityFilters,
+): string {
     if (!filters.date_from && !filters.date_to) {
-return 'Semua tanggal';
-}
+        return 'Semua tanggal';
+    }
 
     const format = (value: string) =>
         new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(
@@ -132,12 +134,12 @@ return 'Semua tanggal';
         );
 
     if (!filters.date_from) {
-return `Sampai ${format(filters.date_to)}`;
-}
+        return `Sampai ${format(filters.date_to)}`;
+    }
 
     if (!filters.date_to) {
-return `Mulai ${format(filters.date_from)}`;
-}
+        return `Mulai ${format(filters.date_from)}`;
+    }
 
     return filters.date_from === filters.date_to
         ? format(filters.date_from)

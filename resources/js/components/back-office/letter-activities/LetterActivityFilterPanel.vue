@@ -88,10 +88,7 @@ function submit(): void {
                     </div>
                 </div>
 
-                <div
-                    v-if="visibility === 'details'"
-                    class="space-y-2"
-                >
+                <div v-if="visibility === 'details'" class="space-y-2">
                     <Label for="activity-letter">Cari surat</Label>
                     <div class="relative">
                         <Search

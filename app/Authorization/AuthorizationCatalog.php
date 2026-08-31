@@ -58,6 +58,18 @@ final class AuthorizationCatalog
                     'description' => 'Melihat jejak penerimaan dan registrasi surat sesuai kewenangan jabatan aktif.',
                     'group' => 'Audit dan Keamanan',
                 ],
+                PermissionName::ViewDocumentVersions => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat histori versi dokumen',
+                    'description' => 'Melihat arsip dan histori dokumen resmi sesuai kewenangan jabatan aktif.',
+                    'group' => 'Dokumen Surat',
+                ],
+                PermissionName::CreateDocumentVersions => [
+                    'name' => $permission->value,
+                    'label' => 'Buat versi koreksi dokumen',
+                    'description' => 'Membuat versi koreksi dokumen resmi sebelum surat diteruskan kepada pimpinan.',
+                    'group' => 'Dokumen Surat',
+                ],
                 PermissionName::ViewIntake => [
                     'name' => $permission->value,
                     'label' => 'Lihat antrean penerimaan surat',
@@ -116,6 +128,8 @@ final class AuthorizationCatalog
                 PermissionName::ManagePositionAssignments->value,
                 PermissionName::ViewPrivilegeAudits->value,
                 PermissionName::ViewLetterActivities->value,
+                PermissionName::ViewDocumentVersions->value,
+                PermissionName::CreateDocumentVersions->value,
                 PermissionName::ViewIntake->value,
                 PermissionName::ScreenIntake->value,
                 PermissionName::DecideIntake->value,

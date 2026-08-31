@@ -110,8 +110,8 @@ export function useLetterActivityWorkspace(props: LetterActivityPageProps) {
         () => props.filters,
         (filters) => {
             if (filters) {
-activeFilters.value = { ...filters };
-}
+                activeFilters.value = { ...filters };
+            }
         },
     );
 
@@ -119,8 +119,8 @@ activeFilters.value = { ...filters };
         activeFilters.value = { ...filters };
 
         if (previewMode.value) {
-return;
-}
+            return;
+        }
 
         const query = Object.fromEntries(
             Object.entries({ ...filters, page: pageNumber }).filter(

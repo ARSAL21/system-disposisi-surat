@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\IncomingLetterStatus;
+use App\Policies\IncomingLetterPolicy;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +36,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, LetterDocument> $documents
  * @property-read LetterDocument|null $initialDocument
  */
+#[UsePolicy(IncomingLetterPolicy::class)]
 class IncomingLetter extends Model
 {
     /** @return array<string, string> */
@@ -77,10 +80,28 @@ class IncomingLetter extends Model
         return $this->hasMany(LetterDocument::class);
     }
 
+    /**
+     * Alias used by Laravel scoped nested binding for the
+     * `{letterDocument}` route parameter.
+     *
+     * @return HasMany<LetterDocument, $this>
+     */
+    public function letterDocuments(): HasMany
+    {
+        return $this->documents();
+    }
+
     /** @return HasOne<LetterDocument, $this> */
     public function initialDocument(): HasOne
     {
         return $this->hasOne(LetterDocument::class)
             ->where('version_number', 1);
+    }
+
+    /** @return HasOne<LetterDocument, $this> */
+    public function currentDocument(): HasOne
+    {
+        return $this->hasOne(LetterDocument::class)
+            ->ofMany('version_number', 'max');
     }
 }

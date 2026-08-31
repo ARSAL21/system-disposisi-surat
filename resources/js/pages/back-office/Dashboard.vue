@@ -3,6 +3,7 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import InternalDashboardWelcome from '@/components/back-office/dashboard/InternalDashboardWelcome.vue';
 import backOffice from '@/routes/back-office';
+import type { IntakeDashboardData } from '@/types';
 
 defineOptions({
     layout: {
@@ -15,6 +16,11 @@ defineOptions({
     },
 });
 
+defineProps<{
+    intakeDashboard?: IntakeDashboardData | null;
+    preview?: boolean;
+}>();
+
 const page = usePage();
 const firstName = computed(
     () => page.props.auth.user.name.trim().split(/\s+/)[0] || 'Staf',
@@ -25,6 +31,10 @@ const firstName = computed(
     <Head title="Dashboard Internal" />
 
     <div class="flex flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
-        <InternalDashboardWelcome :user-name="firstName" />
+        <InternalDashboardWelcome
+            :user-name="firstName"
+            :dashboard-data="intakeDashboard"
+            :preview="preview"
+        />
     </div>
 </template>

@@ -7,10 +7,7 @@ import {
     letterActivityActionClass,
     letterActivityActionLabels,
 } from '@/lib/letterActivityPresentation';
-import type {
-    LetterActivityRecord,
-    LetterActivityVisibility,
-} from '@/types';
+import type { LetterActivityRecord, LetterActivityVisibility } from '@/types';
 
 defineProps<{
     activities: LetterActivityRecord[];
@@ -51,12 +48,15 @@ defineEmits<{
             </div>
 
             <div v-if="visibility === 'details' && activity.target">
-                <h3 class="font-semibold leading-6 text-slate-950 dark:text-white">
+                <h3
+                    class="leading-6 font-semibold text-slate-950 dark:text-white"
+                >
                     {{ activity.target.subject }}
                 </h3>
                 <p class="mt-1 text-sm text-muted-foreground">
                     {{
-                        activity.target.agenda_number ?? activity.target.public_id
+                        activity.target.agenda_number ??
+                        activity.target.public_id
                     }}
                     · {{ activity.target.sender }}
                 </p>
@@ -79,7 +79,9 @@ defineEmits<{
                         <UserRound class="size-4" aria-hidden="true" />
                     </span>
                     <div>
-                        <p class="text-sm font-medium text-slate-900 dark:text-white">
+                        <p
+                            class="text-sm font-medium text-slate-900 dark:text-white"
+                        >
                             {{ activity.actor.name }}
                         </p>
                         <p class="text-xs text-muted-foreground">

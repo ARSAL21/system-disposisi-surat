@@ -72,8 +72,7 @@ function deleteDraft(): void {
                     class="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground"
                 >
                     Periksa data surat dan dokumen terlebih dahulu. Setelah
-                    dikirim, pengajuan surat kembali dikunci selama
-                    pemeriksaan.
+                    dikirim, pengajuan surat kembali dikunci selama pemeriksaan.
                 </p>
                 <p
                     v-if="!submission.document"
