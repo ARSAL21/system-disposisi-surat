@@ -13,6 +13,9 @@ enum PermissionName: string
     case ViewLetterActivities = 'letter-activities.view';
     case ViewDocumentVersions = 'document-versions.view';
     case CreateDocumentVersions = 'document-versions.create';
+    case ViewLetterRouting = 'letter-routing.view';
+    case CreateLetterRouting = 'letter-routing.create';
+    case ViewExecutiveInbox = 'executive-inbox.view';
     case ViewIntake = 'intake.view';
     case ScreenIntake = 'intake.screen';
     case DecideIntake = 'intake.decide';

@@ -15,6 +15,6 @@ class ActivateAuthorizationMutationController extends Controller
             'message' => 'Mode perubahan aktif selama 15 menit.',
         ]);
 
-        return to_route('back-office.authorization.index');
+        return redirect()->back();
     }
 }

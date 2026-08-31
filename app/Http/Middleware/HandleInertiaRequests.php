@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\DocumentVersionPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\IntakePositionAssignmentResolver;
+use App\Services\LetterRoutingPositionAssignmentResolver;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -97,6 +98,9 @@ class HandleInertiaRequests extends Middleware
                 'can_view_privilege_audits' => false,
                 'can_view_letter_activities' => false,
                 'can_view_document_versions' => false,
+                'can_view_letter_routing' => false,
+                'can_create_letter_routing' => false,
+                'can_view_executive_inbox' => false,
                 'can_view_intake' => false,
                 'can_screen_intake' => false,
                 'can_decide_intake' => false,
@@ -113,6 +117,16 @@ class HandleInertiaRequests extends Middleware
         $hasDocumentVersionPermission = $user->can(PermissionName::ViewDocumentVersions->value);
         $hasDocumentVersionPosition = $hasDocumentVersionPermission
             && app(DocumentVersionPositionAssignmentResolver::class)->hasViewingAssignment($user);
+        $routingResolver = app(LetterRoutingPositionAssignmentResolver::class);
+        $hasLetterRoutingPermission = $user->can(PermissionName::ViewLetterRouting->value);
+        $hasLetterRoutingPosition = $hasLetterRoutingPermission
+            && $routingResolver->hasRoutingViewingAssignment($user);
+        $hasCreateRoutingPermission = $user->can(PermissionName::CreateLetterRouting->value);
+        $hasCreateRoutingPosition = $hasCreateRoutingPermission
+            && $routingResolver->hasRoutingCreatingAssignment($user);
+        $hasExecutiveInboxPermission = $user->can(PermissionName::ViewExecutiveInbox->value);
+        $hasExecutiveInboxPosition = $hasExecutiveInboxPermission
+            && $routingResolver->hasExecutiveInboxAssignment($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -123,6 +137,9 @@ class HandleInertiaRequests extends Middleware
             'can_view_privilege_audits' => $user->can(PermissionName::ViewPrivilegeAudits->value),
             'can_view_letter_activities' => $user->can(PermissionName::ViewLetterActivities->value),
             'can_view_document_versions' => $hasDocumentVersionPosition,
+            'can_view_letter_routing' => $hasLetterRoutingPosition,
+            'can_create_letter_routing' => $hasCreateRoutingPosition,
+            'can_view_executive_inbox' => $hasExecutiveInboxPosition,
             'can_view_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ViewIntake->value),
             'can_screen_intake' => $hasIntakePosition
