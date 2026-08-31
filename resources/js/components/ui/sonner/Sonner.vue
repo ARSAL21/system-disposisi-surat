@@ -23,6 +23,7 @@ const { resolvedAppearance } = useAppearance();
 
 <template>
     <Sonner
+        v-bind="props"
         :theme="resolvedAppearance"
         :class="cn('toaster group', props.class)"
         :style="{
@@ -41,7 +42,6 @@ const { resolvedAppearance } = useAppearance();
                 closeButton: 'transition-colors',
             },
         }"
-        v-bind="props"
     >
         <template #success-icon>
             <CircleCheckIcon class="size-4 shrink-0 text-[var(--toast-icon-success)]" />

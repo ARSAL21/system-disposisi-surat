@@ -41,7 +41,7 @@ function toggleAppearance(): void {
         <!-- Subtle Grid Pattern Overlay -->
         <div
             aria-hidden="true"
-            class="pointer-events-none absolute inset-0 opacity-[0.025] dark:opacity-[0.04] [background-image:linear-gradient(to_right,#000000_1px,transparent_1px),linear-gradient(to_bottom,#000000_1px,transparent_1px)] dark:[background-image:linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] [background-size:36px_36px]"
+            class="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,#000000_1px,transparent_1px),linear-gradient(to_bottom,#000000_1px,transparent_1px)] [background-size:36px_36px] opacity-[0.025] dark:[background-image:linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] dark:opacity-[0.04]"
         />
 
         <!-- Top Header Navigation -->
@@ -49,7 +49,7 @@ function toggleAppearance(): void {
             class="relative z-20 mx-auto flex w-full max-w-xl items-center justify-between py-2"
         >
             <Link
-                :href="home()"
+                :href="home.url()"
                 class="group flex items-center gap-2.5 rounded-xl p-1 font-semibold focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
                 <span
@@ -58,10 +58,14 @@ function toggleAppearance(): void {
                     <AppLogoIcon class="size-5 text-white" />
                 </span>
                 <div>
-                    <span class="block text-sm font-bold tracking-tight text-foreground">
+                    <span
+                        class="block text-sm font-bold tracking-tight text-foreground"
+                    >
                         {{ appName }}
                     </span>
-                    <span class="block text-[11px] font-medium text-muted-foreground">
+                    <span
+                        class="block text-[11px] font-medium text-muted-foreground"
+                    >
                         Portal Internal
                     </span>
                 </div>
@@ -103,7 +107,9 @@ function toggleAppearance(): void {
         </header>
 
         <!-- Main Single Center Section / Elevated Glass Card -->
-        <main class="relative z-10 mx-auto my-auto w-full max-w-[28rem] py-6 sm:max-w-[30rem]">
+        <main
+            class="relative z-10 mx-auto my-auto w-full max-w-[28rem] py-6 sm:max-w-[30rem]"
+        >
             <section
                 class="relative w-full rounded-3xl border border-border/80 bg-card/85 p-6 shadow-2xl shadow-indigo-500/5 backdrop-blur-2xl sm:p-9 dark:border-border/60 dark:bg-slate-900/75 dark:shadow-indigo-950/20"
                 aria-labelledby="back-office-auth-title"
@@ -111,7 +117,7 @@ function toggleAppearance(): void {
                 <!-- Form Header with Centered Glowing Icon Badge -->
                 <div class="mb-7 text-center">
                     <div
-                        class="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/20"
+                        class="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 text-white shadow-lg ring-1 shadow-indigo-500/25 ring-white/20"
                     >
                         <AppLogoIcon class="size-6 text-white" />
                     </div>
@@ -146,7 +152,10 @@ function toggleAppearance(): void {
         <footer
             class="relative z-20 mx-auto flex w-full max-w-xl items-center justify-center py-2 text-center text-xs text-muted-foreground"
         >
-            <span>Terkoneksi Jalur Aman HTTPS • Akses Internal Aparatur Berwenang</span>
+            <span
+                >Terkoneksi Jalur Aman HTTPS • Akses Internal Aparatur
+                Berwenang</span
+            >
         </footer>
 
         <Toaster />

@@ -122,7 +122,7 @@ onMounted(() => {
                     </Label>
                     <TextLink
                         v-if="canResetPassword"
-                        :href="request()"
+                        :href="request.url()"
                         class="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
                         :tabindex="5"
                     >
@@ -178,7 +178,7 @@ onMounted(() => {
         >
             <span>Bukan aparatur / staf internal?</span>
             <TextLink
-                :href="publicLogin()"
+                :href="publicLogin.url()"
                 class="group ml-1.5 inline-flex items-center gap-1 font-semibold text-primary transition-colors hover:underline"
             >
                 <span>Masuk ke portal publik</span>
