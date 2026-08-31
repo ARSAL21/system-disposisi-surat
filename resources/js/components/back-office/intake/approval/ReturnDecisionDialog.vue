@@ -31,15 +31,15 @@ watch(
     () => props.open,
     (open) => {
         if (open) {
-note.value = '';
-}
+            note.value = '';
+        }
     },
 );
 
 function confirm(): void {
     if (!canSubmit.value) {
-return;
-}
+        return;
+    }
 
     emit('confirm', {
         outcome: 'INTERNAL_REVISION_REQUIRED',

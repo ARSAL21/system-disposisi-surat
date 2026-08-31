@@ -30,7 +30,8 @@ const statusPresentation: Record<
     },
     INTERNAL_REVISION_REQUIRED: {
         label: 'Dikembalikan ke petugas',
-        description: 'Rancangan pencatatan resmi perlu diperbaiki oleh petugas.',
+        description:
+            'Rancangan pencatatan resmi perlu diperbaiki oleh petugas.',
         badgeClass:
             'border-orange-500/25 bg-orange-500/10 text-orange-800 dark:text-orange-200',
     },

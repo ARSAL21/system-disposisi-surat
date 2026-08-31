@@ -51,8 +51,8 @@ watch(
     () => props.open,
     (open) => {
         if (!open) {
-return;
-}
+            return;
+        }
 
         agendaNumber.value = '';
         note.value = '';
@@ -72,8 +72,8 @@ return;
 
 function confirm(): void {
     if (!canSubmit.value) {
-return;
-}
+        return;
+    }
 
     emit('confirm', {
         outcome: 'REGISTERED',
