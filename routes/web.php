@@ -9,6 +9,7 @@ use App\Http\Controllers\BackOffice\Authorization\ActivateAuthorizationMutationC
 use App\Http\Controllers\BackOffice\Authorization\AuthorizationRoleController;
 use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
 use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
+use App\Http\Controllers\BackOffice\BackOfficeDashboardController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
 use App\Http\Controllers\BackOffice\Documents\DocumentArchiveController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentFileController;
@@ -127,9 +128,9 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                 ->name('password.confirm.store');
 
             Route::middleware('critical-mfa')->group(function (): void {
-                Route::get('dashboard', \App\Http\Controllers\BackOffice\BackOfficeDashboardController::class)->name('dashboard');
+                Route::get('dashboard', BackOfficeDashboardController::class)->name('dashboard');
 
-                if (app()->isLocal()) {
+                if (app()->environment('local', 'testing')) {
                     Route::inertia('previews/dashboard', 'back-office/Dashboard', ['preview' => true])
                         ->name('previews.dashboard');
                     Route::inertia('previews/intake-approvals', 'back-office/intake/approvals/Index')
