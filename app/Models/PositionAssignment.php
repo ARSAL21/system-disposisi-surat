@@ -6,8 +6,10 @@ use App\Policies\PositionAssignmentPolicy;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 
 /**
@@ -22,6 +24,7 @@ use LogicException;
  * @property-read User $user
  * @property-read Position $position
  * @property-read User|null $assignedBy
+ * @property-read Collection<int, LetterRoute> $routedLetterRoutes
  */
 #[UsePolicy(PositionAssignmentPolicy::class)]
 class PositionAssignment extends Model
@@ -91,5 +94,11 @@ class PositionAssignment extends Model
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by_user_id');
+    }
+
+    /** @return HasMany<LetterRoute, $this> */
+    public function routedLetterRoutes(): HasMany
+    {
+        return $this->hasMany(LetterRoute::class, 'routed_by_position_assignment_id');
     }
 }

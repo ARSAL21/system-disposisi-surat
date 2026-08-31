@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property-read OrganizationalUnit|null $organizationalUnit
  * @property-read Collection<int, PositionAssignment> $assignments
  * @property-read PositionAssignment|null $activeAssignment
+ * @property-read Collection<int, LetterRoute> $receivedLetterRoutes
  */
 #[UsePolicy(PositionPolicy::class)]
 class Position extends Model
@@ -57,6 +58,14 @@ class Position extends Model
     /** @return HasOne<PositionAssignment, $this> */
     public function activeAssignment(): HasOne
     {
-        return $this->hasOne(PositionAssignment::class)->whereNull('ended_at');
+        return $this->hasOne(PositionAssignment::class)
+            ->where('started_at', '<=', now())
+            ->whereNull('ended_at');
+    }
+
+    /** @return HasMany<LetterRoute, $this> */
+    public function receivedLetterRoutes(): HasMany
+    {
+        return $this->hasMany(LetterRoute::class, 'recipient_position_id');
     }
 }
