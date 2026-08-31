@@ -5,6 +5,7 @@ namespace App\Auditing;
 use App\Models\AuditLog;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
+use App\Models\LetterRoute;
 use App\Models\LetterSubmission;
 use Illuminate\Support\Collection;
 
@@ -38,6 +39,15 @@ final class LetterActivityTargetResolver
             ->whereKey($this->subjectIds($audits, 'letter_document'))
             ->get(['id', 'incoming_letter_id', 'version_number', 'sha256'])
             ->keyBy('id');
+        $routes = LetterRoute::query()
+            ->with([
+                'incomingLetter:id,letter_submission_id,agenda_number,sender_organization_id,subject',
+                'incomingLetter.submission:id,public_id,source',
+                'incomingLetter.senderOrganization:id,name',
+            ])
+            ->whereKey($this->subjectIds($audits, 'letter_route'))
+            ->get(['id', 'incoming_letter_id'])
+            ->keyBy('id');
         $resolved = [];
 
         foreach ($audits as $audit) {
@@ -52,6 +62,10 @@ final class LetterActivityTargetResolver
                 ),
                 'letter_document' => $this->fromDocument(
                     $documents->get($audit->subject_id),
+                    $audit,
+                ),
+                'letter_route' => $this->fromRoute(
+                    $routes->get($audit->subject_id),
                     $audit,
                 ),
                 default => $this->fallback($audit),
@@ -121,6 +135,16 @@ final class LetterActivityTargetResolver
                 'sha256' => $document->sha256,
             ],
         ];
+    }
+
+    /** @return array{target: array<string, mixed>, document: null} */
+    private function fromRoute(?LetterRoute $route, AuditLog $audit): array
+    {
+        if (! $route instanceof LetterRoute) {
+            return $this->fallback($audit);
+        }
+
+        return $this->fromIncomingLetter($route->incomingLetter, $audit);
     }
 
     /** @return array{target: array<string, mixed>, document: null} */

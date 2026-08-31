@@ -3,6 +3,7 @@
 namespace App\Auditing;
 
 use App\Enums\IncomingLetterStatus;
+use App\Enums\LetterRouteStatus;
 use App\Enums\SubmissionStatus;
 
 final class LetterActivityPayloadSanitizer
@@ -12,6 +13,7 @@ final class LetterActivityPayloadSanitizer
         'submitted_at' => 'waktu_pengajuan',
         'submission_status' => 'status_pengajuan',
         'letter_status' => 'status_surat',
+        'route_status' => 'status_routing',
         'agenda_number' => 'nomor_agenda',
         'agenda_year' => 'tahun_agenda',
         'version_number' => 'versi_dokumen',
@@ -99,6 +101,7 @@ final class LetterActivityPayloadSanitizer
             IncomingLetterStatus::Routed->value => 'Telah diarahkan',
             IncomingLetterStatus::InProgress->value => 'Dalam proses',
             IncomingLetterStatus::Completed->value => 'Selesai',
+            LetterRouteStatus::Pending->value => 'Menunggu disposisi pimpinan',
             default => null,
         };
     }
