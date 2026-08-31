@@ -74,7 +74,9 @@ defineProps<{ preview?: boolean }>();
                     variant="outline"
                     class="min-h-11 justify-between bg-background/75"
                 >
-                    <Link href="/back-office/previews/executive-inbox/routes/503">
+                    <Link
+                        href="/back-office/previews/executive-inbox/routes/503"
+                    >
                         Lihat ruang keputusan pimpinan
                         <ArrowRight class="size-4" aria-hidden="true" />
                     </Link>

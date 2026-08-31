@@ -20,14 +20,19 @@ const emit = defineEmits<{
 
 function updateStatus(value: unknown): void {
     emit('change', {
-        status: value === 'ALL' ? '' : (String(value) as DispositionInboxFilters['status']),
+        status:
+            value === 'ALL'
+                ? ''
+                : (String(value) as DispositionInboxFilters['status']),
     });
 }
 </script>
 
 <template>
     <section class="rounded-2xl border bg-card p-4 shadow-xs">
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_auto] xl:items-end">
+        <div
+            class="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_auto] xl:items-end"
+        >
             <div class="space-y-2">
                 <Label for="disposition-search">Cari surat</Label>
                 <div class="relative">
@@ -53,7 +58,10 @@ function updateStatus(value: unknown): void {
                     :model-value="filters.status || 'ALL'"
                     @update:model-value="updateStatus"
                 >
-                    <SelectTrigger id="disposition-status" class="min-h-11 w-full">
+                    <SelectTrigger
+                        id="disposition-status"
+                        class="min-h-11 w-full"
+                    >
                         <SelectValue placeholder="Semua status" />
                     </SelectTrigger>
                     <SelectContent>
