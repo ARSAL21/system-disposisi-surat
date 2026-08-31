@@ -25,13 +25,15 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
     'update:open': [open: boolean];
-    'preview:save': [payload: {
-        label: DispositionInstructionLabel | null;
-        code: string;
-        name: string;
-        description: string;
-        sort_order: number;
-    }];
+    'preview:save': [
+        payload: {
+            label: DispositionInstructionLabel | null;
+            code: string;
+            name: string;
+            description: string;
+            sort_order: number;
+        },
+    ];
 }>();
 
 const form = useForm({
@@ -75,7 +77,9 @@ function submit(): void {
 
         emit('preview:save', {
             label: props.label,
-            code: form.code.trim().toLocaleUpperCase('id-ID'),
+            code:
+                props.label?.code ??
+                form.code.trim().toLocaleUpperCase('id-ID'),
             name: form.name.trim(),
             description: form.description.trim(),
             sort_order: Number(form.sort_order),
@@ -140,13 +144,19 @@ function submit(): void {
                         id="instruction-code"
                         v-model="form.code"
                         required
+                        :disabled="Boolean(label)"
                         maxlength="80"
                         autocomplete="off"
                         class="font-mono uppercase"
                         placeholder="UNTUK_DITINDAKLANJUTI"
                     />
                     <p class="text-xs leading-5 text-muted-foreground">
-                        Gunakan huruf kapital, angka, atau garis bawah.
+                        <template v-if="label">
+                            Kode adalah identitas tetap dan tidak dapat diubah.
+                        </template>
+                        <template v-else>
+                            Gunakan huruf kapital, angka, atau garis bawah.
+                        </template>
                     </p>
                     <InputError :message="form.errors.code" />
                 </div>

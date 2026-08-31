@@ -21,7 +21,9 @@ defineEmits<{
             v-if="labels.length === 0"
             class="flex min-h-64 flex-col items-center justify-center px-5 py-12 text-center"
         >
-            <span class="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <span
+                class="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground"
+            >
                 <ListChecks class="size-5" aria-hidden="true" />
             </span>
             <h2 class="mt-4 font-semibold">Instruksi tidak ditemukan</h2>
@@ -46,7 +48,9 @@ defineEmits<{
                 :class="!label.is_active ? 'bg-muted/35 opacity-80' : 'bg-card'"
             >
                 <div class="flex items-start justify-between gap-3">
-                    <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                    <span
+                        class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                    >
                         <ListChecks class="size-5" aria-hidden="true" />
                     </span>
                     <Badge

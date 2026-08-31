@@ -75,7 +75,11 @@ const content = computed(() =>
                         variant="outline"
                         class="border-blue-200 bg-white/80 text-blue-800 dark:border-blue-800 dark:bg-blue-950/55 dark:text-blue-200"
                     >
-                        {{ mode === 'routing' ? 'M5 · Routing awal' : 'M6 · Disposisi berbasis jabatan' }}
+                        {{
+                            mode === 'routing'
+                                ? 'M5 · Routing awal'
+                                : 'M6 · Disposisi berbasis jabatan'
+                        }}
                     </Badge>
                     <Badge v-if="preview" variant="secondary">
                         Pratinjau lokal
