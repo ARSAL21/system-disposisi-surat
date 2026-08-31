@@ -2,15 +2,19 @@
 
 namespace App\Actions;
 
+use App\Auditing\Guards\AuditLogGuard;
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
 use App\Models\PositionAssignment;
 use App\Models\User;
 use Illuminate\Support\Str;
-use LogicException;
 
 class RecordAudit
 {
+    public function __construct(
+        private readonly AuditLogGuard $guard = new AuditLogGuard,
+    ) {}
+
     /**
      * @param  array<string, mixed>|null  $oldValues
      * @param  array<string, mixed>|null  $newValues
@@ -27,9 +31,19 @@ class RecordAudit
         ?string $requestId = null,
         ?PositionAssignment $actorPositionAssignment = null,
     ): AuditLog {
-        if ($actor === null && ! app()->runningInConsole()) {
-            throw new LogicException('An unauthenticated audit actor is only allowed for console operations.');
-        }
+        $resolvedRequestId = $requestId ?? Str::uuid()->toString();
+
+        $this->guard->validate(
+            actor: $actor,
+            action: $action,
+            subjectType: $subjectType,
+            subjectId: $subjectId,
+            oldValues: $oldValues,
+            newValues: $newValues,
+            metadata: $metadata,
+            requestId: $resolvedRequestId,
+            actorPositionAssignment: $actorPositionAssignment,
+        );
 
         $request = app()->runningInConsole() ? null : request();
 
@@ -42,7 +56,7 @@ class RecordAudit
         $auditLog->old_values = $oldValues;
         $auditLog->new_values = $newValues;
         $auditLog->metadata = $metadata;
-        $auditLog->request_id = $requestId ?? Str::uuid()->toString();
+        $auditLog->request_id = $resolvedRequestId;
         $auditLog->ip_address = $request?->ip();
         $auditLog->user_agent = $request?->userAgent();
         $auditLog->save();

@@ -14,9 +14,10 @@ function appendOnlyAuditLog(): AuditLog
     return app(RecordAudit::class)->execute(
         actor: null,
         action: AuditAction::RoleChanged,
-        subjectType: 'append_only_test',
+        subjectType: 'role',
         subjectId: 100,
-        metadata: ['source' => 'test'],
+        newValues: ['name' => 'test-role'],
+        metadata: ['source' => 'console', 'command' => 'test'],
     );
 }
 
@@ -28,7 +29,7 @@ function assertAuditLogWasNotMutated(AuditLog $audit): void
         ->not->toBeNull()
         ->action->toBe(AuditAction::RoleChanged->value)
         ->subject_id->toBe(100)
-        ->metadata->toBe(['source' => 'test']);
+        ->metadata->toBe(['source' => 'console', 'command' => 'test']);
 }
 
 test('record audit can append a new audit record', function (): void {
