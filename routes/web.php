@@ -158,6 +158,12 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.executive-inbox.index');
                     Route::inertia('previews/executive-inbox/routes/{letterRoute}', 'back-office/executive/inbox/Show', ['preview' => true])
                         ->name('previews.executive-inbox.show');
+                    Route::inertia('previews/dispositions/inbox', 'back-office/dispositions/inbox/Index', ['preview' => true])
+                        ->name('previews.dispositions.inbox.index');
+                    Route::inertia('previews/dispositions/inbox/recipients/{dispositionRecipient}', 'back-office/dispositions/inbox/Show', ['preview' => true])
+                        ->name('previews.dispositions.inbox.show');
+                    Route::inertia('previews/workflow/instruction-labels', 'back-office/workflow/instruction-labels/Index', ['preview' => true])
+                        ->name('previews.workflow.instruction-labels.index');
                 }
 
                 Route::get('documents', DocumentArchiveController::class)

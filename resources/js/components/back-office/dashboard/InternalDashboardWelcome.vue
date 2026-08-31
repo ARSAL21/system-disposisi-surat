@@ -8,7 +8,9 @@ import {
     History,
     Inbox,
     Landmark,
+    ListChecks,
     Lock,
+    MailOpen,
     Network,
     Route as RouteIcon,
     Shield,
@@ -117,13 +119,27 @@ const letterOperationModules = computed(() => {
         list.push({
             title: 'Inbox Pimpinan',
             description:
-                'Baca surat resmi yang diarahkan kepada jabatan Wali Kota atau Sekretaris Daerah aktif.',
+                'Periksa surat resmi dan buat disposisi pertama kepada satu jabatan Asisten yang sah.',
             href: '/back-office/executive/inbox',
             icon: Landmark,
             color: 'from-amber-500 to-orange-600',
             bgLight: 'bg-amber-50 dark:bg-amber-950/50',
             textLight: 'text-amber-700 dark:text-amber-300',
             badge: 'Meja Pimpinan',
+        });
+    }
+
+    if (capabilities.value.can_view_dispositions) {
+        list.push({
+            title: 'Inbox Disposisi',
+            description:
+                'Tinjau surat dan instruksi resmi yang ditujukan kepada jabatan Asisten aktif Anda.',
+            href: '/back-office/dispositions/inbox',
+            icon: MailOpen,
+            color: 'from-blue-600 to-emerald-600',
+            bgLight: 'bg-blue-50 dark:bg-blue-950/50',
+            textLight: 'text-blue-700 dark:text-blue-300',
+            badge: 'Meja Asisten',
         });
     }
 
@@ -199,6 +215,20 @@ const systemGovernanceModules = computed(() => {
             bgLight: 'bg-slate-100 dark:bg-slate-800/60',
             textLight: 'text-slate-700 dark:text-slate-300',
             badge: 'Audit Trail',
+        });
+    }
+
+    if (capabilities.value.can_view_disposition_instructions) {
+        list.push({
+            title: 'Instruksi Disposisi',
+            description:
+                'Kelola label instruksi aktif tanpa mengubah snapshot histori disposisi lama.',
+            href: '/back-office/workflow/instruction-labels',
+            icon: ListChecks,
+            color: 'from-blue-600 to-cyan-600',
+            bgLight: 'bg-blue-50 dark:bg-blue-950/50',
+            textLight: 'text-blue-700 dark:text-blue-300',
+            badge: 'Workflow',
         });
     }
 

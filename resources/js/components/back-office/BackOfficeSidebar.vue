@@ -8,6 +8,8 @@ import {
     Inbox,
     Landmark,
     LayoutDashboard,
+    ListChecks,
+    MailOpen,
     Network,
     Route as RouteIcon,
     ShieldCheck,
@@ -85,6 +87,16 @@ const mainNavItems = computed<NavItem[]>(() => {
         });
     }
 
+    if (page.props.auth.capabilities.can_view_dispositions) {
+        const dispositionInboxPath = '/back-office/dispositions/inbox';
+        items.push({
+            title: 'Inbox Disposisi',
+            href: dispositionInboxPath,
+            icon: MailOpen,
+            isActive: currentPath.value.startsWith(dispositionInboxPath),
+        });
+    }
+
     if (page.props.auth.capabilities.can_view_document_versions) {
         const archivePath = '/back-office/documents';
         items.push({
@@ -136,6 +148,16 @@ const mainNavItems = computed<NavItem[]>(() => {
                     '/back-office/organization/assignments',
             },
         );
+    }
+
+    if (page.props.auth.capabilities.can_view_disposition_instructions) {
+        const instructionPath = '/back-office/workflow/instruction-labels';
+        items.push({
+            title: 'Instruksi Disposisi',
+            href: instructionPath,
+            icon: ListChecks,
+            isActive: currentPath.value.startsWith(instructionPath),
+        });
     }
 
     if (page.props.auth.capabilities.can_view_privilege_audits) {
