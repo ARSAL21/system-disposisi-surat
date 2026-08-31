@@ -37,6 +37,7 @@ class OrganizationStructureController extends Controller
             'positions' => $workspace['positions'] === null
                 ? null
                 : OrganizationPositionResource::collection($workspace['positions'])->response()->getData(true),
+            'tree' => $workspace['tree'],
             'unitOptions' => $workspace['unit_options']->map(fn ($unit): array => [
                 'id' => $unit->getKey(),
                 'parent_id' => $unit->parent_id,
