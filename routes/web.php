@@ -26,6 +26,11 @@ use App\Http\Controllers\BackOffice\Organization\OrganizationalUnitController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationStructureController;
 use App\Http\Controllers\BackOffice\Organization\PositionAssignmentController;
 use App\Http\Controllers\BackOffice\Organization\PositionController;
+use App\Http\Controllers\BackOffice\Routing\ExecutiveInboxController;
+use App\Http\Controllers\BackOffice\Routing\ExecutiveInboxDocumentController;
+use App\Http\Controllers\BackOffice\Routing\LetterRoutingController;
+use App\Http\Controllers\BackOffice\Routing\LetterRoutingDocumentController;
+use App\Http\Controllers\BackOffice\Routing\StoreLetterRouteController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicSubmission\LetterSubmissionController;
 use App\Http\Controllers\PublicSubmission\PublicDashboardController;
@@ -145,6 +150,14 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.documents.index');
                     Route::inertia('previews/letters/{incomingLetter}/documents', 'back-office/letters/documents/Index', ['preview' => true])
                         ->name('previews.documents.show');
+                    Route::inertia('previews/letter-routing', 'back-office/letter-routing/Index', ['preview' => true])
+                        ->name('previews.letter-routing.index');
+                    Route::inertia('previews/letter-routing/letters/{incomingLetter}', 'back-office/letter-routing/Show', ['preview' => true])
+                        ->name('previews.letter-routing.show');
+                    Route::inertia('previews/executive-inbox', 'back-office/executive/inbox/Index', ['preview' => true])
+                        ->name('previews.executive-inbox.index');
+                    Route::inertia('previews/executive-inbox/routes/{letterRoute}', 'back-office/executive/inbox/Show', ['preview' => true])
+                        ->name('previews.executive-inbox.show');
                 }
 
                 Route::get('documents', DocumentArchiveController::class)
@@ -174,6 +187,45 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ])
                         ->name('letters.documents.download');
                 });
+
+                Route::prefix('letter-routing')
+                    ->name('letter-routing.')
+                    ->middleware('can:'.PermissionName::ViewLetterRouting->value)
+                    ->group(function (): void {
+                        Route::get('/', [LetterRoutingController::class, 'index'])
+                            ->name('index');
+                        Route::get('letters/{incomingLetter}', [LetterRoutingController::class, 'show'])
+                            ->name('show');
+                        Route::get('letters/{incomingLetter}/document/preview', [LetterRoutingDocumentController::class, 'preview'])
+                            ->middleware('throttle:private-document-access')
+                            ->name('document.preview');
+                        Route::get('letters/{incomingLetter}/document/download', [LetterRoutingDocumentController::class, 'download'])
+                            ->middleware('throttle:private-document-access')
+                            ->name('document.download');
+                    });
+
+                Route::post('letter-routing/letters/{incomingLetter}', StoreLetterRouteController::class)
+                    ->middleware([
+                        'can:'.PermissionName::CreateLetterRouting->value,
+                        'throttle:letter-routing-create',
+                    ])
+                    ->name('letter-routing.store');
+
+                Route::prefix('executive/inbox')
+                    ->name('executive.inbox.')
+                    ->middleware('can:'.PermissionName::ViewExecutiveInbox->value)
+                    ->group(function (): void {
+                        Route::get('/', [ExecutiveInboxController::class, 'index'])
+                            ->name('index');
+                        Route::get('routes/{letterRoute}', [ExecutiveInboxController::class, 'show'])
+                            ->name('show');
+                        Route::get('routes/{letterRoute}/document/preview', [ExecutiveInboxDocumentController::class, 'preview'])
+                            ->middleware('throttle:private-document-access')
+                            ->name('document.preview');
+                        Route::get('routes/{letterRoute}/document/download', [ExecutiveInboxDocumentController::class, 'download'])
+                            ->middleware('throttle:private-document-access')
+                            ->name('document.download');
+                    });
 
                 Route::prefix('intake')
                     ->name('intake.')

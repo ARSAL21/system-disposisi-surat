@@ -23,6 +23,13 @@ export type AuthCapabilities = {
     can_view_privilege_audits: boolean;
     can_view_letter_activities: boolean;
     can_view_document_versions: boolean;
+    can_view_letter_routing: boolean;
+    can_create_letter_routing: boolean;
+    can_view_executive_inbox: boolean;
+    can_view_dispositions: boolean;
+    can_create_dispositions: boolean;
+    can_view_disposition_instructions: boolean;
+    can_manage_disposition_instructions: boolean;
     can_view_intake: boolean;
     can_screen_intake: boolean;
     can_decide_intake: boolean;
