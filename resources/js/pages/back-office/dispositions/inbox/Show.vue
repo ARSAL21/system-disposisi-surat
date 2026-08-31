@@ -20,7 +20,10 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Dashboard Internal', href: '/back-office/dashboard' },
-            { title: 'Inbox Disposisi', href: '/back-office/dispositions/inbox' },
+            {
+                title: 'Inbox Disposisi',
+                href: '/back-office/dispositions/inbox',
+            },
             { title: 'Detail Disposisi', href: '#' },
         ],
     },
@@ -83,9 +86,13 @@ function handleDocumentAction(action: 'preview' | 'download'): void {
                 <AlertDescription>{{ interfaceNotice }}</AlertDescription>
             </Alert>
 
-            <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.85fr)]">
+            <div
+                class="grid items-start gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.85fr)]"
+            >
                 <section class="grid gap-5" aria-label="Informasi surat">
-                    <RoutingLetterOverviewCard :letter="activeDisposition.letter" />
+                    <RoutingLetterOverviewCard
+                        :letter="activeDisposition.letter"
+                    />
                     <RoutingOfficialDocumentCard
                         :document="activeDisposition.current_document"
                         :preview="previewMode"

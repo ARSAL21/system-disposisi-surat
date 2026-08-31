@@ -31,7 +31,10 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Dashboard Internal', href: '/back-office/dashboard' },
-            { title: 'Inbox Disposisi', href: '/back-office/dispositions/inbox' },
+            {
+                title: 'Inbox Disposisi',
+                href: '/back-office/dispositions/inbox',
+            },
         ],
     },
 });

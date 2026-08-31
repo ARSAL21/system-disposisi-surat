@@ -238,7 +238,9 @@ onBeforeUnmount(() => {
                     class="size-4 text-emerald-700 dark:text-emerald-300"
                     aria-hidden="true"
                 />
-                <AlertTitle>Disposisi ditampilkan pada mode simulasi</AlertTitle>
+                <AlertTitle
+                    >Disposisi ditampilkan pada mode simulasi</AlertTitle
+                >
                 <AlertDescription>{{ successNotice }}</AlertDescription>
             </Alert>
 
