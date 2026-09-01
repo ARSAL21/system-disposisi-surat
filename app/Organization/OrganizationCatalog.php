@@ -8,6 +8,8 @@ final class OrganizationCatalog
 
     public const string EXECUTIVE_ENTRY_LEVEL = 'EXECUTIVE_ENTRY';
 
+    public const string ASSISTANT_LEVEL = 'ASSISTANT';
+
     public const string SECTION_HEAD_LEVEL = 'SECTION_HEAD';
 
     public const string GENERAL_AFFAIRS_UNIT = 'BAGIAN_UMUM';
@@ -31,7 +33,7 @@ final class OrganizationCatalog
                 'is_active' => true,
             ],
             [
-                'code' => 'ASSISTANT',
+                'code' => self::ASSISTANT_LEVEL,
                 'name' => 'Asisten',
                 'hierarchy_order' => 30,
                 'is_active' => true,
