@@ -2,7 +2,6 @@
 import {
     ClipboardList,
     MessageSquareText,
-    Route as RouteIcon,
     Send,
     ShieldCheck,
 } from '@lucide/vue';
@@ -98,26 +97,6 @@ defineProps<{ disposition: DispositionInboxItem }>();
                     </p>
                     <p class="mt-2 text-sm leading-6 whitespace-pre-wrap">
                         {{ disposition.instruction_note }}
-                    </p>
-                </div>
-            </div>
-
-            <div
-                class="flex items-start gap-3 rounded-2xl border border-dashed p-4 text-sm"
-            >
-                <RouteIcon
-                    class="mt-0.5 size-5 shrink-0 text-amber-700 dark:text-amber-300"
-                    aria-hidden="true"
-                />
-                <div>
-                    <p class="font-semibold">
-                        Tahap berikutnya: penerima jamak
-                    </p>
-                    <p class="mt-1 leading-6 text-muted-foreground">
-                        Pada tahap position-based routing ini, Asisten baru
-                        dapat menerima dan memeriksa disposisi. Penerusan kepada
-                        satu atau beberapa Kepala Bagian akan diaktifkan pada
-                        tahap M6 berikutnya.
                     </p>
                 </div>
             </div>
