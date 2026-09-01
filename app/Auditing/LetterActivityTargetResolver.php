@@ -3,6 +3,7 @@
 namespace App\Auditing;
 
 use App\Models\AuditLog;
+use App\Models\Disposition;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
@@ -48,6 +49,15 @@ final class LetterActivityTargetResolver
             ->whereKey($this->subjectIds($audits, 'letter_route'))
             ->get(['id', 'incoming_letter_id'])
             ->keyBy('id');
+        $dispositions = Disposition::query()
+            ->with([
+                'incomingLetter:id,letter_submission_id,agenda_number,sender_organization_id,subject',
+                'incomingLetter.submission:id,public_id,source',
+                'incomingLetter.senderOrganization:id,name',
+            ])
+            ->whereKey($this->subjectIds($audits, 'disposition'))
+            ->get(['id', 'incoming_letter_id'])
+            ->keyBy('id');
         $resolved = [];
 
         foreach ($audits as $audit) {
@@ -66,6 +76,10 @@ final class LetterActivityTargetResolver
                 ),
                 'letter_route' => $this->fromRoute(
                     $routes->get($audit->subject_id),
+                    $audit,
+                ),
+                'disposition' => $this->fromDisposition(
+                    $dispositions->get($audit->subject_id),
                     $audit,
                 ),
                 default => $this->fallback($audit),
@@ -145,6 +159,16 @@ final class LetterActivityTargetResolver
         }
 
         return $this->fromIncomingLetter($route->incomingLetter, $audit);
+    }
+
+    /** @return array{target: array<string, mixed>, document: null} */
+    private function fromDisposition(?Disposition $disposition, AuditLog $audit): array
+    {
+        if (! $disposition instanceof Disposition) {
+            return $this->fallback($audit);
+        }
+
+        return $this->fromIncomingLetter($disposition->incomingLetter, $audit);
     }
 
     /** @return array{target: array<string, mixed>, document: null} */
