@@ -27,6 +27,24 @@ class DispositionRecipientPolicy
             return $authorization;
         }
 
+        return $this->positionAssignmentResolver->hasInboxAssignmentForPosition(
+            $user,
+            $recipient->recipient_position_id,
+        )
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+
+    public function forwardDisposition(User $user, DispositionRecipient $recipient): Response
+    {
+        if (! $user->isInternalAccount() || ! $user->is_active || ! $user->hasVerifiedEmail()) {
+            return Response::denyAsNotFound();
+        }
+
+        if (! $user->can(PermissionName::CreateDispositions->value)) {
+            return Response::deny('You do not have permission to create dispositions.');
+        }
+
         return $this->positionAssignmentResolver->hasAssistantAssignmentForPosition(
             $user,
             $recipient->recipient_position_id,
@@ -45,7 +63,7 @@ class DispositionRecipientPolicy
             return Response::deny('You do not have permission to view disposition inboxes.');
         }
 
-        return $this->positionAssignmentResolver->hasAssistantInboxAssignment($user)
+        return $this->positionAssignmentResolver->hasInboxAssignment($user)
             ? Response::allow()
             : Response::denyAsNotFound();
     }
