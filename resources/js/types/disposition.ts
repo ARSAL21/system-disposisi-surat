@@ -13,7 +13,7 @@ export type DispositionPositionOption = {
     id: number;
     code: string;
     name: string;
-    level_code: 'ASSISTANT';
+    level_code: 'ASSISTANT' | 'SECTION_HEAD';
     unit_name: string | null;
     holder_name: string | null;
     is_available: boolean;
@@ -92,6 +92,35 @@ export type DispositionInboxRoutes = {
     index: string;
 };
 
+export type ForwardDispositionPayload = {
+    recipient_position_ids: number[];
+    instruction_label_ids: number[];
+    instruction_note: string;
+};
+
+export type ForwardDispositionCapabilities = {
+    can_forward_disposition: boolean;
+};
+
+export type ForwardedDispositionRecipient = {
+    recipient_position: DispositionPositionOption;
+    status: DispositionRecipientStatus;
+    received_at: string;
+};
+
+export type ForwardDispositionReceipt = {
+    instructions: DispositionInstructionSnapshot[];
+    instruction_note: string | null;
+    recipients: ForwardedDispositionRecipient[];
+    disposed_by: RoutingActor;
+    disposed_at: string;
+};
+
+export type DispositionInboxDetailRoutes = {
+    index: string;
+    store?: string;
+};
+
 export type InstructionLabelStatus = 'active' | 'inactive' | 'all';
 
 export type InstructionLabelFilters = {
@@ -102,8 +131,8 @@ export type InstructionLabelFilters = {
 export type DispositionInstructionLabel = DispositionInstructionLabelOption & {
     sort_order: number;
     is_active: boolean;
-    created_at: string;
-    updated_at: string;
+    created_at: string | null;
+    updated_at: string | null;
     links: {
         update: string;
         status: string;
@@ -117,6 +146,7 @@ export type InstructionLabelRoutes = {
 
 export type InstructionLabelPageProps = {
     labels?: DispositionInstructionLabel[];
+    activeLabelCount?: number;
     filters?: InstructionLabelFilters;
     mutationSecurity?: MutationSecurityState;
     routes?: InstructionLabelRoutes;

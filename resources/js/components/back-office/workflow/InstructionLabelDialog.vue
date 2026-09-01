@@ -117,7 +117,8 @@ function submit(): void {
                 </DialogTitle>
                 <DialogDescription class="leading-6">
                     Label aktif akan tersedia pada form disposisi berikutnya.
-                    Perubahan nama tidak mengubah snapshot histori lama.
+                    Label yang sudah digunakan tetap terhubung ke histori dan
+                    tidak dapat dihapus.
                 </DialogDescription>
             </DialogHeader>
 
