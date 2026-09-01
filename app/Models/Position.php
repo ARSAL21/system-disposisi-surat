@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, PositionAssignment> $assignments
  * @property-read PositionAssignment|null $activeAssignment
  * @property-read Collection<int, LetterRoute> $receivedLetterRoutes
+ * @property-read Collection<int, DispositionRecipient> $receivedDispositionRecipients
  */
 #[UsePolicy(PositionPolicy::class)]
 class Position extends Model
@@ -67,5 +68,11 @@ class Position extends Model
     public function receivedLetterRoutes(): HasMany
     {
         return $this->hasMany(LetterRoute::class, 'recipient_position_id');
+    }
+
+    /** @return HasMany<DispositionRecipient, $this> */
+    public function receivedDispositionRecipients(): HasMany
+    {
+        return $this->hasMany(DispositionRecipient::class, 'recipient_position_id');
     }
 }

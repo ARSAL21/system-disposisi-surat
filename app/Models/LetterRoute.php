@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use LogicException;
 
 /**
@@ -25,6 +26,7 @@ use LogicException;
  * @property-read Position $recipientPosition
  * @property-read User $routedBy
  * @property-read PositionAssignment|null $routedByPositionAssignment
+ * @property-read Disposition|null $disposition
  */
 #[UsePolicy(LetterRoutePolicy::class)]
 class LetterRoute extends Model
@@ -87,5 +89,11 @@ class LetterRoute extends Model
     public function routedByPositionAssignment(): BelongsTo
     {
         return $this->belongsTo(PositionAssignment::class, 'routed_by_position_assignment_id');
+    }
+
+    /** @return HasOne<Disposition, $this> */
+    public function disposition(): HasOne
+    {
+        return $this->hasOne(Disposition::class, 'source_route_id');
     }
 }
