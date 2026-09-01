@@ -17,7 +17,7 @@ class ListOrganizationStructureRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'section' => ['sometimes', Rule::in(['levels', 'units', 'positions'])],
+            'section' => ['sometimes', Rule::in(['levels', 'chart', 'units', 'positions'])],
             'search' => ['sometimes', 'nullable', 'string', 'max:100'],
             'status' => ['sometimes', Rule::in(['all', 'active', 'inactive'])],
             'position_level_id' => ['sometimes', 'nullable', 'integer', 'exists:position_levels,id'],

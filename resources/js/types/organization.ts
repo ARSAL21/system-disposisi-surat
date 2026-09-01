@@ -101,8 +101,48 @@ export type MutationSecurityState = {
     security_settings_url: string;
 };
 
+export type OrganizationTreePosition = {
+    id: number;
+    code: string;
+    name: string;
+    is_active: boolean;
+    organizational_unit_id: number | null;
+    level: {
+        id: number;
+        code: string;
+        name: string;
+        hierarchy_order: number;
+    };
+    active_assignment: {
+        id: number;
+        started_at: string;
+        user: {
+            id: number;
+            name: string;
+            email: string;
+        };
+    } | null;
+};
+
+export type OrganizationTreeNode = {
+    id: number;
+    parent_id: number | null;
+    code: string | null;
+    name: string;
+    is_active: boolean;
+    children_count: number;
+    positions_count: number;
+    children: OrganizationTreeNode[];
+    positions: OrganizationTreePosition[];
+};
+
+export type OrganizationTreeData = {
+    root_units: OrganizationTreeNode[];
+    unassigned_positions: OrganizationTreePosition[];
+};
+
 export type OrganizationStructureFilters = {
-    section: 'levels' | 'units' | 'positions';
+    section: 'levels' | 'chart' | 'units' | 'positions';
     search: string;
     status: 'all' | 'active' | 'inactive';
     position_level_id: number | null;
@@ -121,6 +161,7 @@ export type OrganizationStructurePageProps = {
     levels: PositionLevel[];
     units: Paginated<OrganizationalUnit> | null;
     positions: Paginated<OrganizationPosition> | null;
+    tree: OrganizationTreeData;
     unitOptions: OrganizationalUnitOption[];
     summary: {
         levels: number;

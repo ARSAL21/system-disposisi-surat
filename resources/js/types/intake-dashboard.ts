@@ -19,7 +19,7 @@ export type IntakeQueueItem = {
     external_letter_date?: string | null;
     subject: string;
     summary?: string | null;
-    submitted_at: string;
+    submitted_at: string | null;
     document?: {
         original_filename: string;
         mime_type: string;

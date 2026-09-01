@@ -13,6 +13,7 @@ export const letterActivityActionLabels: Record<LetterActivityAction, string> =
         SUBMISSION_RETURNED_TO_STAFF: 'Dikembalikan ke petugas',
         SUBMISSION_REJECTED: 'Surat ditolak',
         LETTER_REGISTERED: 'Surat diregistrasi',
+        LETTER_ROUTED: 'Surat diarahkan ke pimpinan',
         DOCUMENT_VERSION_CREATED: 'Dokumen resmi dikunci',
     };
 
@@ -30,6 +31,8 @@ export const letterActivityActionDescriptions: Record<
         'Kepala Bagian Umum mengembalikan surat untuk diperiksa ulang.',
     SUBMISSION_REJECTED: 'Kepala Bagian Umum menolak pengajuan surat.',
     LETTER_REGISTERED: 'Surat memperoleh identitas dan nomor agenda resmi.',
+    LETTER_ROUTED:
+        'Bagian Umum mengarahkan surat resmi kepada satu pimpinan tujuan.',
     DOCUMENT_VERSION_CREATED:
         'Versi dokumen resmi dan sidik jari SHA-256 dicatat.',
 };
@@ -37,7 +40,7 @@ export const letterActivityActionDescriptions: Record<
 export function letterActivityActionClass(
     action: LetterActivityAction,
 ): string {
-    if (action === 'LETTER_REGISTERED') {
+    if (action === 'LETTER_REGISTERED' || action === 'LETTER_ROUTED') {
         return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300';
     }
 

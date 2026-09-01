@@ -1019,6 +1019,54 @@ Presenter response menggunakan allowlist dan tidak mengirim `storage_disk`,
 
 ---
 
+## 24.4 Routing Awal dan Inbox Pimpinan (M5)
+
+M5 memisahkan pengiriman administratif Bagian Umum dari disposisi substantif.
+Kepala Bagian Umum mengarahkan surat resmi kepada tepat satu Position Wali Kota
+atau Sekda melalui `letter_routes`; tidak dibuat row `dispositions` pada tahap
+ini.
+
+Endpoint produksi:
+
+```text
+GET  /back-office/letter-routing
+GET  /back-office/letter-routing/letters/{incomingLetter}
+POST /back-office/letter-routing/letters/{incomingLetter}
+GET  /back-office/letter-routing/letters/{incomingLetter}/document/preview
+GET  /back-office/letter-routing/letters/{incomingLetter}/document/download
+
+GET  /back-office/executive/inbox
+GET  /back-office/executive/inbox/routes/{letterRoute}
+GET  /back-office/executive/inbox/routes/{letterRoute}/document/preview
+GET  /back-office/executive/inbox/routes/{letterRoute}/document/download
+```
+
+Antrean Bagian Umum membutuhkan `letter-routing.view` dan Position Assignment
+aktif pada unit `BAGIAN_UMUM` dengan level `GENERAL_AFFAIRS` atau
+`SECTION_HEAD`. Pembuatan membutuhkan `letter-routing.create`, tetapi hanya
+`SECTION_HEAD` pada unit tersebut yang dapat menjalankannya. Inbox memerlukan
+`executive-inbox.view` dan hanya membaca route `PENDING` milik Position
+`EXECUTIVE_ENTRY` aktif pengguna. Permission tidak pernah menjadi bypass
+Position; super-admin teknis tanpa Position bisnis tetap menerima `404` dan
+tidak melihat menu.
+
+Action routing mengunci surat, dokumen resmi terkini, assignment actor, Position
+tujuan, dan assignment pemegang tujuan. Surat wajib masih `REGISTERED`, tujuan
+wajib Position `EXECUTIVE_ENTRY` aktif dengan tepat satu pemegang internal aktif
+dan terverifikasi, kemudian route `PENDING`, perubahan surat menjadi `ROUTED`,
+dan audit `LETTER_ROUTED` ditulis dalam transaction yang sama. Unique constraint
+pada `incoming_letter_id` mencegah routing ganda. Route immutable; M5 tidak
+menyediakan endpoint reroute, update, atau delete.
+
+Collection routing dan inbox dibatasi dari query database, diurutkan timestamp
+terbaru lalu ID terbaru, dan dipaginasi 20 item. Presenter menggunakan allowlist
+dan membentuk seluruh URL server-side. `storage_disk`, `storage_path`, email,
+metadata audit mentah, dan data autentikasi tidak dikirim ke Vue. Preview serta
+download memakai storage guard, limiter `private-document-access`, dan header
+keamanan PDF privat yang sama dengan M4.3.
+
+---
+
 # 25. Audit Architecture
 
 Audit trail bersifat application-level append-only.
@@ -1053,6 +1101,7 @@ Setiap event audit didefinisikan secara deklaratif pada `AuditActionContractRegi
 | `SUBMISSION_DRAFT_DELETED` | Submission | `letter_submission` | Wajib | Delete | Forbidden |
 | `LETTER_REGISTERED` | Registration | `incoming_letter` | Wajib | Update | Required |
 | `DOCUMENT_VERSION_CREATED` | Document | `letter_document` | Wajib | Create | Required |
+| `LETTER_ROUTED` | Routing | `letter_route` | Wajib | Update | Required |
 | `POSITION_ASSIGNED` | Organization | `position`, `position_assignment` | Wajib | Create | Optional |
 | `POSITION_HOLDER_REPLACED` | Organization | `position`, `position_assignment` | Wajib | Update | Optional |
 | `POSITION_ASSIGNMENT_ENDED` | Organization | `position`, `position_assignment` | Wajib | Update | Optional |
@@ -1098,10 +1147,10 @@ sudah tidak tersedia, identitas target dibentuk dari snapshot aman pada audit.
 
 Tidak terdapat endpoint update atau delete untuk `audit_logs`.
 
-## Aktivitas Surat M3
+## Aktivitas Surat
 
-Back-office menyediakan console read-only untuk memantau aktivitas intake dan
-registrasi melalui:
+Back-office menyediakan console read-only untuk memantau aktivitas intake,
+registrasi, versi dokumen, dan routing melalui:
 
 ```text
 GET /back-office/audits/letters
@@ -1122,7 +1171,7 @@ dokumen, identitas pelaksana, request ID, IP, atau user agent. Filter yang dapat
 mengungkap identitas juga diabaikan server pada mode ringkasan. Collection,
 filter, rentang tanggal, dan pagination dibatasi pada query server.
 
-Scope M3 hanya memuat:
+Scope operasional saat ini memuat:
 
 ```text
 SUBMISSION_SUBMITTED
@@ -1132,6 +1181,7 @@ SUBMISSION_READY_FOR_APPROVAL
 SUBMISSION_RETURNED_TO_STAFF
 SUBMISSION_REJECTED
 LETTER_REGISTERED
+LETTER_ROUTED
 DOCUMENT_VERSION_CREATED
 ```
 
@@ -1140,7 +1190,9 @@ ditampilkan agar pekerjaan privat pemohon tidak menjadi noise operasional.
 Rentang hari menggunakan zona waktu kantor yang configurable, dengan nilai awal
 `Asia/Makassar`; timestamp audit tetap disimpan dalam UTC. Audit registrasi
 surat dan penciptaan versi dokumen memakai request ID yang sama karena merupakan
-satu operasi bisnis transactional.
+satu operasi bisnis transactional. Event `LETTER_ROUTED` otomatis masuk console
+dengan target surat yang diturunkan dari `letter_route` tanpa mengekspos metadata
+routing mentah.
 
 ---
 
@@ -1236,14 +1288,15 @@ Intake Dashboard
 ├── Online Submission Queue
 ├── Manual Submission
 ├── Register Incoming Letter
-└── Incoming Letters
+├── Incoming Letters
+└── Routing Surat
 ```
 
 ## Pejabat
 
 ```text
 Official Dashboard
-├── Inbox
+├── Inbox Pimpinan
 ├── Disposition
 ├── Related Letters
 └── Follow Up

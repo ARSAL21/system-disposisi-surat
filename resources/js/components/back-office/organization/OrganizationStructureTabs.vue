@@ -7,9 +7,9 @@ const emit = defineEmits<{
     change: [section: OrganizationStructureFilters['section']];
 }>();
 const tabs = [
-    { value: 'levels' as const, label: 'Level workflow', icon: Layers3 },
-    { value: 'units' as const, label: 'Unit organisasi', icon: Building2 },
-    { value: 'positions' as const, label: 'Jabatan', icon: BriefcaseBusiness },
+    { value: 'levels' as const, label: 'Level Workflow', icon: Layers3 },
+    { value: 'units' as const, label: 'Unit Organisasi', icon: Building2 },
+    { value: 'positions' as const, label: 'Daftar Jabatan', icon: BriefcaseBusiness },
 ];
 </script>
 

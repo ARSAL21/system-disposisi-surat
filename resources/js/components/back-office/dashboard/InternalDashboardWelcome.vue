@@ -7,8 +7,12 @@ import {
     ClipboardCheck,
     History,
     Inbox,
+    Landmark,
+    ListChecks,
     Lock,
+    MailOpen,
     Network,
+    Route as RouteIcon,
     Shield,
     ShieldCheck,
     UserRoundCog,
@@ -97,6 +101,48 @@ const letterOperationModules = computed(() => {
         });
     }
 
+    if (capabilities.value.can_view_letter_routing) {
+        list.push({
+            title: 'Routing Surat',
+            description:
+                'Tinjau dokumen resmi terkini dan arahkan surat terdaftar kepada satu pimpinan tujuan.',
+            href: '/back-office/letter-routing',
+            icon: RouteIcon,
+            color: 'from-violet-500 to-fuchsia-600',
+            bgLight: 'bg-violet-50 dark:bg-violet-950/50',
+            textLight: 'text-violet-600 dark:text-violet-300',
+            badge: 'Routing Awal',
+        });
+    }
+
+    if (capabilities.value.can_view_executive_inbox) {
+        list.push({
+            title: 'Inbox Pimpinan',
+            description:
+                'Periksa surat resmi dan buat disposisi pertama kepada satu jabatan Asisten yang sah.',
+            href: '/back-office/executive/inbox',
+            icon: Landmark,
+            color: 'from-amber-500 to-orange-600',
+            bgLight: 'bg-amber-50 dark:bg-amber-950/50',
+            textLight: 'text-amber-700 dark:text-amber-300',
+            badge: 'Meja Pimpinan',
+        });
+    }
+
+    if (capabilities.value.can_view_dispositions) {
+        list.push({
+            title: 'Inbox Disposisi',
+            description:
+                'Tinjau surat dan instruksi resmi yang ditujukan kepada jabatan Asisten aktif Anda.',
+            href: '/back-office/dispositions/inbox',
+            icon: MailOpen,
+            color: 'from-blue-600 to-emerald-600',
+            bgLight: 'bg-blue-50 dark:bg-blue-950/50',
+            textLight: 'text-blue-700 dark:text-blue-300',
+            badge: 'Meja Asisten',
+        });
+    }
+
     if (capabilities.value.can_view_letter_activities) {
         list.push({
             title: 'Aktivitas Surat',
@@ -172,6 +218,20 @@ const systemGovernanceModules = computed(() => {
         });
     }
 
+    if (capabilities.value.can_view_disposition_instructions) {
+        list.push({
+            title: 'Instruksi Disposisi',
+            description:
+                'Kelola label instruksi aktif tanpa mengubah snapshot histori disposisi lama.',
+            href: '/back-office/workflow/instruction-labels',
+            icon: ListChecks,
+            color: 'from-blue-600 to-cyan-600',
+            bgLight: 'bg-blue-50 dark:bg-blue-950/50',
+            textLight: 'text-blue-700 dark:text-blue-300',
+            badge: 'Workflow',
+        });
+    }
+
     return list;
 });
 
@@ -211,9 +271,7 @@ const totalActiveModules = computed(() => {
                             Portal Internal Pemkot
                         </Badge>
                         <Badge
-                            v-if="
-                                user?.two_factor_confirmed_at || user?.has_mfa
-                            "
+                            v-if="user?.two_factor_enabled"
                             variant="secondary"
                             class="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                         >
@@ -284,7 +342,7 @@ const totalActiveModules = computed(() => {
 
         <!-- Petugas Surat (General Affairs) Operational Workspace -->
         <section
-            v-if="capabilities.can_view_intake && intakeData"
+            v-if="(capabilities.can_view_intake || preview) && intakeData"
             class="space-y-5"
             aria-label="Workspace Operasional Petugas Surat"
         >

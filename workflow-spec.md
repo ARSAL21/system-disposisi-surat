@@ -244,6 +244,46 @@ COMPLETED
 
 Route historis tidak dihapus setelah selesai.
 
+## 7.1 Implementasi Routing Awal M5
+
+Routing awal hanya dapat dibuat ketika seluruh invariant berikut terpenuhi:
+
+* actor memiliki permission `letter-routing.create`;
+* actor merupakan account `INTERNAL` aktif dan terverifikasi;
+* actor mempunyai tepat satu Position Assignment aktif sebagai
+  `SECTION_HEAD` pada unit `BAGIAN_UMUM`;
+* `incoming_letters.status = REGISTERED` dan surat belum memiliki route;
+* dokumen resmi terkini lolos storage metadata guard;
+* tujuan merupakan satu Position aktif pada level `EXECUTIVE_ENTRY` dengan
+  tepat satu pemegang assignment aktif yang merupakan account internal aktif
+  dan terverifikasi.
+
+Dalam satu database transaction, Action mengunci surat, dokumen terkini,
+assignment actor, Position tujuan, dan assignment tujuan, kemudian:
+
+```text
+create letter_routes(status = PENDING)
+incoming_letters.status: REGISTERED -> ROUTED
+append audit LETTER_ROUTED
+```
+
+Kegagalan penulisan audit membatalkan route dan perubahan status surat. Unique
+constraint `letter_routes.incoming_letter_id` mencegah dua routing awal akibat
+request bersaing. M5 tidak menyediakan reroute, update, atau delete.
+
+Inbox M5 bersifat read-only dan hanya menampilkan route `PENDING` yang
+`recipient_position_id`-nya cocok dengan Position Assignment eksekutif aktif
+pengguna. Pembuatan disposisi pertama dan transisi route ke `COMPLETED` baru
+menjadi tanggung jawab M6.
+
+Kontrak HTTP M5:
+
+* permission tidak dimiliki: `403`;
+* Position atau resource tidak sesuai: `404`;
+* tujuan/input tidak valid: `422`;
+* state berubah atau metadata/file dokumen rusak: `409`;
+* rate limit terlampaui: `429`.
+
 ---
 
 # 8. Disposition Recipient State

@@ -6,8 +6,12 @@ import {
     ClipboardCheck,
     History,
     Inbox,
+    Landmark,
     LayoutDashboard,
+    ListChecks,
+    MailOpen,
     Network,
+    Route as RouteIcon,
     ShieldCheck,
     UserRoundCog,
 } from '@lucide/vue';
@@ -63,6 +67,36 @@ const mainNavItems = computed<NavItem[]>(() => {
         });
     }
 
+    if (page.props.auth.capabilities.can_view_letter_routing) {
+        const routingPath = '/back-office/letter-routing';
+        items.push({
+            title: 'Routing Surat',
+            href: routingPath,
+            icon: RouteIcon,
+            isActive: currentPath.value.startsWith(routingPath),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_executive_inbox) {
+        const executiveInboxPath = '/back-office/executive/inbox';
+        items.push({
+            title: 'Inbox Pimpinan',
+            href: executiveInboxPath,
+            icon: Landmark,
+            isActive: currentPath.value.startsWith(executiveInboxPath),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_dispositions) {
+        const dispositionInboxPath = '/back-office/dispositions/inbox';
+        items.push({
+            title: 'Inbox Disposisi',
+            href: dispositionInboxPath,
+            icon: MailOpen,
+            isActive: currentPath.value.startsWith(dispositionInboxPath),
+        });
+    }
+
     if (page.props.auth.capabilities.can_view_document_versions) {
         const archivePath = '/back-office/documents';
         items.push({
@@ -114,6 +148,16 @@ const mainNavItems = computed<NavItem[]>(() => {
                     '/back-office/organization/assignments',
             },
         );
+    }
+
+    if (page.props.auth.capabilities.can_view_disposition_instructions) {
+        const instructionPath = '/back-office/workflow/instruction-labels';
+        items.push({
+            title: 'Instruksi Disposisi',
+            href: instructionPath,
+            icon: ListChecks,
+            isActive: currentPath.value.startsWith(instructionPath),
+        });
     }
 
     if (page.props.auth.capabilities.can_view_privilege_audits) {

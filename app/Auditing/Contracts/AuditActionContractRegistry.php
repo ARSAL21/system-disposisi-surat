@@ -152,6 +152,14 @@ final class AuditActionContractRegistry
                 positionAssignmentRequirement: PositionAssignmentRequirement::Required,
             ),
             new AuditContract(
+                action: AuditAction::LetterRouted,
+                domain: AuditDomain::Routing,
+                allowedSubjectTypes: ['letter_route'],
+                requiresSubjectId: true,
+                mutationType: AuditMutationType::Update,
+                positionAssignmentRequirement: PositionAssignmentRequirement::Required,
+            ),
+            new AuditContract(
                 action: AuditAction::DocumentVersionCreated,
                 domain: AuditDomain::Document,
                 allowedSubjectTypes: ['letter_document'],

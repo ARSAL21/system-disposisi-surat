@@ -1,0 +1,121 @@
+<script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
+import {
+    ArrowRight,
+    Building2,
+    Clock3,
+    FileText,
+    UserRoundCheck,
+} from '@lucide/vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    formatRoutingDateTime,
+    initialRouteStatusClass,
+    initialRouteStatusLabels,
+} from '@/lib/letterRoutingPresentation';
+import type { ExecutiveInboxItem } from '@/types';
+
+defineProps<{ routes: ExecutiveInboxItem[] }>();
+</script>
+
+<template>
+    <div class="grid gap-3 p-3 lg:hidden">
+        <article
+            v-for="route in routes"
+            :key="route.route_id"
+            class="rounded-2xl border bg-card p-4 shadow-xs"
+        >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <Badge
+                    v-if="route.letter.current_route"
+                    variant="outline"
+                    :class="
+                        initialRouteStatusClass(
+                            route.letter.current_route.status,
+                        )
+                    "
+                >
+                    {{
+                        initialRouteStatusLabels[
+                            route.letter.current_route.status
+                        ]
+                    }}
+                </Badge>
+                <span class="font-mono text-xs text-muted-foreground">
+                    {{ route.letter.agenda_number }}
+                </span>
+            </div>
+
+            <div class="mt-4 flex gap-3">
+                <span
+                    class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                >
+                    <FileText class="size-4" aria-hidden="true" />
+                </span>
+                <h2 class="leading-6 font-semibold">
+                    {{ route.letter.subject }}
+                </h2>
+            </div>
+
+            <dl class="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                <div class="flex gap-3">
+                    <Building2
+                        class="mt-0.5 size-4 shrink-0 text-violet-600 dark:text-violet-300"
+                        aria-hidden="true"
+                    />
+                    <div>
+                        <dt class="text-xs text-muted-foreground">Pengirim</dt>
+                        <dd class="mt-1 font-medium">
+                            {{ route.letter.sender_organization_name }}
+                        </dd>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <Clock3
+                        class="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-300"
+                        aria-hidden="true"
+                    />
+                    <div>
+                        <dt class="text-xs text-muted-foreground">
+                            Masuk inbox
+                        </dt>
+                        <dd class="mt-1 font-medium tabular-nums">
+                            {{
+                                formatRoutingDateTime(
+                                    route.received_in_inbox_at,
+                                )
+                            }}
+                        </dd>
+                    </div>
+                </div>
+            </dl>
+
+            <div
+                v-if="route.letter.current_route"
+                class="mt-4 flex items-start gap-3 rounded-xl bg-muted/55 p-3"
+            >
+                <UserRoundCheck
+                    class="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-300"
+                    aria-hidden="true"
+                />
+                <div>
+                    <p class="text-xs text-muted-foreground">Diarahkan oleh</p>
+                    <p class="mt-1 font-semibold">
+                        {{ route.letter.current_route.routed_by.name }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        {{ route.letter.current_route.routed_by.position }}
+                    </p>
+                </div>
+            </div>
+
+            <Button as-child class="mt-5 min-h-11 w-full">
+                <Link :href="route.links.show">
+                    Buka dan periksa surat
+                    <ArrowRight class="size-4" aria-hidden="true" />
+                </Link>
+            </Button>
+        </article>
+    </div>
+</template>

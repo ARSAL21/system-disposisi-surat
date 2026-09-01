@@ -73,7 +73,7 @@ const {
             "
         />
         <OrganizationFilterBar
-            v-if="activeFilters.section !== 'levels'"
+            v-if="activeFilters.section !== 'levels' && activeFilters.section !== 'chart'"
             :filters="activeFilters"
             :levels="levels"
             :units="unitOptions"
@@ -95,8 +95,11 @@ const {
         <OrganizationalUnitList
             v-else-if="units"
             :units="units"
+            :tree="tree"
+            :assignments-route="routes.assignments"
             :can-mutate="mutationSecurity.can_mutate"
             @create="openUnit(null)"
+            @create-position="openPosition(null)"
             @edit="openUnit"
             @status="openStatus"
         >

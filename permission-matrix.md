@@ -144,6 +144,40 @@ Kemudian berikan kedua permission baru kepada custom role operasional yang
 sesuai melalui UI RBAC. Exact-sync `super-admin` memasukkan kedua permission ini,
 tetapi tetap tidak memberikan global business visibility tanpa Position.
 
+## Penambahan M5 Routing Awal dan Inbox Pimpinan
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `letter-routing.view` | Katalog capability untuk membaca antrean surat resmi yang menunggu atau telah memperoleh routing awal. |
+| `super-admin` | `letter-routing.create` | Katalog capability untuk mengarahkan satu surat `REGISTERED` kepada tepat satu Wali Kota atau Sekda. |
+| `super-admin` | `executive-inbox.view` | Katalog capability untuk membaca inbox surat pada Position eksekutif aktif pengguna. |
+
+Permission tidak menjadi bypass Position maupun resource. Visibility antrean
+routing memerlukan account `INTERNAL` aktif dan terverifikasi dengan Position
+Assignment aktif sebagai staf `GENERAL_AFFAIRS` atau `SECTION_HEAD` pada unit
+`BAGIAN_UMUM`. Pembuatan routing hanya dapat dilakukan oleh `SECTION_HEAD` pada
+unit tersebut, hanya terhadap surat `REGISTERED`, dan tujuan wajib satu Position
+aktif pada level `EXECUTIVE_ENTRY` yang mempunyai tepat satu pejabat internal
+aktif dan terverifikasi.
+
+Inbox pimpinan hanya menampilkan route `PENDING` dengan
+`recipient_position_id` yang sama dengan Position Assignment aktif pengguna
+pada level `EXECUTIVE_ENTRY`. Wali Kota tidak dapat membaca route milik Sekda,
+dan sebaliknya. Asisten, Kepala Bagian lain, serta super-admin tanpa Position
+bisnis menerima `404`, sekalipun permission katalog dimiliki.
+
+Capability Inertia berikut hanya bernilai benar jika permission dan Position
+sama-sama terpenuhi:
+
+```text
+can_view_letter_routing
+can_create_letter_routing
+can_view_executive_inbox
+```
+
+Setelah deployment M5, jalankan `php artisan authorization:sync`, lalu berikan
+permission yang sesuai kepada custom role operasional melalui UI RBAC.
+
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
 Alur administrative console:

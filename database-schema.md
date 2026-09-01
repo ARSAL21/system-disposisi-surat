@@ -702,6 +702,15 @@ Wali Kota / Sekda
 | created_at                       | timestamp   |                                       |
 | updated_at                       | timestamp   |                                       |
 
+Constraint M5:
+
+```text
+UNIQUE (incoming_letter_id)
+```
+
+Constraint ini mengunci keputusan MVP bahwa satu surat hanya mempunyai satu
+routing awal dan belum tersedia alur koreksi/reroute.
+
 Index:
 
 ```text
@@ -715,9 +724,17 @@ Business invariant:
 
 * recipient wajib Wali Kota atau Sekda;
 * hanya route aktif yang boleh menjadi sumber disposisi pertama;
-* satu surat hanya mempunyai satu initial route aktif.
+* satu surat hanya mempunyai satu initial route;
+* route dibuat saat surat `REGISTERED`, kemudian surat berubah menjadi
+  `ROUTED` dan route dimulai sebagai `PENDING`;
+* kolom tujuan, actor, Position Assignment historis, dan waktu routing
+  immutable setelah dibuat;
+* pada M5 satu-satunya mutasi yang disiapkan model adalah transisi atomik
+  `PENDING` ke `COMPLETED` bersama `completed_at`, yang baru digunakan M6.
 
-Jika terjadi koreksi routing, histori route lama tidak dihapus.
+M5 tidak menyediakan endpoint update, delete, atau reroute. Kebutuhan koreksi
+routing harus dibahas sebagai perubahan workflow dan schema tersendiri; record
+historis tidak boleh dihapus atau ditimpa.
 
 ---
 
@@ -1066,6 +1083,7 @@ SUBMISSION_DRAFT_DELETED
 
 LETTER_REGISTERED
 DOCUMENT_VERSION_CREATED
+LETTER_ROUTED
 
 POSITION_ASSIGNED
 POSITION_HOLDER_REPLACED
@@ -1081,7 +1099,8 @@ POSITION_UPDATED
 POSITION_STATUS_CHANGED
 ```
 
-Event M5–M7 (seperti `LETTER_ROUTED`, `DISPOSITION_CREATED`, `DISPOSITION_COMPLETED`, `FOLLOW_UP_ADDED`) akan ditambahkan bersamaan dengan implementasi fiturnya.
+Event M6–M7 (seperti `DISPOSITION_CREATED`, `DISPOSITION_COMPLETED`, dan
+`FOLLOW_UP_ADDED`) akan ditambahkan bersamaan dengan implementasi fiturnya.
 
 Untuk operasi bootstrap atau provisioning melalui trusted console,
 `actor_user_id` dapat bernilai `null`. Audit tetap wajib memiliki `request_id`

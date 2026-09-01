@@ -15,13 +15,17 @@ class ActivateOrganizationMutationController extends Controller
         $validated = $request->validate([
             'destination' => ['sometimes', Rule::in(['structure', 'assignments'])],
         ]);
-        $destination = $validated['destination'] ?? 'structure';
+        $destination = $validated['destination'] ?? null;
 
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => 'Mode perubahan administratif aktif selama 15 menit.',
         ]);
 
-        return to_route("back-office.organization.{$destination}.index");
+        if ($destination !== null) {
+            return to_route("back-office.organization.{$destination}.index");
+        }
+
+        return redirect()->back();
     }
 }

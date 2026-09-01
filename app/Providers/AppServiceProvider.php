@@ -6,9 +6,11 @@ use App\Authorization\AuthorizationCatalog;
 use App\Enums\AccountType;
 use App\Models\AuditLog;
 use App\Models\IncomingLetter;
+use App\Models\LetterRoute;
 use App\Models\User;
 use App\Policies\AuditLogPolicy;
 use App\Policies\IncomingLetterPolicy;
+use App\Policies\LetterRoutePolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use Carbon\CarbonImmutable;
@@ -48,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(IncomingLetter::class, IncomingLetterPolicy::class);
+        Gate::policy(LetterRoute::class, LetterRoutePolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
     }
@@ -122,6 +125,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('document-version-upload', fn (Request $request): array => [
             Limit::perHour(10)->by('document-version-upload:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perHour(30)->by('document-version-upload:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('letter-routing-create', fn (Request $request): array => [
+            Limit::perMinute(30)->by('letter-routing-create:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(60)->by('letter-routing-create:ip:'.$request->ip()),
         ]);
     }
 }
