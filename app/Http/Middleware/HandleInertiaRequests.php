@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
 use App\Models\User;
+use App\Services\DispositionPositionAssignmentResolver;
 use App\Services\DocumentVersionPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\IntakePositionAssignmentResolver;
@@ -101,6 +102,10 @@ class HandleInertiaRequests extends Middleware
                 'can_view_letter_routing' => false,
                 'can_create_letter_routing' => false,
                 'can_view_executive_inbox' => false,
+                'can_view_dispositions' => false,
+                'can_create_dispositions' => false,
+                'can_view_disposition_instructions' => false,
+                'can_manage_disposition_instructions' => false,
                 'can_view_intake' => false,
                 'can_screen_intake' => false,
                 'can_decide_intake' => false,
@@ -127,6 +132,13 @@ class HandleInertiaRequests extends Middleware
         $hasExecutiveInboxPermission = $user->can(PermissionName::ViewExecutiveInbox->value);
         $hasExecutiveInboxPosition = $hasExecutiveInboxPermission
             && $routingResolver->hasExecutiveInboxAssignment($user);
+        $dispositionResolver = app(DispositionPositionAssignmentResolver::class);
+        $hasDispositionInboxPermission = $user->can(PermissionName::ViewDispositions->value);
+        $hasDispositionInboxPosition = $hasDispositionInboxPermission
+            && $dispositionResolver->hasInboxAssignment($user);
+        $hasDispositionCreatePermission = $user->can(PermissionName::CreateDispositions->value);
+        $canCreateDisposition = $hasDispositionCreatePermission
+            && $dispositionResolver->hasExecutiveAssignment($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -140,6 +152,10 @@ class HandleInertiaRequests extends Middleware
             'can_view_letter_routing' => $hasLetterRoutingPosition,
             'can_create_letter_routing' => $hasCreateRoutingPosition,
             'can_view_executive_inbox' => $hasExecutiveInboxPosition,
+            'can_view_dispositions' => $hasDispositionInboxPosition,
+            'can_create_dispositions' => $canCreateDisposition,
+            'can_view_disposition_instructions' => $user->can(PermissionName::ViewDispositionInstructions->value),
+            'can_manage_disposition_instructions' => $user->can(PermissionName::ManageDispositionInstructions->value),
             'can_view_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ViewIntake->value),
             'can_screen_intake' => $hasIntakePosition

@@ -16,6 +16,10 @@ enum PermissionName: string
     case ViewLetterRouting = 'letter-routing.view';
     case CreateLetterRouting = 'letter-routing.create';
     case ViewExecutiveInbox = 'executive-inbox.view';
+    case ViewDispositions = 'dispositions.view';
+    case CreateDispositions = 'dispositions.create';
+    case ViewDispositionInstructions = 'disposition-instructions.view';
+    case ManageDispositionInstructions = 'disposition-instructions.manage';
     case ViewIntake = 'intake.view';
     case ScreenIntake = 'intake.screen';
     case DecideIntake = 'intake.decide';
