@@ -178,6 +178,37 @@ can_view_executive_inbox
 Setelah deployment M5, jalankan `php artisan authorization:sync`, lalu berikan
 permission yang sesuai kepada custom role operasional melalui UI RBAC.
 
+## Penambahan M6.1 Disposisi Berbasis Position
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `dispositions.view` | Katalog capability untuk membaca branch disposisi milik Position Asisten aktif pengguna. |
+| `super-admin` | `dispositions.create` | Katalog capability untuk membuat disposisi pertama dari Wali Kota/Sekda kepada tepat satu Asisten. |
+| `super-admin` | `disposition-instructions.view` | Melihat katalog label instruksi disposisi. |
+| `super-admin` | `disposition-instructions.manage` | Membuat, memperbarui, mengaktifkan, dan menonaktifkan label instruksi dengan MFA serta konfirmasi password terbaru. |
+
+`dispositions.create` hanya berlaku bagi pemegang Position `EXECUTIVE_ENTRY`
+yang sama dengan penerima `letter_routes`. Tujuan wajib Position aktif level
+`ASSISTANT`, bukan Position actor atau Position lain yang dipegang user actor,
+dan mempunyai tepat satu pejabat internal aktif serta terverifikasi.
+`dispositions.view` hanya membuka recipient yang
+`recipient_position_id`-nya sama dengan Position Assignment Asisten aktif
+pengguna. Permission tidak menjadi bypass resource; eksekutif lain, petugas,
+Kepala Bagian, dan super-admin tanpa Position bisnis menerima `404`.
+
+Capability Inertia baru:
+
+```text
+can_view_dispositions
+can_create_dispositions
+can_view_disposition_instructions
+can_manage_disposition_instructions
+```
+
+Setelah deployment M6.1, jalankan migration dan
+`php artisan authorization:sync`, lalu berikan pasangan permission yang sesuai
+kepada custom role eksekutif, Asisten, dan pengelola workflow melalui UI RBAC.
+
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
 Alur administrative console:

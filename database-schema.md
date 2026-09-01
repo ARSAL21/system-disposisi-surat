@@ -772,6 +772,11 @@ Tidak diperlukan `updated_at`.
 
 Disposition adalah historical action dan tidak diedit setelah dibuat.
 
+Untuk disposisi pertama, `source_route_id` bersifat unique agar satu routing awal
+tidak dapat menghasilkan lebih dari satu tindakan disposisi saat request
+bersaing. `parent_recipient_id` tetap menjadi sumber disposisi lanjutan pada
+tahap multiple-recipient berikutnya.
+
 Sumber disposition harus salah satu:
 
 ```text
@@ -975,6 +980,22 @@ Jika tidak digunakan lagi:
 is_active = false
 ```
 
+## Implementasi Persistensi M6.1
+
+Migration `2026_09_01_000000_create_disposition_tables.php` membuat empat tabel
+di atas tanpa mengubah tabel surat yang sudah ada. Disposisi pertama menyimpan
+`source_route_id` dan selalu memiliki `parent_recipient_id = null`; invariant
+exactly-one-source divalidasi kembali oleh Action. Model `Disposition` menolak
+update/delete, sedangkan identitas dan sumber `DispositionRecipient` tidak dapat
+ditulis ulang. Custom pivot juga menolak update/detach label dari tindakan
+disposisi yang sudah tercatat. Perubahan master label dilakukan melalui status
+aktif, bukan delete, sehingga foreign key histori tetap utuh.
+
+Catalog awal label berisi `FOR_INFORMATION`, `FOLLOW_UP`, `REVIEW`,
+`COORDINATE`, `ATTEND`, `PREPARE_RESPONSE`, dan `URGENT`. Seluruh foreign key
+core menggunakan `RESTRICT ON DELETE`. Index operasional mencakup sumber route,
+surat dan waktu disposisi, serta pasangan recipient Position/status.
+
 ---
 
 # 15. Tindak Lanjut
@@ -1084,6 +1105,7 @@ SUBMISSION_DRAFT_DELETED
 LETTER_REGISTERED
 DOCUMENT_VERSION_CREATED
 LETTER_ROUTED
+DISPOSITION_CREATED
 
 POSITION_ASSIGNED
 POSITION_HOLDER_REPLACED
@@ -1099,8 +1121,9 @@ POSITION_UPDATED
 POSITION_STATUS_CHANGED
 ```
 
-Event M6–M7 (seperti `DISPOSITION_CREATED`, `DISPOSITION_COMPLETED`, dan
-`FOLLOW_UP_ADDED`) akan ditambahkan bersamaan dengan implementasi fiturnya.
+`DISPOSITION_CREATED` telah diimplementasikan pada M6.1. Event lanjutan
+seperti `DISPOSITION_COMPLETED` dan `FOLLOW_UP_ADDED` akan ditambahkan bersama
+implementasi tahap terkait.
 
 Untuk operasi bootstrap atau provisioning melalui trusted console,
 `actor_user_id` dapat bernilai `null`. Audit tetap wajib memiliki `request_id`

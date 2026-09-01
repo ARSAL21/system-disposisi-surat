@@ -373,6 +373,33 @@ Assistant Recipient → PENDING
 
 ---
 
+## 9.1 Implementasi Position-based Routing M6.1
+
+Disposisi pertama hanya dapat dibuat dari `letter_routes.status = PENDING`
+ketika surat induk masih `ROUTED`. Actor wajib memegang Position
+`EXECUTIVE_ENTRY` yang menjadi penerima route tersebut. Pilihan tujuan dibatasi
+server-side kepada Position aktif level `ASSISTANT` dengan tepat satu pemegang
+internal, aktif, dan terverifikasi; Position actor sendiri, Position Asisten yang
+sedang dipegang oleh user actor, Position sederajat, dan `SECTION_HEAD` tidak
+pernah menjadi tujuan sah.
+
+Satu transaksi mengunci akun actor, route, surat, dokumen resmi terkini,
+assignment actor, Position tujuan, assignment tujuan, akun pemegang tujuan,
+serta seluruh label instruksi aktif. Transaksi kemudian membuat satu
+`dispositions`, satu recipient `PENDING`, relasi label,
+mengubah route menjadi `COMPLETED`, mengubah surat menjadi `IN_PROGRESS`, dan
+menulis audit `DISPOSITION_CREATED`. Kegagalan pada salah satu langkah
+membatalkan seluruh perubahan. Unique `source_route_id` mencegah dua disposisi
+pertama akibat request bersaing.
+
+Inbox Asisten berasal dari authorized query `disposition_recipients` berdasarkan
+Position Assignment aktif, bukan hasil filter collection. Permission yang tidak
+dimiliki menghasilkan `403`; Position/resource tidak cocok menghasilkan `404`;
+input tujuan atau label tidak valid menghasilkan `422`; stale state dan konflik
+metadata menghasilkan `409`; rate limit menghasilkan `429`.
+
+---
+
 # 10. Asisten
 
 Asisten menerima satu branch dari Wali Kota/Sekda.
