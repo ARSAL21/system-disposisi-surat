@@ -11,6 +11,10 @@ use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
 use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
 use App\Http\Controllers\BackOffice\BackOfficeDashboardController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
+use App\Http\Controllers\BackOffice\Disposition\DispositionInboxController;
+use App\Http\Controllers\BackOffice\Disposition\DispositionInboxDocumentController;
+use App\Http\Controllers\BackOffice\Disposition\StoreForwardDispositionController;
+use App\Http\Controllers\BackOffice\Disposition\StoreInitialDispositionController;
 use App\Http\Controllers\BackOffice\Documents\DocumentArchiveController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentFileController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentHistoryController;
@@ -31,6 +35,8 @@ use App\Http\Controllers\BackOffice\Routing\ExecutiveInboxDocumentController;
 use App\Http\Controllers\BackOffice\Routing\LetterRoutingController;
 use App\Http\Controllers\BackOffice\Routing\LetterRoutingDocumentController;
 use App\Http\Controllers\BackOffice\Routing\StoreLetterRouteController;
+use App\Http\Controllers\BackOffice\Workflow\ActivateWorkflowMutationController;
+use App\Http\Controllers\BackOffice\Workflow\InstructionLabelController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicSubmission\LetterSubmissionController;
 use App\Http\Controllers\PublicSubmission\PublicDashboardController;
@@ -233,6 +239,39 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                             ->name('document.download');
                     });
 
+                Route::post('executive/inbox/routes/{letterRoute}/dispositions', StoreInitialDispositionController::class)
+                    ->middleware([
+                        'can:'.PermissionName::CreateDispositions->value,
+                        'throttle:disposition-create',
+                    ])
+                    ->name('executive.inbox.dispositions.store');
+
+                Route::prefix('dispositions/inbox')
+                    ->name('dispositions.inbox.')
+                    ->middleware('can:'.PermissionName::ViewDispositions->value)
+                    ->group(function (): void {
+                        Route::get('/', [DispositionInboxController::class, 'index'])
+                            ->name('index');
+                        Route::get('recipients/{dispositionRecipient}', [DispositionInboxController::class, 'show'])
+                            ->name('show');
+                        Route::get('recipients/{dispositionRecipient}/document/preview', [DispositionInboxDocumentController::class, 'preview'])
+                            ->middleware('throttle:private-document-access')
+                            ->name('document.preview');
+                        Route::get('recipients/{dispositionRecipient}/document/download', [DispositionInboxDocumentController::class, 'download'])
+                            ->middleware('throttle:private-document-access')
+                            ->name('document.download');
+                        Route::post('recipients/{dispositionRecipient}/forward', StoreForwardDispositionController::class)
+                            ->middleware([
+                                'can:'.PermissionName::CreateDispositions->value,
+                                'throttle:disposition-create',
+                            ])
+                            ->name('forward.store');
+                    });
+
+                Route::get('workflow/instruction-labels', [InstructionLabelController::class, 'index'])
+                    ->middleware('can:'.PermissionName::ViewDispositionInstructions->value)
+                    ->name('workflow.instruction-labels.index');
+
                 Route::prefix('intake')
                     ->name('intake.')
                     ->middleware('can:'.PermissionName::ViewIntake->value)
@@ -365,6 +404,24 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('authorization.roles.permissions.update');
                     Route::put('authorization/users/{user}/roles', [UserRoleController::class, 'update'])
                         ->name('authorization.users.roles.update');
+                });
+
+                Route::middleware([
+                    'can:'.PermissionName::ManageDispositionInstructions->value,
+                    'mfa',
+                    RequirePassword::using(
+                        'back-office.password.confirm',
+                        AuthorizationMutationSecurity::PASSWORD_CONFIRMATION_TIMEOUT_SECONDS,
+                    ),
+                ])->group(function (): void {
+                    Route::get('workflow/confirm', ActivateWorkflowMutationController::class)
+                        ->name('workflow.mutation.confirm');
+                    Route::post('workflow/instruction-labels', [InstructionLabelController::class, 'store'])
+                        ->name('workflow.instruction-labels.store');
+                    Route::patch('workflow/instruction-labels/{instructionLabel}', [InstructionLabelController::class, 'update'])
+                        ->name('workflow.instruction-labels.update');
+                    Route::patch('workflow/instruction-labels/{instructionLabel}/status', [InstructionLabelController::class, 'status'])
+                        ->name('workflow.instruction-labels.status');
                 });
             });
         });

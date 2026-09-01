@@ -4,6 +4,7 @@ namespace App\Routing;
 
 use App\Enums\AccountType;
 use App\Exceptions\DocumentStorageConflict;
+use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
@@ -21,7 +22,7 @@ final class LetterRoutingPresenter
     /** @return array<string, mixed> */
     public function routingLetter(IncomingLetter $letter): array
     {
-        return $this->letter($letter, null);
+        return $this->letter($letter, null, null);
     }
 
     /** @return array<string, mixed> */
@@ -29,12 +30,20 @@ final class LetterRoutingPresenter
     {
         return [
             'route_id' => $letterRoute->getKey(),
-            'letter' => $this->letter($letterRoute->incomingLetter, $letterRoute),
+            'letter' => $this->letter($letterRoute->incomingLetter, $letterRoute, null),
             'received_in_inbox_at' => $letterRoute->routed_at->toISOString(),
             'links' => [
                 'show' => route('back-office.executive.inbox.show', $letterRoute),
             ],
         ];
+    }
+
+    /** @return array<string, mixed> */
+    public function dispositionInboxLetter(
+        IncomingLetter $letter,
+        DispositionRecipient $recipient,
+    ): array {
+        return $this->letter($letter, null, $recipient);
     }
 
     /**
@@ -49,8 +58,11 @@ final class LetterRoutingPresenter
     }
 
     /** @return array<string, mixed> */
-    private function letter(IncomingLetter $letter, ?LetterRoute $inboxRoute): array
-    {
+    private function letter(
+        IncomingLetter $letter,
+        ?LetterRoute $inboxRoute,
+        ?DispositionRecipient $dispositionRecipient,
+    ): array {
         $document = $letter->currentDocument;
         if (! $document instanceof LetterDocument) {
             throw DocumentStorageConflict::invalidMetadata();
@@ -68,14 +80,16 @@ final class LetterRoutingPresenter
             'external_letter_number' => $letter->external_letter_number,
             'received_at' => $letter->received_at->toISOString(),
             'status' => $letter->status->value,
-            'current_document' => $this->document($letter, $document, $inboxRoute),
+            'current_document' => $this->document($letter, $document, $inboxRoute, $dispositionRecipient),
             'current_route' => $route instanceof LetterRoute
                 ? $this->routeReceipt($route)
                 : null,
             'links' => [
-                'show' => $inboxRoute instanceof LetterRoute
-                    ? route('back-office.executive.inbox.show', $inboxRoute)
-                    : route('back-office.letter-routing.show', $letter),
+                'show' => $dispositionRecipient instanceof DispositionRecipient
+                    ? route('back-office.dispositions.inbox.show', $dispositionRecipient)
+                    : ($inboxRoute instanceof LetterRoute
+                        ? route('back-office.executive.inbox.show', $inboxRoute)
+                        : route('back-office.letter-routing.show', $letter)),
             ],
         ];
     }
@@ -85,6 +99,7 @@ final class LetterRoutingPresenter
         IncomingLetter $letter,
         LetterDocument $document,
         ?LetterRoute $inboxRoute,
+        ?DispositionRecipient $dispositionRecipient,
     ): array {
         return [
             'version_number' => $document->version_number,
@@ -93,12 +108,16 @@ final class LetterRoutingPresenter
             'size_bytes' => $document->size_bytes,
             'sha256' => strtolower($document->sha256),
             'recorded_at' => $document->created_at->toISOString(),
-            'preview_url' => $inboxRoute instanceof LetterRoute
-                ? route('back-office.executive.inbox.document.preview', $inboxRoute)
-                : route('back-office.letter-routing.document.preview', $letter),
-            'download_url' => $inboxRoute instanceof LetterRoute
-                ? route('back-office.executive.inbox.document.download', $inboxRoute)
-                : route('back-office.letter-routing.document.download', $letter),
+            'preview_url' => $dispositionRecipient instanceof DispositionRecipient
+                ? route('back-office.dispositions.inbox.document.preview', $dispositionRecipient)
+                : ($inboxRoute instanceof LetterRoute
+                    ? route('back-office.executive.inbox.document.preview', $inboxRoute)
+                    : route('back-office.letter-routing.document.preview', $letter)),
+            'download_url' => $dispositionRecipient instanceof DispositionRecipient
+                ? route('back-office.dispositions.inbox.document.download', $dispositionRecipient)
+                : ($inboxRoute instanceof LetterRoute
+                    ? route('back-office.executive.inbox.document.download', $inboxRoute)
+                    : route('back-office.letter-routing.document.download', $letter)),
         ];
     }
 
