@@ -12,5 +12,7 @@ enum AuditDomain: string
     case IntakeDecision = 'intake_decision';
     case Registration = 'registration';
     case Routing = 'routing';
+    case Disposition = 'disposition';
+    case WorkflowConfiguration = 'workflow_configuration';
     case Document = 'document';
 }

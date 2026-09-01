@@ -47,6 +47,7 @@ final class LetterActivityCatalog
             AuditAction::SubmissionRejected->value => 'Surat ditolak',
             AuditAction::LetterRegistered->value => 'Surat diregistrasi',
             AuditAction::LetterRouted->value => 'Surat diarahkan ke pimpinan',
+            AuditAction::DispositionCreated->value => 'Disposisi dibuat',
             AuditAction::DocumentVersionCreated->value => 'Versi dokumen resmi dibuat',
         ];
     }

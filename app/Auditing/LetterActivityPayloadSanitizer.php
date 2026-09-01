@@ -2,6 +2,7 @@
 
 namespace App\Auditing;
 
+use App\Enums\DispositionRecipientStatus;
 use App\Enums\IncomingLetterStatus;
 use App\Enums\LetterRouteStatus;
 use App\Enums\SubmissionStatus;
@@ -14,6 +15,8 @@ final class LetterActivityPayloadSanitizer
         'submission_status' => 'status_pengajuan',
         'letter_status' => 'status_surat',
         'route_status' => 'status_routing',
+        'parent_recipient_status' => 'status_penerima_sumber',
+        'recipient_status' => 'status_penerima_disposisi',
         'agenda_number' => 'nomor_agenda',
         'agenda_year' => 'tahun_agenda',
         'version_number' => 'versi_dokumen',
@@ -40,7 +43,7 @@ final class LetterActivityPayloadSanitizer
                 continue;
             }
 
-            $value = $this->changeValue($changes[$source]);
+            $value = $this->changeValue($source, $changes[$source]);
 
             if ($value !== null || $changes[$source] === null) {
                 $safe[$target] = $value;
@@ -70,7 +73,7 @@ final class LetterActivityPayloadSanitizer
         return $this->sanitizer->userAgent($value);
     }
 
-    private function changeValue(mixed $value): string|int|bool|null
+    private function changeValue(string $field, mixed $value): string|int|bool|null
     {
         if ($value === null || is_bool($value) || is_int($value)) {
             return $value;
@@ -84,12 +87,29 @@ final class LetterActivityPayloadSanitizer
             return null;
         }
 
-        return $this->statusLabel($value)
+        return $this->statusLabel($field, $value)
             ?? $this->sanitizer->text($value, 500);
     }
 
-    private function statusLabel(string $value): ?string
+    private function statusLabel(string $field, string $value): ?string
     {
+        if ($field === 'route_status') {
+            return match ($value) {
+                LetterRouteStatus::Pending->value => 'Menunggu disposisi pimpinan',
+                LetterRouteStatus::Completed->value => 'Routing selesai',
+                default => null,
+            };
+        }
+
+        if (in_array($field, ['parent_recipient_status', 'recipient_status'], true)) {
+            return match ($value) {
+                DispositionRecipientStatus::Pending->value => 'Menunggu ditangani',
+                DispositionRecipientStatus::InProgress->value => 'Sedang ditangani',
+                DispositionRecipientStatus::Completed->value => 'Selesai ditangani',
+                default => null,
+            };
+        }
+
         return match ($value) {
             SubmissionStatus::Draft->value => 'Draf',
             SubmissionStatus::Submitted->value => 'Diajukan',
@@ -101,7 +121,6 @@ final class LetterActivityPayloadSanitizer
             IncomingLetterStatus::Routed->value => 'Telah diarahkan',
             IncomingLetterStatus::InProgress->value => 'Dalam proses',
             IncomingLetterStatus::Completed->value => 'Selesai',
-            LetterRouteStatus::Pending->value => 'Menunggu disposisi pimpinan',
             default => null,
         };
     }

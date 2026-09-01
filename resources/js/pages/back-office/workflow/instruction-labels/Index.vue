@@ -95,8 +95,10 @@ const visibleLabels = computed(() => {
                 left.sort_order - right.sort_order || left.id - right.id,
         );
 });
-const activeLabelCount = computed(
-    () => sourceLabels.value.filter((label) => label.is_active).length,
+const activeLabelCount = computed(() =>
+    previewMode.value
+        ? sourceLabels.value.filter((label) => label.is_active).length
+        : (props.activeLabelCount ?? 0),
 );
 
 const selectedLabel = ref<DispositionInstructionLabel | null>(null);

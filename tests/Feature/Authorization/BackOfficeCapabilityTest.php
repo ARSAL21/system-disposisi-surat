@@ -41,7 +41,11 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_view_document_versions', false)
             ->where('auth.capabilities.can_view_letter_routing', false)
             ->where('auth.capabilities.can_create_letter_routing', false)
-            ->where('auth.capabilities.can_view_executive_inbox', false),
+            ->where('auth.capabilities.can_view_executive_inbox', false)
+            ->where('auth.capabilities.can_view_dispositions', false)
+            ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_disposition_instructions', false)
+            ->where('auth.capabilities.can_manage_disposition_instructions', false),
         );
 
     $publicUser = User::factory()->create();
@@ -70,6 +74,10 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_view_letter_routing', false)
             ->where('auth.capabilities.can_create_letter_routing', false)
             ->where('auth.capabilities.can_view_executive_inbox', false)
+            ->where('auth.capabilities.can_view_dispositions', false)
+            ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_disposition_instructions', false)
+            ->where('auth.capabilities.can_manage_disposition_instructions', false)
             ->missing('auth.user.roles')
             ->missing('auth.user.permissions'),
         );
@@ -92,7 +100,11 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_view_document_versions', false)
             ->where('auth.capabilities.can_view_letter_routing', false)
             ->where('auth.capabilities.can_create_letter_routing', false)
-            ->where('auth.capabilities.can_view_executive_inbox', false),
+            ->where('auth.capabilities.can_view_executive_inbox', false)
+            ->where('auth.capabilities.can_view_dispositions', false)
+            ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_disposition_instructions', false)
+            ->where('auth.capabilities.can_manage_disposition_instructions', false),
         );
 
     $viewer = User::factory()->internal()->create();
@@ -116,6 +128,10 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_view_letter_routing', false)
             ->where('auth.capabilities.can_create_letter_routing', false)
             ->where('auth.capabilities.can_view_executive_inbox', false)
+            ->where('auth.capabilities.can_view_dispositions', false)
+            ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_disposition_instructions', false)
+            ->where('auth.capabilities.can_manage_disposition_instructions', false)
             ->missing('auth.user.roles')
             ->missing('auth.user.permissions'),
         );
@@ -185,7 +201,11 @@ test('critical administrator capabilities remain protected by MFA', function ():
             ->where('auth.capabilities.can_view_document_versions', false)
             ->where('auth.capabilities.can_view_letter_routing', false)
             ->where('auth.capabilities.can_create_letter_routing', false)
-            ->where('auth.capabilities.can_view_executive_inbox', false),
+            ->where('auth.capabilities.can_view_executive_inbox', false)
+            ->where('auth.capabilities.can_view_dispositions', false)
+            ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_disposition_instructions', true)
+            ->where('auth.capabilities.can_manage_disposition_instructions', true),
         );
 
     $this->actingAs($mfaAdministrator)

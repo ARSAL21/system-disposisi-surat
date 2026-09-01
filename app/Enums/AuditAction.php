@@ -19,6 +19,10 @@ enum AuditAction: string
     case SubmissionDraftDeleted = 'SUBMISSION_DRAFT_DELETED';
     case LetterRegistered = 'LETTER_REGISTERED';
     case LetterRouted = 'LETTER_ROUTED';
+    case DispositionCreated = 'DISPOSITION_CREATED';
+    case InstructionLabelCreated = 'INSTRUCTION_LABEL_CREATED';
+    case InstructionLabelUpdated = 'INSTRUCTION_LABEL_UPDATED';
+    case InstructionLabelStatusChanged = 'INSTRUCTION_LABEL_STATUS_CHANGED';
     case DocumentVersionCreated = 'DOCUMENT_VERSION_CREATED';
     case PositionAssigned = 'POSITION_ASSIGNED';
     case PositionHolderReplaced = 'POSITION_HOLDER_REPLACED';

@@ -5,11 +5,17 @@ namespace App\Providers;
 use App\Authorization\AuthorizationCatalog;
 use App\Enums\AccountType;
 use App\Models\AuditLog;
+use App\Models\Disposition;
+use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
+use App\Models\InstructionLabel;
 use App\Models\LetterRoute;
 use App\Models\User;
 use App\Policies\AuditLogPolicy;
+use App\Policies\DispositionPolicy;
+use App\Policies\DispositionRecipientPolicy;
 use App\Policies\IncomingLetterPolicy;
+use App\Policies\InstructionLabelPolicy;
 use App\Policies\LetterRoutePolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
@@ -50,6 +56,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(IncomingLetter::class, IncomingLetterPolicy::class);
+        Gate::policy(Disposition::class, DispositionPolicy::class);
+        Gate::policy(DispositionRecipient::class, DispositionRecipientPolicy::class);
+        Gate::policy(InstructionLabel::class, InstructionLabelPolicy::class);
         Gate::policy(LetterRoute::class, LetterRoutePolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
@@ -130,6 +139,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('letter-routing-create', fn (Request $request): array => [
             Limit::perMinute(30)->by('letter-routing-create:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perMinute(60)->by('letter-routing-create:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('disposition-create', fn (Request $request): array => [
+            Limit::perMinute(30)->by('disposition-create:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(60)->by('disposition-create:ip:'.$request->ip()),
         ]);
     }
 }

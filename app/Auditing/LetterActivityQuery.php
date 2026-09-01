@@ -5,6 +5,7 @@ namespace App\Auditing;
 use App\Enums\AccountType;
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
+use App\Models\Disposition;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
@@ -114,6 +115,11 @@ final class LetterActivityQuery
                     $routes
                         ->where('subject_type', 'letter_route')
                         ->where('action', AuditAction::LetterRouted->value);
+                })
+                ->orWhere(function (Builder $dispositions): void {
+                    $dispositions
+                        ->where('subject_type', 'disposition')
+                        ->where('action', AuditAction::DispositionCreated->value);
                 });
         });
     }
@@ -147,8 +153,11 @@ final class LetterActivityQuery
         $routeIds = LetterRoute::query()
             ->select('id')
             ->whereIn('incoming_letter_id', clone $letterIds);
+        $dispositionIds = Disposition::query()
+            ->select('id')
+            ->whereIn('incoming_letter_id', clone $letterIds);
 
-        $query->where(function (Builder $target) use ($submissionIds, $letterIds, $documentIds, $routeIds): void {
+        $query->where(function (Builder $target) use ($submissionIds, $letterIds, $documentIds, $routeIds, $dispositionIds): void {
             $target
                 ->where(function (Builder $submission) use ($submissionIds): void {
                     $submission
@@ -169,6 +178,11 @@ final class LetterActivityQuery
                     $route
                         ->where('subject_type', 'letter_route')
                         ->whereIn('subject_id', $routeIds);
+                })
+                ->orWhere(function (Builder $disposition) use ($dispositionIds): void {
+                    $disposition
+                        ->where('subject_type', 'disposition')
+                        ->whereIn('subject_id', $dispositionIds);
                 });
         });
     }

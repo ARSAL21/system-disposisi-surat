@@ -38,6 +38,81 @@ export const previewAssistantPositions: DispositionPositionOption[] = [
     },
 ];
 
+export const previewSectionHeadPositions: DispositionPositionOption[] = [
+    {
+        id: 41,
+        code: 'KABAG_PEMERINTAHAN',
+        name: 'Kepala Bagian Pemerintahan',
+        level_code: 'SECTION_HEAD',
+        unit_name: 'Bagian Pemerintahan',
+        holder_name: 'Drs. Arman Saleh, M.Si.',
+        is_available: true,
+    },
+    {
+        id: 42,
+        code: 'KABAG_HUKUM',
+        name: 'Kepala Bagian Hukum',
+        level_code: 'SECTION_HEAD',
+        unit_name: 'Bagian Hukum',
+        holder_name: 'Nurlina, S.H., M.H.',
+        is_available: true,
+    },
+    {
+        id: 43,
+        code: 'KABAG_PEREKONOMIAN',
+        name: 'Kepala Bagian Perekonomian',
+        level_code: 'SECTION_HEAD',
+        unit_name: 'Bagian Perekonomian',
+        holder_name: 'Rahmat Hidayat, S.E.',
+        is_available: true,
+    },
+    {
+        id: 44,
+        code: 'KABAG_PEMBANGUNAN',
+        name: 'Kepala Bagian Pembangunan',
+        level_code: 'SECTION_HEAD',
+        unit_name: 'Bagian Pembangunan',
+        holder_name: 'Maya Sari, S.T., M.T.',
+        is_available: true,
+    },
+    {
+        id: 45,
+        code: 'KABAG_KESRA',
+        name: 'Kepala Bagian Kesejahteraan Rakyat',
+        level_code: 'SECTION_HEAD',
+        unit_name: 'Bagian Kesejahteraan Rakyat',
+        holder_name: 'Abd. Karim, S.Ag., M.Pd.',
+        is_available: true,
+    },
+    {
+        id: 46,
+        code: 'KABAG_UMUM',
+        name: 'Kepala Bagian Umum',
+        level_code: 'SECTION_HEAD',
+        unit_name: 'Bagian Umum',
+        holder_name: 'Hendra Wijaya, S.Sos.',
+        is_available: true,
+    },
+    {
+        id: 47,
+        code: 'KABAG_ORGANISASI',
+        name: 'Kepala Bagian Organisasi',
+        level_code: 'SECTION_HEAD',
+        unit_name: 'Bagian Organisasi',
+        holder_name: 'Fitriani, S.IP., M.Si.',
+        is_available: true,
+    },
+    {
+        id: 48,
+        code: 'KABAG_PROTOKOL',
+        name: 'Kepala Bagian Protokol dan Komunikasi Pimpinan',
+        level_code: 'SECTION_HEAD',
+        unit_name: 'Bagian Protokol dan Komunikasi Pimpinan',
+        holder_name: 'Yusuf Amin, S.Sos.',
+        is_available: true,
+    },
+];
+
 export const previewDispositionInstructionLabels: DispositionInstructionLabelOption[] =
     [
         {

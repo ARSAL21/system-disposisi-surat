@@ -37,6 +37,7 @@ use Illuminate\Support\Carbon;
  * @property-read LetterDocument|null $initialDocument
  * @property-read Collection<int, LetterRoute> $routes
  * @property-read LetterRoute|null $currentRoute
+ * @property-read Collection<int, Disposition> $dispositions
  */
 #[UsePolicy(IncomingLetterPolicy::class)]
 class IncomingLetter extends Model
@@ -117,5 +118,11 @@ class IncomingLetter extends Model
     public function currentRoute(): HasOne
     {
         return $this->hasOne(LetterRoute::class)->latestOfMany();
+    }
+
+    /** @return HasMany<Disposition, $this> */
+    public function dispositions(): HasMany
+    {
+        return $this->hasMany(Disposition::class);
     }
 }

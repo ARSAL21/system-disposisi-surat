@@ -7,6 +7,7 @@ export type LetterActivityAction =
     | 'SUBMISSION_REJECTED'
     | 'LETTER_REGISTERED'
     | 'LETTER_ROUTED'
+    | 'DISPOSITION_CREATED'
     | 'DOCUMENT_VERSION_CREATED';
 
 export type LetterActivityVisibility = 'details' | 'summary';

@@ -1067,6 +1067,48 @@ keamanan PDF privat yang sama dengan M4.3.
 
 ---
 
+## 24.5 Disposisi Pertama Berbasis Position (M6.1)
+
+M6.1 mengaktifkan tindakan substantif pertama dari Wali Kota/Sekda kepada tepat
+satu Asisten. UI tidak merangkai target dari user atau role: backend hanya
+mengirim Position level `ASSISTANT` yang benar-benar eligible (tepat satu
+pemegang internal, aktif, dan terverifikasi), menghapus Position actor maupun
+Position Asisten yang dipegang user actor dari pilihan, dan memvalidasi ulang
+target di dalam transaction.
+
+Endpoint produksi:
+
+```text
+POST /back-office/executive/inbox/routes/{letterRoute}/dispositions
+
+GET  /back-office/dispositions/inbox
+GET  /back-office/dispositions/inbox/recipients/{dispositionRecipient}
+GET  /back-office/dispositions/inbox/recipients/{dispositionRecipient}/document/preview
+GET  /back-office/dispositions/inbox/recipients/{dispositionRecipient}/document/download
+
+GET   /back-office/workflow/instruction-labels
+POST  /back-office/workflow/instruction-labels
+PATCH /back-office/workflow/instruction-labels/{instructionLabel}
+PATCH /back-office/workflow/instruction-labels/{instructionLabel}/status
+```
+
+Account actor dan pemegang tujuan, route, surat, Position/assignment, dokumen,
+serta label aktif dikunci dan diperiksa ulang. Disposisi, recipient, label,
+transisi `letter_routes PENDING -> COMPLETED`, transisi
+`incoming_letters ROUTED -> IN_PROGRESS`, dan audit `DISPOSITION_CREATED`
+ditulis atomik. Inbox Asisten dibatasi pada SQL menggunakan Position Assignment
+aktif. Presenter allowlist tidak mengekspos email, storage disk/path, assignment
+ID, atau metadata audit mentah. File tetap dilayani dari private storage dengan
+policy resource, storage guard, limiter, dan header keamanan yang sama.
+
+Label instruksi merupakan master data configurable. Kode immutable dan unique;
+label yang telah digunakan tidak dapat dihapus atau dilepas dari disposisi,
+hanya dinonaktifkan. Mutasi
+katalog memerlukan `disposition-instructions.manage`, MFA, recent password
+confirmation, transaction, dan audit.
+
+---
+
 # 25. Audit Architecture
 
 Audit trail bersifat application-level append-only.
@@ -1102,6 +1144,10 @@ Setiap event audit didefinisikan secara deklaratif pada `AuditActionContractRegi
 | `LETTER_REGISTERED` | Registration | `incoming_letter` | Wajib | Update | Required |
 | `DOCUMENT_VERSION_CREATED` | Document | `letter_document` | Wajib | Create | Required |
 | `LETTER_ROUTED` | Routing | `letter_route` | Wajib | Update | Required |
+| `DISPOSITION_CREATED` | Disposition | `disposition` | Wajib | Create | Required |
+| `INSTRUCTION_LABEL_CREATED` | Workflow Configuration | `instruction_label` | Wajib | Create | Optional |
+| `INSTRUCTION_LABEL_UPDATED` | Workflow Configuration | `instruction_label` | Wajib | Update | Optional |
+| `INSTRUCTION_LABEL_STATUS_CHANGED` | Workflow Configuration | `instruction_label` | Wajib | Update | Optional |
 | `POSITION_ASSIGNED` | Organization | `position`, `position_assignment` | Wajib | Create | Optional |
 | `POSITION_HOLDER_REPLACED` | Organization | `position`, `position_assignment` | Wajib | Update | Optional |
 | `POSITION_ASSIGNMENT_ENDED` | Organization | `position`, `position_assignment` | Wajib | Update | Optional |
@@ -1183,6 +1229,7 @@ SUBMISSION_REJECTED
 LETTER_REGISTERED
 LETTER_ROUTED
 DOCUMENT_VERSION_CREATED
+DISPOSITION_CREATED
 ```
 
 Aktivitas draft, pembaruan draft, dan penggantian dokumen sebelum submit tidak
@@ -1190,9 +1237,10 @@ ditampilkan agar pekerjaan privat pemohon tidak menjadi noise operasional.
 Rentang hari menggunakan zona waktu kantor yang configurable, dengan nilai awal
 `Asia/Makassar`; timestamp audit tetap disimpan dalam UTC. Audit registrasi
 surat dan penciptaan versi dokumen memakai request ID yang sama karena merupakan
-satu operasi bisnis transactional. Event `LETTER_ROUTED` otomatis masuk console
-dengan target surat yang diturunkan dari `letter_route` tanpa mengekspos metadata
-routing mentah.
+satu operasi bisnis transactional. Event `LETTER_ROUTED` dan
+`DISPOSITION_CREATED` otomatis masuk console dengan target surat yang diturunkan
+dari record domain masing-masing tanpa mengekspos metadata routing atau disposisi
+mentah.
 
 ---
 
