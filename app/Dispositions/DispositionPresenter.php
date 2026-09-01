@@ -26,7 +26,24 @@ final class DispositionPresenter
     public function assistantPositions(Collection $positions): array
     {
         return array_values($positions
-            ->map(fn (Position $position): array => $this->position($position))
+            ->map(fn (Position $position): array => $this->position(
+                $position,
+                OrganizationCatalog::ASSISTANT_LEVEL,
+            ))
+            ->all());
+    }
+
+    /**
+     * @param  Collection<int, Position>  $positions
+     * @return list<array<string, mixed>>
+     */
+    public function sectionHeadPositions(Collection $positions): array
+    {
+        return array_values($positions
+            ->map(fn (Position $position): array => $this->position(
+                $position,
+                OrganizationCatalog::SECTION_HEAD_LEVEL,
+            ))
             ->all());
     }
 
@@ -55,9 +72,44 @@ final class DispositionPresenter
 
         return [
             'status' => $recipient->status->value,
-            'recipient_position' => $this->position($recipient->recipientPosition),
+            'recipient_position' => $this->position(
+                $recipient->recipientPosition,
+                OrganizationCatalog::ASSISTANT_LEVEL,
+            ),
             'instructions' => $this->instructionSnapshots($disposition->instructionLabels),
             'instruction_note' => $disposition->instruction_note,
+            'disposed_by' => $this->actor($disposition),
+            'disposed_at' => $disposition->created_at->toISOString(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function forwardedDisposition(Disposition $disposition): array
+    {
+        if ($disposition->recipients->isEmpty()) {
+            throw DispositionStateConflict::staleSource();
+        }
+
+        return [
+            'instructions' => $this->instructionSnapshots($disposition->instructionLabels),
+            'instruction_note' => $disposition->instruction_note,
+            'recipients' => $disposition->recipients
+                ->map(function (DispositionRecipient $recipient): array {
+                    if ($recipient->received_at === null) {
+                        throw DispositionStateConflict::staleSource();
+                    }
+
+                    return [
+                        'recipient_position' => $this->position(
+                            $recipient->recipientPosition,
+                            OrganizationCatalog::SECTION_HEAD_LEVEL,
+                        ),
+                        'status' => $recipient->status->value,
+                        'received_at' => $recipient->received_at->toISOString(),
+                    ];
+                })
+                ->values()
+                ->all(),
             'disposed_by' => $this->actor($disposition),
             'disposed_at' => $disposition->created_at->toISOString(),
         ];
@@ -134,9 +186,15 @@ final class DispositionPresenter
     }
 
     /** @return array<string, mixed> */
-    private function position(Position $position): array
+    private function position(Position $position, ?string $expectedLevelCode = null): array
     {
-        if ($position->positionLevel->code !== OrganizationCatalog::ASSISTANT_LEVEL) {
+        $levelCode = $position->positionLevel->code;
+
+        if (($expectedLevelCode !== null && $levelCode !== $expectedLevelCode)
+            || ! in_array($levelCode, [
+                OrganizationCatalog::ASSISTANT_LEVEL,
+                OrganizationCatalog::SECTION_HEAD_LEVEL,
+            ], true)) {
             throw DispositionStateConflict::staleSource();
         }
 
@@ -161,7 +219,7 @@ final class DispositionPresenter
             'id' => (int) $position->getKey(),
             'code' => $position->code,
             'name' => $position->name,
-            'level_code' => OrganizationCatalog::ASSISTANT_LEVEL,
+            'level_code' => $levelCode,
             'unit_name' => $position->organizationalUnit?->name,
             'holder_name' => $isAvailable ? $holder->name : null,
             'is_available' => $isAvailable,

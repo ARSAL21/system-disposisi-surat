@@ -72,7 +72,7 @@ final class DispositionInboxQuery
     public function authorized(User $user): Builder
     {
         $query = DispositionRecipient::query();
-        $positionIds = $this->positionAssignmentResolver->assistantPositionIds($user);
+        $positionIds = $this->positionAssignmentResolver->inboxPositionIds($user);
 
         if ($positionIds === []) {
             return $query->whereRaw('1 = 0');

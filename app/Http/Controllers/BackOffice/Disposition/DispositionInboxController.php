@@ -85,12 +85,14 @@ class DispositionInboxController extends Controller
             'capabilities' => [
                 'can_forward_disposition' => $canForward,
             ],
-            'routes' => [
-                'index' => route('back-office.dispositions.inbox.index'),
-                'store' => $canForward
-                    ? route('back-office.dispositions.inbox.forward.store', $dispositionRecipient)
-                    : null,
-            ],
+            'routes' => $canForward
+                ? [
+                    'index' => route('back-office.dispositions.inbox.index'),
+                    'store' => route('back-office.dispositions.inbox.forward.store', $dispositionRecipient),
+                ]
+                : [
+                    'index' => route('back-office.dispositions.inbox.index'),
+                ],
             'preview' => false,
         ]);
     }
