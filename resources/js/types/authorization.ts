@@ -10,6 +10,7 @@ export type AuthorizationRole = {
     name: string;
     guard_name: string;
     is_protected: boolean;
+    is_assignable: boolean;
     is_assigned_to_actor: boolean;
     user_count: number;
     permissions: string[];
