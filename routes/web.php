@@ -11,8 +11,11 @@ use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
 use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
 use App\Http\Controllers\BackOffice\BackOfficeDashboardController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
+use App\Http\Controllers\BackOffice\Disposition\CompleteDispositionBranchController;
 use App\Http\Controllers\BackOffice\Disposition\DispositionInboxController;
 use App\Http\Controllers\BackOffice\Disposition\DispositionInboxDocumentController;
+use App\Http\Controllers\BackOffice\Disposition\StartDispositionBranchController;
+use App\Http\Controllers\BackOffice\Disposition\StoreDispositionFollowUpController;
 use App\Http\Controllers\BackOffice\Disposition\StoreForwardDispositionController;
 use App\Http\Controllers\BackOffice\Disposition\StoreInitialDispositionController;
 use App\Http\Controllers\BackOffice\Documents\DocumentArchiveController;
@@ -170,6 +173,10 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.dispositions.inbox.show');
                     Route::inertia('previews/workflow/instruction-labels', 'back-office/workflow/instruction-labels/Index', ['preview' => true])
                         ->name('previews.workflow.instruction-labels.index');
+                    Route::inertia('previews/reports', 'back-office/reports/Index', ['preview' => true])
+                        ->name('previews.reports.index');
+                    Route::inertia('previews/reports/letters/{incomingLetter}', 'back-office/reports/Show', ['preview' => true])
+                        ->name('previews.reports.show');
                 }
 
                 Route::get('documents', DocumentArchiveController::class)
@@ -266,6 +273,24 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                                 'throttle:disposition-create',
                             ])
                             ->name('forward.store');
+                        Route::post('recipients/{dispositionRecipient}/start', StartDispositionBranchController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ProcessDispositions->value,
+                                'throttle:disposition-branch-mutation',
+                            ])
+                            ->name('branch.start');
+                        Route::post('recipients/{dispositionRecipient}/follow-ups', StoreDispositionFollowUpController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ProcessDispositions->value,
+                                'throttle:disposition-branch-mutation',
+                            ])
+                            ->name('branch.follow-ups.store');
+                        Route::post('recipients/{dispositionRecipient}/complete', CompleteDispositionBranchController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ProcessDispositions->value,
+                                'throttle:disposition-branch-mutation',
+                            ])
+                            ->name('branch.complete');
                     });
 
                 Route::get('workflow/instruction-labels', [InstructionLabelController::class, 'index'])

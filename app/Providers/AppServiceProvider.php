@@ -145,5 +145,10 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(30)->by('disposition-create:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perMinute(60)->by('disposition-create:ip:'.$request->ip()),
         ]);
+
+        RateLimiter::for('disposition-branch-mutation', fn (Request $request): array => [
+            Limit::perMinute(60)->by('disposition-branch-mutation:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(120)->by('disposition-branch-mutation:ip:'.$request->ip()),
+        ]);
     }
 }

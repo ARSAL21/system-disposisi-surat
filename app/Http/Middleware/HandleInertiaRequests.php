@@ -104,6 +104,7 @@ class HandleInertiaRequests extends Middleware
                 'can_view_executive_inbox' => false,
                 'can_view_dispositions' => false,
                 'can_create_dispositions' => false,
+                'can_process_dispositions' => false,
                 'can_view_disposition_instructions' => false,
                 'can_manage_disposition_instructions' => false,
                 'can_view_intake' => false,
@@ -139,6 +140,10 @@ class HandleInertiaRequests extends Middleware
         $hasDispositionCreatePermission = $user->can(PermissionName::CreateDispositions->value);
         $canCreateDisposition = $hasDispositionCreatePermission
             && $dispositionResolver->hasExecutiveAssignment($user);
+        $hasDispositionProcessPermission = $user->can(PermissionName::ViewDispositions->value)
+            && $user->can(PermissionName::ProcessDispositions->value);
+        $canProcessDisposition = $hasDispositionProcessPermission
+            && $dispositionResolver->hasSectionHeadAssignment($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -154,6 +159,7 @@ class HandleInertiaRequests extends Middleware
             'can_view_executive_inbox' => $hasExecutiveInboxPosition,
             'can_view_dispositions' => $hasDispositionInboxPosition,
             'can_create_dispositions' => $canCreateDisposition,
+            'can_process_dispositions' => $canProcessDisposition,
             'can_view_disposition_instructions' => $user->can(PermissionName::ViewDispositionInstructions->value),
             'can_manage_disposition_instructions' => $user->can(PermissionName::ManageDispositionInstructions->value),
             'can_view_intake' => $hasIntakePosition
