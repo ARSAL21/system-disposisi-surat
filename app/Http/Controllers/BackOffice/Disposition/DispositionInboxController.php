@@ -4,6 +4,7 @@ namespace App\Http\Controllers\BackOffice\Disposition;
 
 use App\Dispositions\DispositionInboxQuery;
 use App\Dispositions\DispositionPresenter;
+use App\Enums\DispositionRecipientStatus;
 use App\Exceptions\DispositionStateConflict;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BackOffice\Disposition\ListDispositionInboxRequest;
@@ -64,6 +65,20 @@ class DispositionInboxController extends Controller
         $canForward = $forwardedDisposition === null
             && $dispositionRecipient->status->value === 'PENDING'
             && Gate::allows('forwardDisposition', $dispositionRecipient);
+        $canProcess = Gate::allows('startBranch', $dispositionRecipient);
+        $isSectionHeadBranch = $dispositionRecipient->recipientPosition->positionLevel->code === 'SECTION_HEAD';
+        $canStart = $isSectionHeadBranch
+            && $canProcess
+            && $dispositionRecipient->status === DispositionRecipientStatus::Pending;
+        $canAddFollowUp = $isSectionHeadBranch
+            && $canProcess
+            && $dispositionRecipient->status === DispositionRecipientStatus::InProgress;
+        $canComplete = $isSectionHeadBranch
+            && $canProcess
+            && in_array($dispositionRecipient->status, [
+                DispositionRecipientStatus::Pending,
+                DispositionRecipientStatus::InProgress,
+            ], true);
 
         return Inertia::render('back-office/dispositions/inbox/Show', [
             'disposition' => $presenter->inboxRecipient($dispositionRecipient),
@@ -82,17 +97,33 @@ class DispositionInboxController extends Controller
             'forwardedDisposition' => $forwardedDisposition instanceof Disposition
                 ? $presenter->forwardedDisposition($forwardedDisposition)
                 : null,
+            'branch' => $isSectionHeadBranch
+                ? $presenter->branchLifecycle($dispositionRecipient)
+                : null,
+            'branchMonitor' => ! $isSectionHeadBranch && $forwardedDisposition instanceof Disposition
+                ? $presenter->assistantBranchMonitor($forwardedDisposition)
+                : null,
             'capabilities' => [
                 'can_forward_disposition' => $canForward,
+                'can_start_branch' => $canStart,
+                'can_add_follow_up' => $canAddFollowUp,
+                'can_complete_branch' => $canComplete,
             ],
-            'routes' => $canForward
-                ? [
-                    'index' => route('back-office.dispositions.inbox.index'),
-                    'store' => route('back-office.dispositions.inbox.forward.store', $dispositionRecipient),
-                ]
-                : [
-                    'index' => route('back-office.dispositions.inbox.index'),
-                ],
+            'routes' => array_filter([
+                'index' => route('back-office.dispositions.inbox.index'),
+                'store' => $canForward
+                    ? route('back-office.dispositions.inbox.forward.store', $dispositionRecipient)
+                    : null,
+                'start' => $canStart
+                    ? route('back-office.dispositions.inbox.branch.start', $dispositionRecipient)
+                    : null,
+                'follow_up' => $canAddFollowUp
+                    ? route('back-office.dispositions.inbox.branch.follow-ups.store', $dispositionRecipient)
+                    : null,
+                'complete' => $canComplete
+                    ? route('back-office.dispositions.inbox.branch.complete', $dispositionRecipient)
+                    : null,
+            ], static fn (?string $url): bool => $url !== null),
             'preview' => false,
         ]);
     }
@@ -104,6 +135,13 @@ class DispositionInboxController extends Controller
                 'recipients.recipientPosition.positionLevel:id,code',
                 'recipients.recipientPosition.organizationalUnit:id,name',
                 'recipients.recipientPosition.activeAssignment.user:id,name,account_type,is_active,email_verified_at',
+                'recipients.completedBy:id,name',
+                'recipients.completedByPositionAssignment.position.organizationalUnit:id,name',
+                'recipients.followUps' => fn ($followUps) => $followUps
+                    ->orderBy('created_at')
+                    ->orderBy('id'),
+                'recipients.followUps.createdBy:id,name',
+                'recipients.followUps.createdByPositionAssignment.position.organizationalUnit:id,name',
                 'instructionLabels:id,code,name,description,sort_order,is_active',
                 'createdBy:id,name',
                 'createdByPositionAssignment.position.organizationalUnit:id,name',

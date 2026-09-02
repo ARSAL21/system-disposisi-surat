@@ -22,12 +22,12 @@ class StoreInitialDispositionController extends Controller
         $createDisposition->execute(
             actor: $actor,
             letterRoute: $letterRoute,
-            recipientPositionId: $request->recipientPositionId(),
+            recipientPositionIds: $request->recipientPositionIds(),
             instructionLabelIds: $request->instructionLabelIds(),
             instructionNote: $request->instructionNote(),
         );
 
         return to_route('back-office.executive.inbox.show', $letterRoute)
-            ->with('status', 'Disposisi berhasil dikirim kepada Asisten.');
+            ->with('status', 'Disposisi berhasil dikirim kepada Asisten terpilih.');
     }
 }

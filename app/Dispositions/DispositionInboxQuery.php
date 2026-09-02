@@ -92,6 +92,13 @@ final class DispositionInboxQuery
             'disposition.createdBy:id,name',
             'disposition.createdByPositionAssignment.position.organizationalUnit:id,name',
             'disposition.incomingLetter' => fn ($letter) => $letter->with($this->routingQuery->relations()),
+            'completedBy:id,name',
+            'completedByPositionAssignment.position.organizationalUnit:id,name',
+            'followUps' => fn ($followUps) => $followUps
+                ->orderBy('created_at')
+                ->orderBy('id'),
+            'followUps.createdBy:id,name',
+            'followUps.createdByPositionAssignment.position.organizationalUnit:id,name',
         ];
     }
 
