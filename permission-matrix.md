@@ -17,6 +17,25 @@ bertahap bersama milestone yang benar-benar membutuhkan capability baru.
 * Akses terhadap surat tetap harus melewati Policy, Position Assignment aktif,
   visibility scope, dan aturan workflow yang relevan.
 
+## Role Operasional Baku
+
+Role operasional berikut dikelola sebagai katalog immutable. Permission-nya
+disinkronkan secara exact melalui `authorization:sync`, tetapi selain
+`super-admin` role tetap dapat ditetapkan kepada akun internal melalui UI RBAC.
+
+| Role | Permission |
+| --- | --- |
+| `petugas-surat` | `intake.view`, `intake.screen`, `letter-activities.view`, `document-versions.view`, `letter-routing.view` |
+| `kabag-umum` | `intake.view`, `intake.decide`, `letter-activities.view`, `document-versions.view`, `document-versions.create`, `letter-routing.view`, `letter-routing.create`, `dispositions.view`, `dispositions.process`, `disposition-instructions.view` |
+| `pimpinan-eksekutif` | `executive-inbox.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `disposition-instructions.view` |
+| `asisten` | `dispositions.view`, `dispositions.create`, `disposition-instructions.view` |
+| `kepala-bagian` | `dispositions.view`, `dispositions.process`, `disposition-instructions.view` |
+
+Role adalah capability bundle, bukan identitas jabatan. Wali Kota dan Sekda
+berbagi role `pimpinan-eksekutif`, tetapi resource yang dapat diakses tetap
+dibatasi oleh Position dan Position Assignment masing-masing. Prinsip yang sama
+berlaku untuk tiga Asisten dan seluruh Kepala Bagian.
+
 ## Katalog M2.1
 
 | Role | Permission | Tujuan |
@@ -182,32 +201,50 @@ permission yang sesuai kepada custom role operasional melalui UI RBAC.
 
 | Protected Role | Permission | Tujuan |
 | --- | --- | --- |
-| `super-admin` | `dispositions.view` | Katalog capability untuk membaca branch disposisi milik Position Asisten aktif pengguna. |
-| `super-admin` | `dispositions.create` | Katalog capability untuk membuat disposisi pertama dari Wali Kota/Sekda kepada tepat satu Asisten. |
+| `super-admin` | `dispositions.view` | Katalog capability untuk membaca recipient disposisi milik Position Asisten atau Kepala Bagian aktif pengguna. |
+| `super-admin` | `dispositions.create` | Katalog capability untuk membuat disposisi sesuai hierarchy eksekutif ke satu/lebih Asisten atau Asisten ke satu/lebih Kepala Bagian. |
+| `super-admin` | `dispositions.process` | Katalog capability untuk memulai, mencatat tindak lanjut, dan menyelesaikan cabang Kepala Bagian milik Position aktif pengguna. |
 | `super-admin` | `disposition-instructions.view` | Melihat katalog label instruksi disposisi. |
 | `super-admin` | `disposition-instructions.manage` | Membuat, memperbarui, mengaktifkan, dan menonaktifkan label instruksi dengan MFA serta konfirmasi password terbaru. |
 
-`dispositions.create` hanya berlaku bagi pemegang Position `EXECUTIVE_ENTRY`
-yang sama dengan penerima `letter_routes`. Tujuan wajib Position aktif level
-`ASSISTANT`, bukan Position actor atau Position lain yang dipegang user actor,
-dan mempunyai tepat satu pejabat internal aktif serta terverifikasi.
-`dispositions.view` hanya membuka recipient yang
-`recipient_position_id`-nya sama dengan Position Assignment Asisten aktif
-pengguna. Permission tidak menjadi bypass resource; eksekutif lain, petugas,
-Kepala Bagian, dan super-admin tanpa Position bisnis menerima `404`.
+`dispositions.create` selalu mengikuti hierarchy: pemegang Position
+`EXECUTIVE_ENTRY` yang menjadi penerima route hanya dapat memilih satu sampai
+tiga Asisten,
+sedangkan Asisten hanya dapat memilih satu atau lebih Position
+`SECTION_HEAD` yang eligible. Position actor atau Position lain yang dipegang
+user actor tidak boleh menjadi tujuan.
+
+`dispositions.view` hanya membuka recipient yang `recipient_position_id`-nya
+sama dengan Position Assignment Asisten atau Kepala Bagian aktif pengguna.
+`dispositions.process` juga membutuhkan `dispositions.view` dan hanya efektif
+bagi pemegang Position `SECTION_HEAD` yang sama dengan recipient. Asisten,
+Wali Kota, Sekda, Kepala Bagian lain, dan super-admin tanpa Position bisnis
+tidak dapat memproses cabang meskipun mengetahui ID resource. Permission tidak
+menjadi bypass Position: permission kurang menghasilkan `403`, sedangkan
+Position/resource yang tidak sesuai menghasilkan `404`.
+
+Acceptance M7.1 mempertahankan kontrak tersebut tanpa permission baru.
+Penyelesaian dari `PENDING` maupun `IN_PROGRESS` menggunakan pemeriksaan Policy
+yang sama. Assignment lama yang sudah berakhir tidak memberi akses, sementara
+pemegang baru pada Position recipient yang sama dapat menyelesaikan dan dicatat
+sebagai actor historis.
 
 Capability Inertia baru:
 
 ```text
 can_view_dispositions
 can_create_dispositions
+can_process_dispositions
 can_view_disposition_instructions
 can_manage_disposition_instructions
 ```
 
-Setelah deployment M6.1, jalankan migration dan
+Setelah deployment M6.3, jalankan migration dan
 `php artisan authorization:sync`, lalu berikan pasangan permission yang sesuai
-kepada custom role eksekutif, Asisten, dan pengelola workflow melalui UI RBAC.
+kepada custom role eksekutif, Asisten, Kepala Bagian, dan pengelola workflow
+melalui UI RBAC. Role Kepala Bagian yang menangani recipient membutuhkan
+`dispositions.view` dan `dispositions.process`; role eksekutif dan Asisten tidak
+memerlukan `dispositions.process`.
 
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
@@ -241,6 +278,23 @@ dan terkonfirmasi.
 Seluruh perubahan account, Role, dan Permission melalui alur ini dicatat pada
 audit append-only. UI administrasi privilege belum termasuk tahap ini dan kelak
 wajib menggunakan Action teraudit yang sama.
+
+Bootstrap lokal setelah database fresh menggunakan urutan:
+
+```text
+php artisan migrate:fresh
+php artisan authorization:sync
+php artisan internal:user
+php artisan authorization:super-admin {email}
+php artisan db:seed
+```
+
+`db:seed` membuat struktur Setda inti, role operasional, 14 akun internal
+generik, dan Position Assignment aktif. Tujuh label instruksi baku sudah dibuat
+oleh migration disposisi. Seeder tidak membuat akun
+super-admin, public user, submission, surat, dokumen, routing, atau disposisi.
+Seluruh akun operasional seed menggunakan password lokal `password`; seeder
+menolak berjalan pada environment production.
 
 Command mutasi bawaan package seperti `permission:create-role`,
 `permission:create-permission`, dan `permission:assign-role` bukan administrative

@@ -369,6 +369,16 @@ Position Assignment
 
 Mengatur capability aplikasi.
 
+Katalog operasional baku menyediakan role `petugas-surat`, `kabag-umum`,
+`pimpinan-eksekutif`, `asisten`, dan `kepala-bagian`. Role tersebut immutable
+dan permission-nya disinkronkan secara exact, tetapi dapat ditetapkan kepada
+akun internal melalui UI RBAC. Hanya assignment role `super-admin` yang wajib
+melalui console terkontrol.
+
+Role operasional tidak menggantikan Position. Wali Kota dan Sekda menggunakan
+capability eksekutif yang sama, sedangkan kepemilikan inbox dan kewenangan
+terhadap surat tetap ditentukan oleh Position Assignment aktif.
+
 ---
 
 ## Position
@@ -395,6 +405,23 @@ Kepala Bagian Aset
 Menghubungkan Internal User dengan Position dalam periode tertentu.
 
 Public User tidak mempunyai Position Assignment.
+
+## Bootstrap Data Operasional Lokal
+
+Seeder non-production menyediakan struktur Setda inti yang deterministik:
+
+```text
+Wali Kota / Sekda
+Asisten I / II / III
+8 Kepala Bagian
+1 Petugas Surat Bagian Umum
+```
+
+Setiap Position memperoleh satu account internal aktif dan terverifikasi serta
+satu Position Assignment aktif. Seeder tidak membuat super-admin, public user,
+surat, dokumen, routing, maupun disposisi. Akun generik tersebut hanya untuk
+pengembangan lokal dan menggunakan password `password`; production guard wajib
+menolak eksekusi seeder operasional.
 
 ## Administrasi Struktur Organisasi
 
@@ -1069,8 +1096,9 @@ keamanan PDF privat yang sama dengan M4.3.
 
 ## 24.5 Disposisi Pertama Berbasis Position (M6.1)
 
-M6.1 mengaktifkan tindakan substantif pertama dari Wali Kota/Sekda kepada tepat
-satu Asisten. UI tidak merangkai target dari user atau role: backend hanya
+M6.1 mengaktifkan tindakan substantif pertama dari Wali Kota/Sekda kepada satu
+atau lebih Asisten, dengan batas operasional maksimal tiga Position Asisten per
+disposisi awal. UI tidak merangkai target dari user atau role: backend hanya
 mengirim Position level `ASSISTANT` yang benar-benar eligible (tepat satu
 pemegang internal, aktif, dan terverifikasi), menghapus Position actor maupun
 Position Asisten yang dipegang user actor dari pilihan, dan memvalidasi ulang
@@ -1092,7 +1120,7 @@ PATCH /back-office/workflow/instruction-labels/{instructionLabel}
 PATCH /back-office/workflow/instruction-labels/{instructionLabel}/status
 ```
 
-Account actor dan pemegang tujuan, route, surat, Position/assignment, dokumen,
+Account actor dan seluruh pemegang tujuan, route, surat, Position/assignment, dokumen,
 serta label aktif dikunci dan diperiksa ulang. Disposisi, recipient, label,
 transisi `letter_routes PENDING -> COMPLETED`, transisi
 `incoming_letters ROUTED -> IN_PROGRESS`, dan audit `DISPOSITION_CREATED`
@@ -1106,6 +1134,67 @@ label yang telah digunakan tidak dapat dihapus atau dilepas dari disposisi,
 hanya dinonaktifkan. Mutasi
 katalog memerlukan `disposition-instructions.manage`, MFA, recent password
 confirmation, transaction, dan audit.
+
+---
+
+## 24.6 Multiple Recipients dan Independent Branches (M6.2–M6.3)
+
+Asisten dapat meneruskan satu tindakan disposisi kepada satu atau lebih
+Position level `SECTION_HEAD`. Setiap recipient menjadi cabang terminal
+independen: memulai atau menyelesaikan satu cabang tidak memutasi cabang lain.
+Cabang tetap dimiliki Position, sehingga pergantian pejabat tidak mengubah
+target historis dan pejabat aktif baru dapat melanjutkan pekerjaan melalui
+Position Assignment yang sah.
+
+Kepala Bagian hanya menerima detail cabangnya sendiri beserta jurnal follow-up.
+Asisten menerima monitoring read-only untuk seluruh cabang yang merupakan anak
+langsung recipient Asisten miliknya. Wali Kota/Sekda hanya menerima fase dan
+angka aggregate tanpa identitas recipient, isi jurnal, hasil penyelesaian,
+email, assignment ID, atau metadata audit mentah.
+
+Lifecycle resmi:
+
+```text
+PENDING -> IN_PROGRESS -> COMPLETED
+PENDING ----------------> COMPLETED
+```
+
+Jurnal `disposition_follow_ups` append-only dan hanya dapat dibuat saat cabang
+`IN_PROGRESS`. Penyelesaian menyimpan hasil akhir, user, Position Assignment,
+dan timestamp historis pada `disposition_recipients`. Tidak ada endpoint edit,
+delete, reopen, atau perubahan aggregate dari frontend.
+
+Mutasi lifecycle memakai transaction dengan retry deadlock dan lock order
+deterministik: surat, seluruh cabang terminal terurut ID, actor, lalu Position
+Assignment. Service aggregate mengubah `incoming_letters` menjadi `COMPLETED`
+hanya ketika seluruh cabang `SECTION_HEAD` selesai. Audit lifecycle ditulis
+dalam transaction yang sama; kegagalan audit menggagalkan mutasi business
+state.
+
+Setiap Asisten penerima memperoleh branch independen dan dapat meneruskannya
+kepada satu atau lebih Kepala Bagian. Inbox eksekutif mencakup route `PENDING` tanpa disposition dan route
+`COMPLETED` yang memiliki disposition. Filter fase dan summary dihitung pada
+authorized query database. Route/graph yang tidak konsisten gagal tertutup dan
+tidak dipulihkan melalui filtering collection di Vue.
+
+## 24.7 Finalisasi Branch Completion (M7.1)
+
+M7.1 menerima lifecycle cabang M6.3 sebagai kontrak produksi resmi dan tidak
+membuat state, permission, endpoint, atau tabel penyelesaian kedua. Penyelesaian
+tetap dilakukan hanya oleh pemegang aktif Position `SECTION_HEAD` penerima,
+baik dari `PENDING` maupun `IN_PROGRESS`, dengan hasil akhir 10–2.000 karakter.
+
+Cabang yang selesai bersifat final. Presenter wajib memverifikasi bahwa user
+historis dan Position Assignment penyelesaian saling sesuai serta assignment
+tersebut berasal dari Position recipient. Metadata yang tidak konsisten gagal
+tertutup dengan `409`; email, ID assignment, isi hasil akhir, dan metadata audit
+mentah tidak boleh bocor ke Activity Console umum.
+
+Pergantian pejabat tidak mengubah target branch. Pemegang lama kehilangan akses
+ketika assignment berakhir, sedangkan pemegang baru dapat menyelesaikan branch
+yang sama dan dicatat menggunakan identitas serta assignment barunya. UI
+mengunci aksi secara sinkron saat request dimulai dan menampilkan cabang final
+sebagai histori read-only.
 
 ---
 
@@ -1145,6 +1234,10 @@ Setiap event audit didefinisikan secara deklaratif pada `AuditActionContractRegi
 | `DOCUMENT_VERSION_CREATED` | Document | `letter_document` | Wajib | Create | Required |
 | `LETTER_ROUTED` | Routing | `letter_route` | Wajib | Update | Required |
 | `DISPOSITION_CREATED` | Disposition | `disposition` | Wajib | Create | Required |
+| `DISPOSITION_STARTED` | Disposition | `disposition_recipient` | Wajib | Update | Required |
+| `FOLLOW_UP_ADDED` | Disposition | `disposition_follow_up` | Wajib | Create | Required |
+| `DISPOSITION_COMPLETED` | Disposition | `disposition_recipient` | Wajib | Update | Required |
+| `LETTER_COMPLETED` | Disposition | `incoming_letter` | Wajib | Update | Required |
 | `INSTRUCTION_LABEL_CREATED` | Workflow Configuration | `instruction_label` | Wajib | Create | Optional |
 | `INSTRUCTION_LABEL_UPDATED` | Workflow Configuration | `instruction_label` | Wajib | Update | Optional |
 | `INSTRUCTION_LABEL_STATUS_CHANGED` | Workflow Configuration | `instruction_label` | Wajib | Update | Optional |
@@ -1230,6 +1323,10 @@ LETTER_REGISTERED
 LETTER_ROUTED
 DOCUMENT_VERSION_CREATED
 DISPOSITION_CREATED
+DISPOSITION_STARTED
+FOLLOW_UP_ADDED
+DISPOSITION_COMPLETED
+LETTER_COMPLETED
 ```
 
 Aktivitas draft, pembaruan draft, dan penggantian dokumen sebelum submit tidak
@@ -1238,9 +1335,9 @@ Rentang hari menggunakan zona waktu kantor yang configurable, dengan nilai awal
 `Asia/Makassar`; timestamp audit tetap disimpan dalam UTC. Audit registrasi
 surat dan penciptaan versi dokumen memakai request ID yang sama karena merupakan
 satu operasi bisnis transactional. Event `LETTER_ROUTED` dan
-`DISPOSITION_CREATED` otomatis masuk console dengan target surat yang diturunkan
-dari record domain masing-masing tanpa mengekspos metadata routing atau disposisi
-mentah.
+seluruh event disposisi otomatis masuk console dengan target surat yang
+diturunkan dari record domain masing-masing tanpa mengekspos metadata routing,
+isi follow-up, hasil penyelesaian, atau metadata disposisi mentah.
 
 ---
 

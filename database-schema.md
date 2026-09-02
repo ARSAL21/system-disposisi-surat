@@ -777,6 +777,11 @@ tidak dapat menghasilkan lebih dari satu tindakan disposisi saat request
 bersaing. `parent_recipient_id` tetap menjadi sumber disposisi lanjutan pada
 tahap multiple-recipient berikutnya.
 
+Satu tindakan disposisi pertama dapat mempunyai satu sampai tiga recipient
+Position level `ASSISTANT`. Batas jumlah dan eligibility target divalidasi di
+Form Request serta Action; unique `(disposition_id, recipient_position_id)`
+mencegah Position Asisten yang sama dicatat dua kali.
+
 Sumber disposition harus salah satu:
 
 ```text
@@ -1032,10 +1037,37 @@ Jika salah, lakukan correction melalui mekanisme bisnis yang meninggalkan histor
 Index:
 
 ```text
-disposition_recipient_id
-created_by_user_id
-created_at
+(disposition_recipient_id, created_at, id)
+(created_by_user_id, created_at)
+(created_by_position_assignment_id, created_at)
 ```
+
+## Implementasi Persistensi M6.3
+
+Migration `2026_09_01_010000_create_disposition_follow_ups_table.php` membuat
+`disposition_follow_ups` tanpa `updated_at`. Seluruh foreign key menggunakan
+`RESTRICT ON DELETE`. Model bersifat append-only dan menolak update/delete;
+tidak tersedia endpoint edit atau hapus jurnal.
+
+Lifecycle cabang tetap memakai kolom `status`, `started_at`, `completed_at`,
+`completed_by_user_id`, `completed_by_position_assignment_id`, dan
+`completion_note` yang sudah tersedia pada `disposition_recipients`. Tidak ada
+kolom status tambahan atau duplikasi aggregate pada tabel follow-up.
+
+## Acceptance Persistence M7.1
+
+M7.1 tidak memerlukan migration. Penyelesaian cabang tetap disimpan pada kolom
+lifecycle `disposition_recipients`; jurnal kerja tetap berada pada
+`disposition_follow_ups`, dan kejadian sistem tetap berada pada `audit_logs`.
+`completed_by_user_id` harus sama dengan user milik
+`completed_by_position_assignment_id`, sedangkan assignment historis tersebut
+harus menunjuk `recipient_position_id` cabang. Presenter gagal tertutup jika
+relasi historis tidak konsisten, sedangkan Action selalu mengambil assignment
+aktif recipient dari server.
+
+Pergantian pejabat membuat Position Assignment baru tanpa mengubah recipient.
+Karena itu reporting berikutnya memakai `completed_at`, Position recipient, dan
+assignment historis tanpa menyalin nama pejabat atau unit ke tabel cabang.
 
 ---
 
@@ -1084,7 +1116,7 @@ created_at
 request_id
 ```
 
-Katalog action resmi (M1–M3):
+Katalog action resmi sampai M6.3:
 
 ```text
 INTERNAL_ACCOUNT_PROVISIONED
@@ -1106,6 +1138,10 @@ LETTER_REGISTERED
 DOCUMENT_VERSION_CREATED
 LETTER_ROUTED
 DISPOSITION_CREATED
+DISPOSITION_STARTED
+FOLLOW_UP_ADDED
+DISPOSITION_COMPLETED
+LETTER_COMPLETED
 
 POSITION_ASSIGNED
 POSITION_HOLDER_REPLACED
@@ -1121,9 +1157,11 @@ POSITION_UPDATED
 POSITION_STATUS_CHANGED
 ```
 
-`DISPOSITION_CREATED` telah diimplementasikan pada M6.1. Event lanjutan
-seperti `DISPOSITION_COMPLETED` dan `FOLLOW_UP_ADDED` akan ditambahkan bersama
-implementasi tahap terkait.
+`DISPOSITION_CREATED` diimplementasikan pada M6.1. M6.3 menambahkan
+`DISPOSITION_STARTED`, `FOLLOW_UP_ADDED`, `DISPOSITION_COMPLETED`, dan
+`LETTER_COMPLETED`. Seluruh event lifecycle menyimpan user serta Position
+Assignment historis dan ditulis dalam transaction yang sama dengan mutasi
+business state.
 
 Untuk operasi bootstrap atau provisioning melalui trusted console,
 `actor_user_id` dapat bernilai `null`. Audit tetap wajib memiliki `request_id`

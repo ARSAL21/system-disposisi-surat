@@ -33,7 +33,7 @@ Aturan:
 
 * seluruh surat masuk dimulai dari Bagian Umum;
 * initial routing hanya ke **satu** Wali Kota atau Sekda;
-* Wali Kota/Sekda memilih **satu Asisten**;
+* Wali Kota/Sekda memilih **satu sampai tiga Asisten**;
 * Asisten memilih **satu atau lebih Kepala Bagian**;
 * Kepala Bagian merupakan terminal formal workflow MVP;
 * Staff belum termasuk workflow MVP;
@@ -232,7 +232,7 @@ Surat sudah diarahkan tetapi Wali Kota/Sekda belum membuat disposisi pertama.
 
 ### `COMPLETED`
 
-Wali Kota/Sekda telah membuat disposisi yang valid kepada satu Asisten.
+Wali Kota/Sekda telah membuat disposisi yang valid kepada satu sampai tiga Asisten.
 
 Transition:
 
@@ -353,7 +353,7 @@ Wali Kota/Sekda hanya dapat menyelesaikan initial route dengan membuat disposisi
 ```text
 Wali Kota / Sekda
         ↓
-satu Asisten
+satu sampai tiga Asisten
 ```
 
 Tidak boleh:
@@ -368,7 +368,7 @@ Ketika disposisi pertama berhasil dibuat secara transactional:
 ```text
 Initial Route → COMPLETED
 Incoming Letter → IN_PROGRESS
-Assistant Recipient → PENDING
+Setiap Assistant Recipient → PENDING
 ```
 
 ---
@@ -384,9 +384,9 @@ sedang dipegang oleh user actor, Position sederajat, dan `SECTION_HEAD` tidak
 pernah menjadi tujuan sah.
 
 Satu transaksi mengunci akun actor, route, surat, dokumen resmi terkini,
-assignment actor, Position tujuan, assignment tujuan, akun pemegang tujuan,
+assignment actor, seluruh Position tujuan, assignment tujuan, akun pemegang tujuan,
 serta seluruh label instruksi aktif. Transaksi kemudian membuat satu
-`dispositions`, satu recipient `PENDING`, relasi label,
+`dispositions`, satu sampai tiga recipient `PENDING`, relasi label,
 mengubah route menjadi `COMPLETED`, mengubah surat menjadi `IN_PROGRESS`, dan
 menulis audit `DISPOSITION_CREATED`. Kegagalan pada salah satu langkah
 membatalkan seluruh perubahan. Unique `source_route_id` mencegah dua disposisi
@@ -402,7 +402,7 @@ metadata menghasilkan `409`; rate limit menghasilkan `429`.
 
 # 10. Asisten
 
-Asisten menerima satu branch dari Wali Kota/Sekda.
+Setiap Asisten terpilih menerima branch independen dari Wali Kota/Sekda.
 
 Asisten dapat meneruskan surat kepada:
 
@@ -586,6 +586,79 @@ Pergantian pejabat **tidak mengubah state workflow secara otomatis**.
 
 ---
 
+## 14.1 Implementasi Independent Branch Lifecycle M6.3
+
+Setiap recipient level `SECTION_HEAD` adalah cabang terminal independen.
+Pemegang Position Kepala Bagian yang sama, dengan `dispositions.view` dan
+`dispositions.process`, dapat menjalankan transition berikut:
+
+```text
+PENDING -> IN_PROGRESS -> COMPLETED
+PENDING ----------------> COMPLETED
+```
+
+`started_at` hanya diisi pada transition pertama. Penyelesaian langsung dari
+`PENDING` mempertahankan `started_at = null`. Follow-up hanya dapat ditambahkan
+saat cabang `IN_PROGRESS`; cabang `COMPLETED` bersifat final dan tidak dapat
+ditambah catatan, dibuka kembali, atau diselesaikan ulang.
+
+Endpoint produksi:
+
+```text
+POST /back-office/dispositions/inbox/recipients/{dispositionRecipient}/start
+POST /back-office/dispositions/inbox/recipients/{dispositionRecipient}/follow-ups
+POST /back-office/dispositions/inbox/recipients/{dispositionRecipient}/complete
+```
+
+Catatan follow-up dan hasil penyelesaian wajib di-trim dan berukuran 10–2.000
+karakter. Actor, status, timestamp, dan Position Assignment selalu ditentukan
+server. Ketiga endpoint berbagi limiter 60 request/menit per user dan 120
+request/menit per IP.
+
+Setiap Action mengunci surat, seluruh recipient terminal berdasarkan ID, actor,
+kemudian Position Assignment aktif dengan urutan yang sama. State surat wajib
+`IN_PROGRESS`; graph tanpa cabang terminal atau hierarchy yang tidak konsisten
+ditolak dengan `409`. Satu cabang selesai tidak mengubah cabang lain. Surat baru
+berubah menjadi `COMPLETED` setelah seluruh cabang `SECTION_HEAD` selesai.
+Karena surat dikunci lebih dahulu, penyelesaian dua cabang terakhir yang
+bersaing hanya dapat menghasilkan satu transition surat dan satu audit
+`LETTER_COMPLETED`.
+
+Audit `DISPOSITION_STARTED`, `FOLLOW_UP_ADDED`, `DISPOSITION_COMPLETED`, dan
+`LETTER_COMPLETED` ditulis atomik. Isi jurnal dan hasil akhir tidak dimasukkan
+ke metadata Activity Console umum; detail tersebut hanya tersedia melalui
+presenter recipient yang terotorisasi.
+
+## 14.2 Acceptance Branch Completion M7.1
+
+M7.1 tidak menambah transition baru. Endpoint `complete` dari M6.3 menjadi
+satu-satunya jalur penyelesaian cabang terminal. Kontrak finalnya adalah:
+
+* hanya pemegang aktif Position `SECTION_HEAD` recipient dengan
+  `dispositions.view` dan `dispositions.process` yang dapat menyelesaikan;
+* hasil penyelesaian wajib di-trim dan sepanjang 10–2.000 karakter;
+* penyelesaian dari `PENDING` mempertahankan `started_at = null`;
+* penyelesaian dari `IN_PROGRESS` mempertahankan timestamp mulai semula;
+* `COMPLETED` tidak dapat diedit, dihapus, dibuka kembali, atau diselesaikan
+  ulang;
+* user dan Position Assignment historis wajib konsisten dengan Position
+  recipient;
+* kegagalan audit cabang maupun audit aggregate menggagalkan seluruh transaction.
+
+Pergantian pemegang jabatan tidak mengubah `recipient_position_id`. Pemegang
+lama ditolak setelah assignment berakhir dan pemegang baru melanjutkan branch
+dengan assignment aktifnya. Frontend hanya mengirim hasil penyelesaian serta
+tidak pernah mengirim actor, status, timestamp, atau aggregate letter state.
+
+Release gate M7.1 mencakup smoke test pada database MySQL terisolasi. Dua
+request yang menyelesaikan dua cabang terakhir secara bersamaan harus membuat
+kedua cabang `COMPLETED`, satu surat `COMPLETED`, dan tepat satu audit
+`LETTER_COMPLETED`. Dua request bersamaan pada cabang yang sama menghasilkan
+satu keberhasilan dan satu respons stale-state `409`. Suite SQLite tetap
+menguji invariant transaksi, tetapi bukan pengganti verifikasi row lock MySQL.
+
+---
+
 # 15. Invalid Transition
 
 Backend wajib menolak transition yang:
@@ -652,6 +725,7 @@ LETTER_ROUTED
 
 DISPOSITION_CREATED
 DISPOSITION_STARTED
+FOLLOW_UP_ADDED
 DISPOSITION_COMPLETED
 
 LETTER_COMPLETED
@@ -710,7 +784,7 @@ Invariant MVP:
 5. Surat selalu dimulai dari Bagian Umum.
 6. Surat hanya memiliki satu initial route aktif.
 7. Initial route hanya menuju Wali Kota atau Sekda.
-8. Wali Kota/Sekda hanya meneruskan ke satu Asisten.
+8. Wali Kota/Sekda meneruskan ke satu sampai tiga Asisten dalam satu tindakan disposisi atomik.
 9. Asisten meneruskan ke satu atau lebih Kepala Bagian.
 10. Kepala Bagian adalah terminal formal MVP.
 11. Hierarchy tidak dapat dilompati.
