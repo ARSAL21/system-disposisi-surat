@@ -33,7 +33,13 @@ class StoreInitialDispositionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'recipient_position_id' => ['required', 'integer', Rule::exists('positions', 'id')],
+            'recipient_position_ids' => ['required', 'array', 'min:1', 'max:3'],
+            'recipient_position_ids.*' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('positions', 'id'),
+            ],
             'instruction_label_ids' => ['required', 'array', 'min:1', 'max:10'],
             'instruction_label_ids.*' => [
                 'required',
@@ -45,9 +51,13 @@ class StoreInitialDispositionRequest extends FormRequest
         ];
     }
 
-    public function recipientPositionId(): int
+    /** @return list<int> */
+    public function recipientPositionIds(): array
     {
-        return (int) $this->validated('recipient_position_id');
+        return array_values(array_map(
+            static fn (mixed $id): int => (int) $id,
+            (array) $this->validated('recipient_position_ids'),
+        ));
     }
 
     /** @return list<int> */

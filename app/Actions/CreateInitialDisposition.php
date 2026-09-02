@@ -14,12 +14,16 @@ use App\Models\IncomingLetter;
 use App\Models\InstructionLabel;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
+use App\Models\Position;
+use App\Models\PositionAssignment;
 use App\Models\User;
 use App\Services\AssistantDispositionTargetResolver;
 use App\Services\DispositionPositionAssignmentResolver;
 use App\Services\DocumentStorageGuard;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -34,12 +38,13 @@ class CreateInitialDisposition
     ) {}
 
     /**
+     * @param  list<int>  $recipientPositionIds
      * @param  list<int>  $instructionLabelIds
      */
     public function execute(
         User $actor,
         LetterRoute $letterRoute,
-        int $recipientPositionId,
+        array $recipientPositionIds,
         array $instructionLabelIds,
         ?string $instructionNote,
     ): Disposition {
@@ -47,7 +52,7 @@ class CreateInitialDisposition
             return DB::transaction(function () use (
                 $actor,
                 $letterRoute,
-                $recipientPositionId,
+                $recipientPositionIds,
                 $instructionLabelIds,
                 $instructionNote,
             ): Disposition {
@@ -94,9 +99,9 @@ class CreateInitialDisposition
                 $this->storageGuard->validateOfficialLetterDocument($lockedLetter, $currentDocument);
                 $actorAssignment = $this->positionAssignmentResolver
                     ->lockExecutiveAssignmentForPosition($lockedActor, $lockedRoute->recipient_position_id);
-                [$recipientPosition, $recipientAssignment] = $this->targetResolver
-                    ->lockAvailablePosition(
-                        $recipientPositionId,
+                $recipientTargets = $this->targetResolver
+                    ->lockAvailablePositions(
+                        $recipientPositionIds,
                         $actorAssignment->position_id,
                         (int) $lockedActor->getKey(),
                     );
@@ -114,18 +119,7 @@ class CreateInitialDisposition
                 $disposition->save();
 
                 $disposition->instructionLabels()->attach($instructionLabels->modelKeys());
-
-                $recipient = new DispositionRecipient;
-                $recipient->disposition_id = $disposition->getKey();
-                $recipient->recipient_position_id = $recipientPosition->getKey();
-                $recipient->status = DispositionRecipientStatus::Pending;
-                $recipient->received_at = $now;
-                $recipient->started_at = null;
-                $recipient->completed_at = null;
-                $recipient->completed_by_user_id = null;
-                $recipient->completed_by_position_assignment_id = null;
-                $recipient->completion_note = null;
-                $recipient->save();
+                $recipients = $this->createRecipients($disposition, $recipientTargets, $now);
 
                 $lockedRoute->status = LetterRouteStatus::Completed;
                 $lockedRoute->completed_at = $now;
@@ -143,14 +137,20 @@ class CreateInitialDisposition
                         'letter_status' => IncomingLetterStatus::InProgress->value,
                         'route_status' => LetterRouteStatus::Completed->value,
                         'recipient_status' => DispositionRecipientStatus::Pending->value,
-                        'recipient_position_id' => $recipientPosition->getKey(),
+                        'recipient_position_ids' => $recipientTargets
+                            ->map(static fn (array $target): int => (int) $target[0]->getKey())
+                            ->values()
+                            ->all(),
                         'instruction_label_codes' => $instructionLabels->pluck('code')->values()->all(),
                     ],
                     metadata: [
                         'incoming_letter_id' => $lockedLetter->getKey(),
                         'source_route_id' => $lockedRoute->getKey(),
-                        'recipient_id' => $recipient->getKey(),
-                        'recipient_position_assignment_id' => $recipientAssignment->getKey(),
+                        'recipient_ids' => $recipients->modelKeys(),
+                        'recipient_position_assignment_ids' => $recipientTargets
+                            ->map(static fn (array $target): int => (int) $target[1]->getKey())
+                            ->values()
+                            ->all(),
                         'document_version_number' => $currentDocument->version_number,
                     ],
                     actorPositionAssignment: $actorAssignment,
@@ -165,6 +165,36 @@ class CreateInitialDisposition
 
             throw $exception;
         }
+    }
+
+    /**
+     * @param  SupportCollection<int, array{Position, PositionAssignment}>  $recipientTargets
+     * @return Collection<int, DispositionRecipient>
+     */
+    private function createRecipients(
+        Disposition $disposition,
+        SupportCollection $recipientTargets,
+        CarbonInterface $receivedAt,
+    ): Collection {
+        $recipients = new Collection;
+
+        foreach ($recipientTargets as [$position]) {
+            $recipient = new DispositionRecipient;
+            $recipient->disposition_id = $disposition->getKey();
+            $recipient->recipient_position_id = $position->getKey();
+            $recipient->status = DispositionRecipientStatus::Pending;
+            $recipient->received_at = $receivedAt;
+            $recipient->started_at = null;
+            $recipient->completed_at = null;
+            $recipient->completed_by_user_id = null;
+            $recipient->completed_by_position_assignment_id = null;
+            $recipient->completion_note = null;
+            $recipient->save();
+
+            $recipients->push($recipient);
+        }
+
+        return $recipients;
     }
 
     /**
