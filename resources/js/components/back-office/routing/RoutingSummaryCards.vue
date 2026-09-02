@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import { Clock3, Inbox, Route as RouteIcon, Send } from '@lucide/vue';
+import {
+    CheckCircle2,
+    Clock3,
+    FileCheck,
+    GitBranch,
+    Inbox,
+    Route as RouteIcon,
+    Send,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import type { Component } from 'vue';
-import { Card, CardContent } from '@/components/ui/card';
 import type { ExecutiveInboxSummary, LetterRoutingSummary } from '@/types';
 
 const props = defineProps<{
@@ -16,50 +23,98 @@ type SummaryEntry = {
     value: number;
     helper: string;
     icon: Component;
-    tone: string;
+    gradient: string;
+    iconColor: string;
+    borderAccent: string;
+    pulse: boolean;
 };
 
 const entries = computed<SummaryEntry[]>(() => {
     if (props.mode === 'inbox') {
         return [
             {
-                label: 'Menunggu tindak lanjut',
+                label: 'Menunggu Disposisi',
                 value: props.inboxSummary?.pending ?? 0,
-                helper: 'Route aktif di inbox',
+                helper: 'Surat belum ditelaah',
                 icon: Inbox,
-                tone: 'bg-blue-500/10 text-blue-700 dark:text-blue-300',
+                gradient: 'from-amber-500/15 via-amber-500/5 to-transparent',
+                iconColor: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
+                borderAccent: 'border-amber-500/30 hover:border-amber-500/60',
+                pulse: (props.inboxSummary?.pending ?? 0) > 0,
             },
             {
-                label: 'Diterima hari ini',
+                label: 'Menunggu Penerusan',
+                value: props.inboxSummary?.awaiting_forwarding ?? 0,
+                helper: 'Sedang di tingkat Asisten',
+                icon: RouteIcon,
+                gradient: 'from-indigo-500/15 via-indigo-500/5 to-transparent',
+                iconColor: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10',
+                borderAccent: 'border-indigo-500/30 hover:border-indigo-500/60',
+                pulse: false,
+            },
+            {
+                label: 'Sedang Ditangani',
+                value: props.inboxSummary?.in_progress ?? 0,
+                helper: 'Cabang aktif berjalan',
+                icon: GitBranch,
+                gradient: 'from-sky-500/15 via-sky-500/5 to-transparent',
+                iconColor: 'text-sky-600 dark:text-sky-400 bg-sky-500/10',
+                borderAccent: 'border-sky-500/30 hover:border-sky-500/60',
+                pulse: false,
+            },
+            {
+                label: 'Disposisi Selesai',
+                value: props.inboxSummary?.completed ?? 0,
+                helper: 'Seluruh cabang tuntas',
+                icon: CheckCircle2,
+                gradient: 'from-emerald-500/15 via-emerald-500/5 to-transparent',
+                iconColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+                borderAccent: 'border-emerald-500/30 hover:border-emerald-500/60',
+                pulse: false,
+            },
+            {
+                label: 'Diterima Hari Ini',
                 value: props.inboxSummary?.received_today ?? 0,
-                helper: 'Berdasarkan waktu kantor',
+                helper: 'Arus masuk hari kerja',
                 icon: Clock3,
-                tone: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
+                gradient: 'from-purple-500/15 via-purple-500/5 to-transparent',
+                iconColor: 'text-purple-600 dark:text-purple-400 bg-purple-500/10',
+                borderAccent: 'border-purple-500/30 hover:border-purple-500/60',
+                pulse: false,
             },
         ];
     }
 
     return [
         {
-            label: 'Menunggu routing',
+            label: 'Menunggu Routing',
             value: props.routingSummary?.awaiting_route ?? 0,
             helper: 'Surat berstatus teregistrasi',
             icon: RouteIcon,
-            tone: 'bg-amber-500/10 text-amber-800 dark:text-amber-300',
+            gradient: 'from-amber-500/15 via-amber-500/5 to-transparent',
+            iconColor: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
+            borderAccent: 'border-amber-500/30 hover:border-amber-500/60',
+            pulse: (props.routingSummary?.awaiting_route ?? 0) > 0,
         },
         {
-            label: 'Menunggu pimpinan',
+            label: 'Menunggu Pimpinan',
             value: props.routingSummary?.pending_executive ?? 0,
-            helper: 'Initial route masih aktif',
-            icon: Inbox,
-            tone: 'bg-blue-500/10 text-blue-700 dark:text-blue-300',
+            helper: 'Initial route aktif di inbox',
+            icon: FileCheck,
+            gradient: 'from-indigo-500/15 via-indigo-500/5 to-transparent',
+            iconColor: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10',
+            borderAccent: 'border-indigo-500/30 hover:border-indigo-500/60',
+            pulse: false,
         },
         {
-            label: 'Diarahkan hari ini',
+            label: 'Diarahkan Hari Ini',
             value: props.routingSummary?.routed_today ?? 0,
-            helper: 'Berdasarkan waktu kantor',
+            helper: 'Selesai di routing',
             icon: Send,
-            tone: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
+            gradient: 'from-emerald-500/15 via-emerald-500/5 to-transparent',
+            iconColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+            borderAccent: 'border-emerald-500/30 hover:border-emerald-500/60',
+            pulse: false,
         },
     ];
 });
@@ -68,43 +123,50 @@ const entries = computed<SummaryEntry[]>(() => {
 <template>
     <section
         :class="[
-            'grid gap-3',
-            mode === 'routing' ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
-        ]"
-        :aria-label="
+            'grid gap-3.5',
             mode === 'routing'
-                ? 'Ringkasan antrean routing'
-                : 'Ringkasan inbox pimpinan'
-        "
+                ? 'grid-cols-1 sm:grid-cols-3'
+                : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-5',
+        ]"
+        :aria-label="mode === 'routing' ? 'Ringkasan antrean routing' : 'Ringkasan inbox pimpinan'"
     >
-        <Card
+        <article
             v-for="entry in entries"
             :key="entry.label"
-            class="border-slate-200/80 py-0 shadow-none dark:border-slate-800"
+            class="group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4.5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md dark:border-border/50 dark:bg-slate-900/80"
+            :class="entry.borderAccent"
         >
-            <CardContent class="flex items-center gap-4 p-4 sm:p-5">
-                <span
-                    :class="[
-                        'flex size-11 shrink-0 items-center justify-center rounded-2xl',
-                        entry.tone,
-                    ]"
-                >
-                    <component
-                        :is="entry.icon"
-                        class="size-5"
-                        aria-hidden="true"
-                    />
-                </span>
-                <div class="min-w-0">
-                    <p class="text-2xl font-semibold tabular-nums">
+            <!-- Background Subtle Gradient Wash -->
+            <div
+                class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-70 transition-opacity group-hover:opacity-100"
+                :class="entry.gradient"
+                aria-hidden="true"
+            />
+
+            <div class="relative flex items-center justify-between gap-3">
+                <div class="space-y-1">
+                    <p class="font-mono text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                        {{ entry.label }}
+                    </p>
+                    <p class="font-['Syne',sans-serif] text-3xl font-extrabold text-foreground tabular-nums sm:text-4xl">
                         {{ entry.value }}
                     </p>
-                    <p class="text-sm font-medium">{{ entry.label }}</p>
-                    <p class="mt-0.5 text-xs text-muted-foreground">
+                    <p class="text-[11px] font-medium text-muted-foreground">
                         {{ entry.helper }}
                     </p>
                 </div>
-            </CardContent>
-        </Card>
+
+                <div
+                    class="relative flex size-12 shrink-0 items-center justify-center rounded-2xl shadow-xs transition-transform duration-300 group-hover:scale-105"
+                    :class="entry.iconColor"
+                >
+                    <component :is="entry.icon" class="size-6" />
+                    <span
+                        v-if="entry.pulse"
+                        class="absolute -top-1 -right-1 size-3 rounded-full bg-amber-500 ring-4 ring-card animate-pulse"
+                    />
+                </div>
+            </div>
+        </article>
     </section>
 </template>
