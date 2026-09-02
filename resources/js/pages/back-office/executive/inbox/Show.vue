@@ -2,6 +2,7 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { CircleCheck, FileWarning } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref } from 'vue';
+import ExecutiveBranchProgressCard from '@/components/back-office/dispositions/ExecutiveBranchProgressCard.vue';
 import FirstDispositionPanel from '@/components/back-office/dispositions/FirstDispositionPanel.vue';
 import FirstDispositionReceiptCard from '@/components/back-office/dispositions/FirstDispositionReceiptCard.vue';
 import InitialRouteReceiptCard from '@/components/back-office/routing/InitialRouteReceiptCard.vue';
@@ -12,13 +13,18 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
     previewAssistantPositions,
     previewDispositionInstructionLabels,
+    previewFirstDispositionReceipt,
 } from '@/lib/dispositionPreview';
-import { previewExecutiveInboxItems } from '@/lib/letterRoutingPreview';
+import {
+    previewExecutiveBranchProgress,
+    previewExecutiveInboxItems,
+} from '@/lib/letterRoutingPreview';
 import type {
     CreateFirstDispositionPayload,
     DispositionInstructionLabelOption,
     DispositionPositionOption,
     ExecutiveInboxItem,
+    ExecutiveBranchProgress,
     FirstDispositionCapabilities,
     FirstDispositionReceipt,
     FirstDispositionRoutes,
@@ -29,6 +35,7 @@ const props = defineProps<{
     assistantPositions?: DispositionPositionOption[];
     instructionLabels?: DispositionInstructionLabelOption[];
     firstDisposition?: FirstDispositionReceipt | null;
+    branchProgress?: ExecutiveBranchProgress | null;
     capabilities?: FirstDispositionCapabilities;
     routes?: FirstDispositionRoutes;
     preview?: boolean;
@@ -39,7 +46,7 @@ defineOptions({
         breadcrumbs: [
             { title: 'Dashboard Internal', href: '/back-office/dashboard' },
             { title: 'Inbox Pimpinan', href: '/back-office/executive/inbox' },
-            { title: 'Detail Surat', href: '#' },
+            { title: 'Detail Naskah Dinas', href: '#' },
         ],
     },
 });
@@ -61,8 +68,21 @@ const baseRoute = computed(() =>
         : (props.route ?? null),
 );
 const simulatedDisposition = ref<FirstDispositionReceipt | null>(null);
-const activeDisposition = computed(
-    () => simulatedDisposition.value ?? props.firstDisposition ?? null,
+const activeDisposition = computed(() => {
+    if (simulatedDisposition.value) {
+        return simulatedDisposition.value;
+    }
+
+    if (previewMode.value && previewRouteId.value === 504) {
+        return previewFirstDispositionReceipt;
+    }
+
+    return props.firstDisposition ?? null;
+});
+const activeBranchProgress = computed(() =>
+    previewMode.value && previewRouteId.value === 504
+        ? previewExecutiveBranchProgress
+        : (props.branchProgress ?? null),
 );
 const activeRoute = computed<ExecutiveInboxItem | null>(() => {
     if (!baseRoute.value || !activeDisposition.value) {
@@ -122,9 +142,9 @@ function createDisposition(payload: CreateFirstDispositionPayload): void {
     successNotice.value = '';
 
     if (previewMode.value) {
-        const recipient = assistantPositions.value.find(
+        const recipients = assistantPositions.value.filter(
             (position) =>
-                position.id === payload.recipient_position_id &&
+                payload.recipient_position_ids.includes(position.id) &&
                 position.level_code === 'ASSISTANT' &&
                 position.is_available,
         );
@@ -132,10 +152,14 @@ function createDisposition(payload: CreateFirstDispositionPayload): void {
             payload.instruction_label_ids.includes(label.id),
         );
 
-        if (!recipient) {
+        if (
+            recipients.length === 0 ||
+            recipients.length !== payload.recipient_position_ids.length ||
+            recipients.length > 3
+        ) {
             errors.value = {
-                recipient_position_id:
-                    'Pilih satu jabatan Asisten yang tersedia.',
+                recipient_position_ids:
+                    'Pilih 1-3 jabatan Asisten yang tersedia tanpa duplikasi.',
             };
 
             return;
@@ -153,8 +177,10 @@ function createDisposition(payload: CreateFirstDispositionPayload): void {
         processing.value = true;
         previewTimer = setTimeout(() => {
             simulatedDisposition.value = {
-                status: 'PENDING',
-                recipient_position: recipient,
+                recipients: recipients.map((recipient) => ({
+                    status: 'PENDING',
+                    recipient_position: recipient,
+                })),
                 instructions: instructions.map((instruction) => ({
                     code: instruction.code,
                     name: instruction.name,
@@ -178,7 +204,7 @@ function createDisposition(payload: CreateFirstDispositionPayload): void {
 
     if (!props.routes?.store) {
         errors.value = {
-            recipient_position_id:
+            recipient_position_ids:
                 'Endpoint disposisi belum tersedia. Muat ulang halaman setelah backend M6 diaktifkan.',
         };
 
@@ -215,59 +241,57 @@ onBeforeUnmount(() => {
         "
     />
 
-    <main class="flex flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
+    <main class="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <template v-if="activeRoute">
+            <!-- 1. Executive Detail Header -->
             <RoutingDetailHeader
                 :letter="activeRoute.letter"
                 :back-href="indexUrl"
-                back-label="Kembali ke inbox pimpinan"
+                back-label="Kembali ke Inbox Pimpinan"
                 :preview="previewMode"
             />
 
-            <Alert v-if="interfaceNotice">
-                <FileWarning class="size-4" aria-hidden="true" />
-                <AlertTitle>Fixture UI tanpa akses berkas privat</AlertTitle>
-                <AlertDescription>{{ interfaceNotice }}</AlertDescription>
+            <!-- Alerts -->
+            <Alert v-if="interfaceNotice" class="rounded-2xl">
+                <FileWarning class="size-4" />
+                <AlertTitle>Pratinjau Lokal Berkas</AlertTitle>
+                <AlertDescription class="text-xs">{{ interfaceNotice }}</AlertDescription>
             </Alert>
 
             <Alert
                 v-if="successNotice"
-                class="border-emerald-300 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/25"
+                class="rounded-2xl border-emerald-500/30 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-950/30"
             >
-                <CircleCheck
-                    class="size-4 text-emerald-700 dark:text-emerald-300"
-                    aria-hidden="true"
-                />
-                <AlertTitle
-                    >Disposisi ditampilkan pada mode simulasi</AlertTitle
-                >
-                <AlertDescription>{{ successNotice }}</AlertDescription>
+                <CircleCheck class="size-4 text-emerald-600 dark:text-emerald-400" />
+                <AlertTitle class="text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                    Disposisi Ditampilkan Pada Mode Simulasi
+                </AlertTitle>
+                <AlertDescription class="text-xs text-emerald-700 dark:text-emerald-300">
+                    {{ successNotice }}
+                </AlertDescription>
             </Alert>
 
-            <div
-                class="grid items-start gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.85fr)]"
-            >
-                <section class="grid gap-5" aria-label="Informasi surat">
+            <!-- 2. Main 2-Column Responsive Dossier & Disposition Layout -->
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+                <!-- Left Column (7 Cols): Dossier & Official Document Card -->
+                <div class="space-y-6 lg:col-span-7">
+                    <!-- Letter Dossier Overview Card -->
                     <RoutingLetterOverviewCard :letter="activeRoute.letter" />
+
+                    <!-- Official Document & SHA-256 Card -->
                     <RoutingOfficialDocumentCard
                         :document="activeRoute.letter.current_document"
                         :preview="previewMode"
                         @preview="handleDocumentAction('preview')"
                         @download="handleDocumentAction('download')"
                     />
-                </section>
+                </div>
 
-                <aside class="grid gap-5" aria-label="Keputusan disposisi">
-                    <InitialRouteReceiptCard
-                        v-if="activeRoute.letter.current_route"
-                        :route="activeRoute.letter.current_route"
-                    />
-                    <FirstDispositionReceiptCard
-                        v-if="activeDisposition"
-                        :disposition="activeDisposition"
-                    />
+                <!-- Right Column (5 Cols): Disposition Desk & Provenance Cards -->
+                <div class="space-y-6 lg:col-span-5">
+                    <!-- 1. Disposition Panel (Active form if not yet disposed) -->
                     <FirstDispositionPanel
-                        v-else
+                        v-if="!activeDisposition"
                         :positions="assistantPositions"
                         :instruction-labels="instructionLabels"
                         :can-create="canCreateDisposition"
@@ -275,16 +299,33 @@ onBeforeUnmount(() => {
                         :errors="errors"
                         @confirm="createDisposition"
                     />
-                </aside>
+
+                    <!-- 2. First Disposition Receipt (If already created) -->
+                    <FirstDispositionReceiptCard
+                        v-if="activeDisposition"
+                        :disposition="activeDisposition"
+                    />
+
+                    <!-- 3. Branch Progress Monitoring (If in progress/completed) -->
+                    <ExecutiveBranchProgressCard
+                        v-if="activeDisposition && activeBranchProgress"
+                        :progress="activeBranchProgress"
+                    />
+
+                    <!-- 4. Initial Route Provenance Receipt -->
+                    <InitialRouteReceiptCard
+                        v-if="activeRoute.letter.current_route"
+                        :route="activeRoute.letter.current_route"
+                    />
+                </div>
             </div>
         </template>
 
-        <Alert v-else variant="destructive">
-            <FileWarning class="size-4" aria-hidden="true" />
-            <AlertTitle>Route tidak tersedia</AlertTitle>
-            <AlertDescription>
-                Payload produksi tidak memuat route. Fixture tidak diaktifkan
-                karena halaman ini bukan mode pratinjau.
+        <Alert v-else variant="destructive" class="rounded-2xl">
+            <FileWarning class="size-4" />
+            <AlertTitle>Route Surat Tidak Ditemukan</AlertTitle>
+            <AlertDescription class="text-xs">
+                Data naskah dinas tidak ditemukan atau Anda tidak memiliki hak akses untuk memeriksa rincian disposisi ini.
             </AlertDescription>
         </Alert>
     </main>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { useDebounceFn } from '@vueuse/core';
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import ExecutiveInboxFilterPanel from '@/components/back-office/routing/ExecutiveInboxFilterPanel.vue';
 import ExecutiveInboxList from '@/components/back-office/routing/ExecutiveInboxList.vue';
 import RoutingPagination from '@/components/back-office/routing/RoutingPagination.vue';
@@ -36,8 +36,11 @@ defineOptions({
 });
 
 const previewMode = computed(() => props.preview === true);
+const viewMode = ref<'cards' | 'table'>('cards');
+
 const filters = reactive<ExecutiveInboxFilters>({
     search: props.filters?.search ?? '',
+    progress: props.filters?.progress ?? '',
     date_from: props.filters?.date_from ?? '',
     date_to: props.filters?.date_to ?? '',
 });
@@ -60,6 +63,8 @@ const previewRoutes = computed(() => {
 
         return (
             matchesSearch &&
+            (!filters.progress ||
+                route.branch_progress.phase === filters.progress) &&
             (!filters.date_from || inboxDate >= filters.date_from) &&
             (!filters.date_to || inboxDate <= filters.date_to)
         );
@@ -69,11 +74,19 @@ const previewRoutes = computed(() => {
 const inboxRoutes = computed(() =>
     previewMode.value ? previewRoutes.value : (props.inbox?.data ?? []),
 );
+
 const summary = computed<ExecutiveInboxSummary>(() =>
     previewMode.value
         ? previewExecutiveInboxSummary
-        : (props.summary ?? { pending: 0, received_today: 0 }),
+        : (props.summary ?? {
+              pending: 0,
+              awaiting_forwarding: 0,
+              in_progress: 0,
+              completed: 0,
+              received_today: 0,
+          }),
 );
+
 const pagination = computed<PaginationData>(() =>
     previewMode.value
         ? {
@@ -120,6 +133,7 @@ function updateFilters(patch: Partial<ExecutiveInboxFilters>): void {
 function resetFilters(): void {
     Object.assign(filters, {
         search: '',
+        progress: '',
         date_from: '',
         date_to: '',
     } satisfies ExecutiveInboxFilters);
@@ -130,15 +144,28 @@ function resetFilters(): void {
 <template>
     <Head title="Inbox Pimpinan" />
 
-    <main class="flex flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
+    <main class="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+        <!-- 1. Massive Executive Header -->
         <RoutingWorkspaceHeader mode="inbox" :preview="previewMode" />
+
+        <!-- 2. High-Density Bento Metric Cards -->
         <RoutingSummaryCards mode="inbox" :inbox-summary="summary" />
+
+        <!-- 3. Advanced Filter Toolbar & View Mode Switcher -->
         <ExecutiveInboxFilterPanel
             :filters="filters"
+            :view-mode="viewMode"
             @change="updateFilters"
             @reset="resetFilters"
+            @toggle-view="viewMode = $event"
         />
-        <ExecutiveInboxList :routes="inboxRoutes" @reset="resetFilters">
+
+        <!-- 4. Executive List (Cards or Table) & Pagination -->
+        <ExecutiveInboxList
+            :routes="inboxRoutes"
+            :view-mode="viewMode"
+            @reset="resetFilters"
+        >
             <template #pagination>
                 <RoutingPagination :pagination="pagination" />
             </template>
