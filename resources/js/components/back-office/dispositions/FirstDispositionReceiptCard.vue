@@ -7,7 +7,6 @@ import {
     UserRoundCheck,
 } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     dispositionRecipientStatusClass,
     dispositionRecipientStatusLabels,
@@ -19,111 +18,114 @@ defineProps<{ disposition: FirstDispositionReceipt }>();
 </script>
 
 <template>
-    <Card class="border-emerald-200/80 py-0 shadow-sm dark:border-emerald-950">
-        <CardHeader class="border-b p-5 sm:p-6">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="flex items-start gap-3">
-                    <span
-                        class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+    <section class="rounded-3xl border border-emerald-500/30 bg-card p-6 shadow-sm dark:border-emerald-500/20 dark:bg-slate-900/80">
+        <!-- Header -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4 dark:border-border/40">
+            <div class="flex items-center gap-3">
+                <div class="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400">
+                    <ClipboardCheck class="size-5" />
+                </div>
+                <div>
+                    <h2 class="font-['Syne',sans-serif] text-base font-bold text-foreground">
+                        Disposisi Pertama Diterbitkan
+                    </h2>
+                    <p class="text-xs text-muted-foreground">
+                        Bukti penetapan instruksi dan penugasan Asisten.
+                    </p>
+                </div>
+            </div>
+
+            <Badge
+                variant="outline"
+                class="border-emerald-500/30 bg-emerald-500/10 px-3 py-1 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300"
+            >
+                {{ disposition.recipients.length }} Asisten Ditugaskan
+            </Badge>
+        </div>
+
+        <div class="mt-5 space-y-4">
+            <!-- Recipients List -->
+            <div class="space-y-2">
+                <span class="font-mono text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Asisten Penerima Disposisi:
+                </span>
+                <div class="grid gap-2">
+                    <div
+                        v-for="recipient in disposition.recipients"
+                        :key="recipient.recipient_position.id"
+                        class="flex items-start justify-between gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 dark:bg-emerald-950/20"
                     >
-                        <ClipboardCheck class="size-5" aria-hidden="true" />
-                    </span>
-                    <div>
-                        <CardTitle>Disposisi pertama terkirim</CardTitle>
-                        <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                            Bukti keputusan eksekutif dan tujuan jabatan resmi.
-                        </p>
+                        <div class="flex items-start gap-2.5 min-w-0">
+                            <UserRoundCheck class="mt-0.5 size-4.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <div class="min-w-0 text-xs">
+                                <p class="font-bold text-foreground truncate">
+                                    {{ recipient.recipient_position.name }}
+                                </p>
+                                <p class="text-muted-foreground truncate">
+                                    {{ recipient.recipient_position.holder_name }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <Badge
+                            variant="outline"
+                            class="px-2 py-0.5 font-mono text-[10px] font-bold shrink-0"
+                            :class="dispositionRecipientStatusClass(recipient.status)"
+                        >
+                            {{ dispositionRecipientStatusLabels[recipient.status] }}
+                        </Badge>
                     </div>
                 </div>
-                <Badge
-                    variant="outline"
-                    :class="dispositionRecipientStatusClass(disposition.status)"
-                >
-                    {{ dispositionRecipientStatusLabels[disposition.status] }}
-                </Badge>
-            </div>
-        </CardHeader>
-
-        <CardContent class="grid gap-4 p-5 sm:p-6">
-            <div
-                class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/65 p-4 dark:border-emerald-900 dark:bg-emerald-950/25"
-            >
-                <UserRoundCheck
-                    class="mt-0.5 size-5 shrink-0 text-emerald-700 dark:text-emerald-300"
-                    aria-hidden="true"
-                />
-                <div>
-                    <p class="text-xs text-muted-foreground">
-                        Asisten penerima
-                    </p>
-                    <p class="mt-1 font-semibold">
-                        {{ disposition.recipient_position.name }}
-                    </p>
-                    <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                        {{ disposition.recipient_position.holder_name }}
-                    </p>
-                </div>
             </div>
 
-            <div class="rounded-2xl border p-4">
+            <!-- Instructions -->
+            <div class="rounded-2xl border border-border/70 bg-background/80 p-4 dark:bg-slate-950/60">
                 <div class="flex items-center gap-2">
-                    <CheckCircle2
-                        class="size-4 text-blue-700 dark:text-blue-300"
-                        aria-hidden="true"
-                    />
-                    <p class="text-xs font-medium text-muted-foreground">
-                        Instruksi resmi
-                    </p>
+                    <CheckCircle2 class="size-4 text-indigo-600 dark:text-indigo-400" />
+                    <span class="font-mono text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Instruksi Resmi Pimpinan:
+                    </span>
                 </div>
-                <ul class="mt-3 flex flex-wrap gap-2">
-                    <li
+
+                <div class="mt-2.5 flex flex-wrap gap-1.5">
+                    <span
                         v-for="instruction in disposition.instructions"
                         :key="instruction.code"
-                        class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300"
+                        class="rounded-xl border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1 font-mono text-[11px] font-bold text-indigo-700 dark:text-indigo-300"
                     >
                         {{ instruction.name }}
-                    </li>
-                </ul>
+                    </span>
+                </div>
 
                 <div
                     v-if="disposition.instruction_note"
-                    class="mt-4 flex items-start gap-3 rounded-xl bg-muted/55 p-3"
+                    class="mt-3 flex items-start gap-2.5 rounded-xl bg-muted/50 p-3 text-xs"
                 >
-                    <MessageSquareText
-                        class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                    />
-                    <p
-                        class="text-sm leading-6 whitespace-pre-wrap text-muted-foreground"
-                    >
+                    <MessageSquareText class="mt-0.5 size-4 text-muted-foreground shrink-0" />
+                    <p class="whitespace-pre-wrap text-muted-foreground leading-relaxed">
                         {{ disposition.instruction_note }}
                     </p>
                 </div>
             </div>
 
-            <div class="rounded-2xl bg-muted/45 p-4 text-sm">
-                <p class="font-semibold">{{ disposition.disposed_by.name }}</p>
-                <p class="mt-1 text-muted-foreground">
-                    {{ disposition.disposed_by.position }}
-                    <template v-if="disposition.disposed_by.unit">
-                        · {{ disposition.disposed_by.unit }}
-                    </template>
-                </p>
-                <p class="mt-2 text-xs font-medium tabular-nums">
+            <!-- Disposed By Author Metadata -->
+            <div class="flex items-center justify-between gap-3 rounded-2xl bg-muted/40 p-3.5 text-xs">
+                <div class="min-w-0">
+                    <p class="font-bold text-foreground">{{ disposition.disposed_by.name }}</p>
+                    <p class="text-[11px] text-muted-foreground">
+                        {{ disposition.disposed_by.position }}
+                        <template v-if="disposition.disposed_by.unit">· {{ disposition.disposed_by.unit }}</template>
+                    </p>
+                </div>
+                <span class="font-mono text-[10px] text-muted-foreground tabular-nums shrink-0">
                     {{ formatRoutingDateTime(disposition.disposed_at) }}
-                </p>
+                </span>
             </div>
 
-            <p
-                class="flex items-start gap-2 text-xs leading-5 text-muted-foreground"
-            >
-                <ShieldCheck
-                    class="mt-0.5 size-4 shrink-0"
-                    aria-hidden="true"
-                />
-                Identitas pengirim dan Position Assignment historis ditetapkan
-                server ketika disposisi dibuat.
-            </p>
-        </CardContent>
-    </Card>
+            <div class="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <ShieldCheck class="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>Disposisi tersimpan secara append-only dalam audit log.</span>
+            </div>
+        </div>
+    </section>
 </template>
