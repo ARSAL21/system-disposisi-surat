@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\CompleteDispositionBranch;
 use App\Actions\CreateInitialDisposition;
 use App\Actions\ForwardDisposition;
 use App\Actions\RecordAudit;
@@ -15,6 +16,7 @@ use App\Exceptions\DispositionPositionContextConflict;
 use App\Exceptions\DispositionStateConflict;
 use App\Models\AuditLog;
 use App\Models\Disposition;
+use App\Models\DispositionFollowUp;
 use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
 use App\Models\InstructionLabel;
@@ -276,7 +278,7 @@ test('executive detail exposes only assistant positions and never offers the exe
         );
 });
 
-test('executive creates one atomic first disposition and assistant receives only its own branch', function (): void {
+test('executive creates an atomic first disposition and assistant receives only its own branch', function (): void {
     $executive = m6Actor(
         OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
         'Sekretaris Daerah',
@@ -301,7 +303,7 @@ test('executive creates one atomic first disposition and assistant receives only
 
     $this->actingAs($executive['user'])
         ->post(route('back-office.executive.inbox.dispositions.store', $fixture['route']), [
-            'recipient_position_id' => $assistant['position']->getKey(),
+            'recipient_position_ids' => [$assistant['position']->getKey()],
             'instruction_label_ids' => $labels->modelKeys(),
             'instruction_note' => 'Mohon ditelaah dan dikoordinasikan.',
         ])
@@ -328,7 +330,7 @@ test('executive creates one atomic first disposition and assistant receives only
     expect($audit->actor_position_assignment_id)->toBe($executive['assignment']->getKey())
         ->and($audit->new_values['letter_status'])->toBe(IncomingLetterStatus::InProgress->value)
         ->and($audit->new_values['route_status'])->toBe(LetterRouteStatus::Completed->value)
-        ->and($audit->metadata['recipient_id'])->toBe($recipient->getKey());
+        ->and($audit->metadata['recipient_ids'])->toBe([$recipient->getKey()]);
 
     $this->actingAs($executive['user'])
         ->get(route('back-office.letter-activities.index', [
@@ -349,14 +351,14 @@ test('executive creates one atomic first disposition and assistant receives only
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('capabilities.can_create_disposition', false)
-            ->where('firstDisposition.recipient_position.id', $assistant['position']->getKey())
-            ->where('firstDisposition.status', DispositionRecipientStatus::Pending->value)
+            ->where('firstDisposition.recipients.0.recipient_position.id', $assistant['position']->getKey())
+            ->where('firstDisposition.recipients.0.status', DispositionRecipientStatus::Pending->value)
             ->has('assistantPositions', 0)
             ->missing('firstDisposition.disposed_by.email'));
 
     $this->actingAs($executive['user'])
         ->postJson(route('back-office.executive.inbox.dispositions.store', $fixture['route']), [
-            'recipient_position_id' => $assistant['position']->getKey(),
+            'recipient_position_ids' => [$assistant['position']->getKey()],
             'instruction_label_ids' => $labels->modelKeys(),
             'instruction_note' => '',
         ])
@@ -366,7 +368,7 @@ test('executive creates one atomic first disposition and assistant receives only
     app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $otherFixture['route'],
-        $otherAssistant['position']->getKey(),
+        [$otherAssistant['position']->getKey()],
         [$labels->firstOrFail()->getKey()],
         null,
     );
@@ -426,6 +428,65 @@ test('executive creates one atomic first disposition and assistant receives only
         ->assertConflict();
 });
 
+test('executive can appoint multiple assistants in one atomic first disposition', function (): void {
+    $executive = m6Actor(
+        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+        'Sekretaris Daerah',
+        [PermissionName::ViewExecutiveInbox, PermissionName::CreateDispositions],
+    );
+    $assistants = [
+        m6Actor(OrganizationCatalog::ASSISTANT_LEVEL, 'Asisten I', [PermissionName::ViewDispositions]),
+        m6Actor(OrganizationCatalog::ASSISTANT_LEVEL, 'Asisten II', [PermissionName::ViewDispositions]),
+    ];
+    $fixture = m6RoutedLetter($executive, 'Disposisi lintas dua Asisten');
+    $label = InstructionLabel::query()->firstOrFail();
+    $recipientPositionIds = array_map(
+        static fn (array $assistant): int => (int) $assistant['position']->getKey(),
+        $assistants,
+    );
+
+    $this->actingAs($executive['user'])
+        ->post(route('back-office.executive.inbox.dispositions.store', $fixture['route']), [
+            'recipient_position_ids' => array_reverse($recipientPositionIds),
+            'instruction_label_ids' => [$label->getKey()],
+            'instruction_note' => 'Koordinasikan sesuai ruang lingkup masing-masing.',
+        ])
+        ->assertRedirect(route('back-office.executive.inbox.show', $fixture['route']));
+
+    $disposition = Disposition::query()->firstOrFail();
+    $recipients = $disposition->recipients()->orderBy('recipient_position_id')->get();
+    expect($recipients)->toHaveCount(2)
+        ->and($recipients->pluck('recipient_position_id')->all())->toBe($recipientPositionIds)
+        ->and($recipients->pluck('status')->all())->each->toBe(DispositionRecipientStatus::Pending)
+        ->and($fixture['route']->refresh()->status)->toBe(LetterRouteStatus::Completed)
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::InProgress);
+
+    $audit = AuditLog::query()
+        ->where('action', AuditAction::DispositionCreated->value)
+        ->where('subject_id', $disposition->getKey())
+        ->firstOrFail();
+    expect($audit->new_values['recipient_position_ids'])->toBe($recipientPositionIds)
+        ->and($audit->metadata['recipient_ids'])->toBe($recipients->modelKeys());
+
+    $this->actingAs($executive['user'])
+        ->get(route('back-office.executive.inbox.show', $fixture['route']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('firstDisposition.recipients', 2)
+            ->where('firstDisposition.recipients.0.recipient_position.id', $recipientPositionIds[0])
+            ->where('firstDisposition.recipients.1.recipient_position.id', $recipientPositionIds[1])
+            ->missing('firstDisposition.recipients.0.recipient_position.active_assignment_id'));
+
+    foreach ($assistants as $assistant) {
+        $this->actingAs($assistant['user'])
+            ->get(route('back-office.dispositions.inbox.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('inbox.data', 1)
+                ->where('inbox.data.0.recipient_position.id', $assistant['position']->getKey()));
+    }
+});
+
 test('permission and position boundaries preserve 403 versus hidden 404 responses', function (): void {
     $executive = m6Actor(
         OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
@@ -446,7 +507,7 @@ test('permission and position boundaries preserve 403 versus hidden 404 response
     $fixture = m6RoutedLetter($executive);
     $label = InstructionLabel::query()->firstOrFail();
     $payload = [
-        'recipient_position_id' => $assistant['position']->getKey(),
+        'recipient_position_ids' => [$assistant['position']->getKey()],
         'instruction_label_ids' => [$label->getKey()],
         'instruction_note' => '',
     ];
@@ -509,17 +570,17 @@ test('invalid hierarchy self selection vacant targets and inactive labels are re
     $inactiveLabel->save();
 
     foreach ([
-        [$executive['position']->getKey(), [$activeLabel->getKey()], 'recipient_position_id'],
-        [$selfAssistant->getKey(), [$activeLabel->getKey()], 'recipient_position_id'],
-        [$sectionHead->getKey(), [$activeLabel->getKey()], 'recipient_position_id'],
-        [$vacantAssistant->getKey(), [$activeLabel->getKey()], 'recipient_position_id'],
-        [$inactiveAssistant['position']->getKey(), [$activeLabel->getKey()], 'recipient_position_id'],
+        [$executive['position']->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
+        [$selfAssistant->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
+        [$sectionHead->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
+        [$vacantAssistant->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
+        [$inactiveAssistant['position']->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
         [$assistant['position']->getKey(), [$inactiveLabel->getKey()], 'instruction_label_ids'],
     ] as [$positionId, $labelIds, $errorKey]) {
         $this->actingAs($executive['user'])
             ->from(route('back-office.executive.inbox.show', $fixture['route']))
             ->post(route('back-office.executive.inbox.dispositions.store', $fixture['route']), [
-                'recipient_position_id' => $positionId,
+                'recipient_position_ids' => [$positionId],
                 'instruction_label_ids' => $labelIds,
                 'instruction_note' => '',
             ])
@@ -549,7 +610,7 @@ test('disposition creation rejects corrupt official document metadata without pa
 
     $this->actingAs($executive['user'])
         ->postJson(route('back-office.executive.inbox.dispositions.store', $fixture['route']), [
-            'recipient_position_id' => $assistant['position']->getKey(),
+            'recipient_position_ids' => [$assistant['position']->getKey()],
             'instruction_label_ids' => [$label->getKey()],
             'instruction_note' => '',
         ])
@@ -579,7 +640,7 @@ test('disposition action rechecks stale state and rolls back all database change
     expect(fn () => app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $fixture['route'],
-        $assistant['position']->getKey(),
+        [$assistant['position']->getKey()],
         [$label->getKey()],
         null,
     ))->toThrow(DispositionPositionContextConflict::class);
@@ -595,7 +656,7 @@ test('disposition action rechecks stale state and rolls back all database change
     expect(fn () => app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $fixture['route'],
-        $assistant['position']->getKey(),
+        [$assistant['position']->getKey()],
         [$label->getKey()],
         null,
     ))->toThrow(DispositionStateConflict::class);
@@ -615,7 +676,7 @@ test('disposition action rechecks stale state and rolls back all database change
     expect(fn () => app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $fixture['route']->refresh(),
-        $assistant['position']->getKey(),
+        [$assistant['position']->getKey()],
         [$label->getKey()],
         null,
     ))->toThrow(RuntimeException::class, 'Simulated disposition audit failure.');
@@ -639,7 +700,7 @@ test('disposition records are immutable and recipient identity cannot be rewritt
     $disposition = app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $fixture['route'],
-        $assistant['position']->getKey(),
+        [$assistant['position']->getKey()],
         [$label->getKey()],
         null,
     );
@@ -786,7 +847,7 @@ test('disposition input and mutation rate limits are enforced before state chang
         $this->actingAs($executive['user'])
             ->post(route('back-office.executive.inbox.dispositions.store', $fixture['route']), [])
             ->assertSessionHasErrors([
-                'recipient_position_id',
+                'recipient_position_ids',
                 'instruction_label_ids',
             ]);
     }
@@ -833,7 +894,7 @@ test('assistant forwards one atomic disposition to multiple section heads and ea
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $fixture['route'],
-        $assistant['position']->getKey(),
+        [$assistant['position']->getKey()],
         [$labels->firstOrFail()->getKey()],
         'Mohon ditangani pada tingkat Asisten.',
     );
@@ -952,7 +1013,7 @@ test('multiple-recipient forwarding preserves permission, position, and target b
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $fixture['route'],
-        $assistant['position']->getKey(),
+        [$assistant['position']->getKey()],
         [$label->getKey()],
         null,
     );
@@ -1014,7 +1075,7 @@ test('multiple-recipient forwarding rejects invalid targets and labels without p
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $fixture['route'],
-        $assistant['position']->getKey(),
+        [$assistant['position']->getKey()],
         [$activeLabel->getKey()],
         null,
     );
@@ -1073,7 +1134,7 @@ test('multiple-recipient forwarding rolls back recipients and source completion 
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
         $executive['user'],
         $fixture['route'],
-        $assistant['position']->getKey(),
+        [$assistant['position']->getKey()],
         [$label->getKey()],
         null,
     );
@@ -1099,4 +1160,567 @@ test('multiple-recipient forwarding rolls back recipients and source completion 
         ->and($assistantRecipient->completed_at)->toBeNull()
         ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::InProgress)
         ->and(AuditLog::query()->where('action', AuditAction::DispositionCreated->value)->count())->toBe(1);
+});
+
+/**
+ * @return array{
+ *     executive: array{user: User, position: Position, assignment: PositionAssignment},
+ *     assistant: array{user: User, position: Position, assignment: PositionAssignment},
+ *     heads: list<array{user: User, position: Position, assignment: PositionAssignment}>,
+ *     letter: IncomingLetter,
+ *     route: LetterRoute,
+ *     assistant_recipient: DispositionRecipient,
+ *     branches: list<DispositionRecipient>
+ * }
+ */
+function m6IndependentBranchFixture(): array
+{
+    $executive = m6Actor(
+        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+        'Sekretaris Daerah Pemantau',
+        [
+            PermissionName::ViewExecutiveInbox,
+            PermissionName::CreateDispositions,
+            PermissionName::ViewLetterActivities,
+        ],
+    );
+    $assistant = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten Koordinator Cabang',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $heads = [
+        m6Actor(
+            OrganizationCatalog::SECTION_HEAD_LEVEL,
+            'Kepala Bagian Cabang Satu',
+            [
+                PermissionName::ViewDispositions,
+                PermissionName::ProcessDispositions,
+                PermissionName::ViewLetterActivities,
+            ],
+        ),
+        m6Actor(
+            OrganizationCatalog::SECTION_HEAD_LEVEL,
+            'Kepala Bagian Cabang Dua',
+            [PermissionName::ViewDispositions, PermissionName::ProcessDispositions],
+        ),
+    ];
+    $fixture = m6RoutedLetter($executive, 'Penanganan cabang independen');
+    $label = InstructionLabel::query()->firstOrFail();
+    $initialDisposition = app(CreateInitialDisposition::class)->execute(
+        $executive['user'],
+        $fixture['route'],
+        [$assistant['position']->getKey()],
+        [$label->getKey()],
+        'Koordinasikan kepada unit yang sesuai.',
+    );
+    $assistantRecipient = $initialDisposition->recipients()->firstOrFail();
+    $childDisposition = app(ForwardDisposition::class)->execute(
+        $assistant['user'],
+        $assistantRecipient,
+        array_map(
+            static fn (array $head): int => (int) $head['position']->getKey(),
+            $heads,
+        ),
+        [$label->getKey()],
+        'Tangani secara paralel dan laporkan hasil akhir.',
+    );
+    $branches = $childDisposition->recipients()
+        ->orderBy('recipient_position_id')
+        ->get()
+        ->mapWithKeys(fn (DispositionRecipient $recipient): array => [
+            $recipient->recipient_position_id => $recipient,
+        ]);
+
+    return [
+        'executive' => $executive,
+        'assistant' => $assistant,
+        'heads' => $heads,
+        'letter' => $fixture['letter'],
+        'route' => $fixture['route'],
+        'assistant_recipient' => $assistantRecipient,
+        'branches' => array_values(array_map(
+            fn (array $head): DispositionRecipient => $branches
+                ->get($head['position']->getKey()),
+            $heads,
+        )),
+    ];
+}
+
+test('section heads process independent branches while assistant and executive receive scoped monitoring', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    [$firstBranch, $secondBranch] = $fixture['branches'];
+    [$firstHead, $secondHead] = $fixture['heads'];
+
+    $this->actingAs($firstHead['user'])
+        ->get(route('back-office.dispositions.inbox.show', $firstBranch))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.capabilities.can_process_dispositions', true)
+            ->where('branch.status', DispositionRecipientStatus::Pending->value)
+            ->where('capabilities.can_start_branch', true)
+            ->where('capabilities.can_add_follow_up', false)
+            ->where('capabilities.can_complete_branch', true)
+            ->where('routes.start', route('back-office.dispositions.inbox.branch.start', $firstBranch))
+            ->where('routes.complete', route('back-office.dispositions.inbox.branch.complete', $firstBranch))
+            ->missing('branch.completed_by.email')
+            ->missing('branch.completed_by.assignment_id'));
+
+    $this->actingAs($firstHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.start', $firstBranch))
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $firstBranch));
+
+    expect($firstBranch->refresh()->status)->toBe(DispositionRecipientStatus::InProgress)
+        ->and($firstBranch->started_at)->not->toBeNull()
+        ->and($secondBranch->refresh()->status)->toBe(DispositionRecipientStatus::Pending)
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::InProgress);
+
+    $followUpNote = 'Koordinasi lintas unit telah dilakukan dan dokumen pendukung sedang diperiksa.';
+    $this->actingAs($firstHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.follow-ups.store', $firstBranch), [
+            'note' => '  '.$followUpNote.'  ',
+        ])
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $firstBranch));
+
+    $followUp = DispositionFollowUp::query()->firstOrFail();
+    expect($followUp->note)->toBe($followUpNote)
+        ->and($followUp->created_by_user_id)->toBe($firstHead['user']->getKey())
+        ->and($followUp->created_by_position_assignment_id)->toBe($firstHead['assignment']->getKey());
+
+    $this->actingAs($firstHead['user'])
+        ->get(route('back-office.letter-activities.index', [
+            'action' => AuditAction::FollowUpAdded->value,
+        ]))
+        ->assertOk()
+        ->assertDontSee($followUpNote, false)
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('activities.data', 1)
+            ->where('activities.data.0.action', AuditAction::FollowUpAdded->value)
+            ->where('activities.data.0.actor.name', 'Pengguna internal')
+            ->where('filterOptions.actions', fn ($actions): bool => collect($actions)
+                ->contains(fn (array $option): bool => $option === [
+                    'value' => AuditAction::FollowUpAdded->value,
+                    'label' => 'Catatan tindak lanjut ditambahkan',
+                ]))
+            ->missing('activities.data.0.after.note'));
+
+    $firstCompletionNote = 'Cabang pertama selesai dengan rekomendasi yang telah disampaikan.';
+    $this->actingAs($firstHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $firstBranch), [
+            'completion_note' => $firstCompletionNote,
+        ])
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $firstBranch));
+
+    expect($firstBranch->refresh()->status)->toBe(DispositionRecipientStatus::Completed)
+        ->and($secondBranch->refresh()->status)->toBe(DispositionRecipientStatus::Pending)
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::InProgress)
+        ->and(AuditLog::query()->where('action', AuditAction::LetterCompleted->value)->count())->toBe(0);
+
+    $this->actingAs($firstHead['user'])
+        ->get(route('back-office.dispositions.inbox.show', $firstBranch))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('branch.status', DispositionRecipientStatus::Completed->value)
+            ->where('branch.completion_note', $firstCompletionNote)
+            ->where('branch.completed_by.name', $firstHead['user']->name)
+            ->where('branch.completed_by.position', $firstHead['position']->name)
+            ->where('capabilities.can_start_branch', false)
+            ->where('capabilities.can_add_follow_up', false)
+            ->where('capabilities.can_complete_branch', false)
+            ->missing('branch.completed_by.email')
+            ->missing('branch.completed_by.assignment_id')
+            ->missing('routes.start')
+            ->missing('routes.follow_up')
+            ->missing('routes.complete'));
+
+    $this->actingAs($firstHead['user'])
+        ->get(route('back-office.letter-activities.index', [
+            'action' => AuditAction::DispositionCompleted->value,
+        ]))
+        ->assertOk()
+        ->assertDontSee($firstCompletionNote, false)
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('activities.data', 1)
+            ->where('activities.data.0.action', AuditAction::DispositionCompleted->value)
+            ->missing('activities.data.0.after.completion_note'));
+
+    $this->actingAs($fixture['assistant']['user'])
+        ->get(route('back-office.dispositions.inbox.show', $fixture['assistant_recipient']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('branch', null)
+            ->where('branchMonitor.total', 2)
+            ->where('branchMonitor.pending', 1)
+            ->where('branchMonitor.completed', 1)
+            ->has('branchMonitor.branches.0.follow_ups')
+            ->missing('branchMonitor.branches.0.completed_by.email')
+            ->missing('routes.start')
+            ->missing('routes.follow_up')
+            ->missing('routes.complete'));
+
+    $this->actingAs($fixture['executive']['user'])
+        ->get(route('back-office.executive.inbox.show', $fixture['route']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('branchProgress.phase', 'IN_PROGRESS')
+            ->where('branchProgress.total', 2)
+            ->where('branchProgress.completed', 1)
+            ->missing('branchProgress.branches')
+            ->missing('branchProgress.recipient_position'));
+
+    $this->actingAs($secondHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $secondBranch), [
+            'completion_note' => 'Cabang kedua diselesaikan langsung setelah verifikasi lapangan tuntas.',
+        ])
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $secondBranch));
+
+    expect($secondBranch->refresh()->status)->toBe(DispositionRecipientStatus::Completed)
+        ->and($secondBranch->started_at)->toBeNull()
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::Completed)
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionStarted->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::FollowUpAdded->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionCompleted->value)->count())->toBe(2)
+        ->and(AuditLog::query()->where('action', AuditAction::LetterCompleted->value)->count())->toBe(1);
+
+    $this->actingAs($fixture['executive']['user'])
+        ->get(route('back-office.executive.inbox.index', ['progress' => 'COMPLETED']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('inbox.data', 1)
+            ->where('inbox.data.0.branch_progress.phase', 'COMPLETED')
+            ->where('summary.completed', 1)
+            ->missing('inbox.data.0.branch_progress.branches'));
+});
+
+test('branch mutation authorization preserves permission and position boundaries', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $branch = $fixture['branches'][0];
+    $owner = $fixture['heads'][0];
+    $otherHead = $fixture['heads'][1];
+
+    $owner['user']->syncRoles([]);
+    m6Grant($owner['user'], PermissionName::ViewDispositions);
+    $this->actingAs($owner['user'])
+        ->post(route('back-office.dispositions.inbox.branch.start', $branch))
+        ->assertForbidden();
+    $this->actingAs($owner['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Cabang ini tidak boleh diselesaikan tanpa permission proses.',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($otherHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.start', $branch))
+        ->assertNotFound();
+    $this->actingAs($otherHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Kepala Bagian lain tidak boleh menyelesaikan cabang ini.',
+        ])
+        ->assertNotFound();
+
+    foreach ([$fixture['assistant'], $fixture['executive']] as $nonTerminalActor) {
+        $nonTerminalActor['user']->syncRoles([]);
+        m6Grant(
+            $nonTerminalActor['user'],
+            PermissionName::ViewDispositions,
+            PermissionName::ProcessDispositions,
+        );
+        $this->actingAs($nonTerminalActor['user'])
+            ->post(route('back-office.dispositions.inbox.branch.start', $branch))
+            ->assertNotFound();
+        $this->actingAs($nonTerminalActor['user'])
+            ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+                'completion_note' => 'Pejabat nonterminal tidak boleh menyelesaikan cabang Kepala Bagian.',
+            ])
+            ->assertNotFound();
+    }
+
+    $technicalAdministrator = User::factory()->internal()->create();
+    m6Grant($technicalAdministrator, ...PermissionName::cases());
+    $this->actingAs($technicalAdministrator)
+        ->post(route('back-office.dispositions.inbox.branch.start', $branch))
+        ->assertNotFound();
+    $this->actingAs($technicalAdministrator)
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Administrator teknis tanpa Position bisnis harus tetap ditolak.',
+        ])
+        ->assertNotFound();
+
+    expect($branch->refresh()->status)->toBe(DispositionRecipientStatus::Pending)
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionStarted->value)->exists())->toBeFalse()
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionCompleted->value)->exists())->toBeFalse();
+});
+
+test('a replacement position holder completes the existing branch with the new historical assignment', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $branch = $fixture['branches'][0];
+    $originalHead = $fixture['heads'][0];
+    $recipientPositionId = (int) $originalHead['position']->getKey();
+
+    $originalHead['assignment']->ended_at = now()->subMinute();
+    $originalHead['assignment']->save();
+
+    $replacement = User::factory()->internal()->create();
+    m6Grant(
+        $replacement,
+        PermissionName::ViewDispositions,
+        PermissionName::ProcessDispositions,
+    );
+    $replacementAssignment = new PositionAssignment;
+    $replacementAssignment->user_id = $replacement->getKey();
+    $replacementAssignment->position_id = $recipientPositionId;
+    $replacementAssignment->started_at = now()->subSeconds(30);
+    $replacementAssignment->ended_at = null;
+    $replacementAssignment->assigned_by_user_id = null;
+    $replacementAssignment->save();
+
+    $this->actingAs($originalHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Pejabat lama tidak lagi memiliki assignment aktif untuk cabang ini.',
+        ])
+        ->assertNotFound();
+
+    $completionNote = 'Penyelesaian dilanjutkan pejabat pengganti berdasarkan histori pekerjaan yang tersedia.';
+    $this->actingAs($replacement)
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => '  '.$completionNote.'  ',
+        ])
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $branch));
+
+    expect($branch->refresh()->recipient_position_id)->toBe($recipientPositionId)
+        ->and($branch->status)->toBe(DispositionRecipientStatus::Completed)
+        ->and($branch->completion_note)->toBe($completionNote)
+        ->and($branch->completed_by_user_id)->toBe($replacement->getKey())
+        ->and($branch->completed_by_position_assignment_id)->toBe($replacementAssignment->getKey());
+
+    $this->actingAs($replacement)
+        ->get(route('back-office.dispositions.inbox.show', $branch))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('branch.completed_by.name', $replacement->name)
+            ->where('branch.completed_by.position', $originalHead['position']->name)
+            ->missing('branch.completed_by.email')
+            ->missing('branch.completed_by.assignment_id'));
+});
+
+test('completed branch presentation fails closed for a mismatched historical position assignment', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $branch = $fixture['branches'][0];
+    $owner = $fixture['heads'][0];
+    $otherHead = $fixture['heads'][1];
+
+    $this->actingAs($owner['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Cabang diselesaikan sebelum simulasi kerusakan metadata historis.',
+        ])
+        ->assertRedirect();
+
+    DB::table('disposition_recipients')
+        ->where('id', $branch->getKey())
+        ->update([
+            'completed_by_user_id' => $otherHead['user']->getKey(),
+            'completed_by_position_assignment_id' => $otherHead['assignment']->getKey(),
+        ]);
+
+    $this->actingAs($owner['user'])
+        ->getJson(route('back-office.dispositions.inbox.show', $branch))
+        ->assertConflict();
+});
+
+test('branch lifecycle rejects invalid input stale states and mutations after completion', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $branch = $fixture['branches'][0];
+    $head = $fixture['heads'][0];
+
+    $this->actingAs($head['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.follow-ups.store', $branch), [
+            'note' => 'Catatan ini cukup panjang tetapi cabang belum dimulai.',
+        ])
+        ->assertConflict();
+    $this->actingAs($head['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Pendek',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('completion_note');
+    $this->actingAs($head['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => str_repeat('a', 2001),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('completion_note');
+
+    $this->actingAs($head['user'])
+        ->post(route('back-office.dispositions.inbox.branch.start', $branch))
+        ->assertRedirect();
+    $this->actingAs($head['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.start', $branch))
+        ->assertConflict();
+    $this->actingAs($head['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.follow-ups.store', $branch), [
+            'note' => 'Terlalu',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('note');
+    $this->actingAs($head['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Penyelesaian cabang telah diverifikasi dan dinyatakan final.',
+        ])
+        ->assertRedirect();
+    $this->actingAs($head['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.follow-ups.store', $branch), [
+            'note' => 'Catatan tambahan tidak boleh masuk setelah cabang final.',
+        ])
+        ->assertConflict();
+    $this->actingAs($head['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Cabang yang final tidak boleh diselesaikan untuk kedua kalinya.',
+        ])
+        ->assertConflict();
+
+    DB::table('incoming_letters')
+        ->where('id', $fixture['letter']->getKey())
+        ->update(['status' => IncomingLetterStatus::Routed->value]);
+    $secondBranch = $fixture['branches'][1];
+    $secondHead = $fixture['heads'][1];
+    $this->actingAs($secondHead['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.start', $secondBranch))
+        ->assertConflict();
+
+    expect(DispositionFollowUp::query()->count())->toBe(0);
+});
+
+test('follow-ups are append-only and audit failure rolls branch changes back atomically', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $branch = $fixture['branches'][0];
+    $head = $fixture['heads'][0];
+
+    $this->actingAs($head['user'])
+        ->post(route('back-office.dispositions.inbox.branch.start', $branch))
+        ->assertRedirect();
+    $this->actingAs($head['user'])
+        ->post(route('back-office.dispositions.inbox.branch.follow-ups.store', $branch), [
+            'note' => 'Catatan awal yang bersifat permanen untuk histori cabang.',
+        ])
+        ->assertRedirect();
+    $followUp = DispositionFollowUp::query()->firstOrFail();
+
+    expect(fn () => tap($followUp, function (DispositionFollowUp $record): void {
+        $record->note = 'Catatan ini tidak boleh menggantikan histori yang sudah ada.';
+        $record->save();
+    }))->toThrow(LogicException::class)
+        ->and(fn () => $followUp->delete())->toThrow(LogicException::class);
+
+    $this->mock(RecordAudit::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('execute')
+            ->once()
+            ->andThrow(new RuntimeException('Simulated branch completion audit failure.'));
+    });
+
+    expect(fn () => app(CompleteDispositionBranch::class)->execute(
+        $head['user'],
+        $branch,
+        'Penyelesaian ini harus dibatalkan ketika audit gagal ditulis.',
+    ))->toThrow(RuntimeException::class, 'Simulated branch completion audit failure.');
+
+    expect($branch->refresh()->status)->toBe(DispositionRecipientStatus::InProgress)
+        ->and($branch->completed_at)->toBeNull()
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::InProgress)
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionCompleted->value)->exists())->toBeFalse();
+});
+
+test('failure while auditing aggregate letter completion rolls back the final branch and its first audit', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    [$firstBranch, $finalBranch] = $fixture['branches'];
+    [$firstHead, $finalHead] = $fixture['heads'];
+
+    $this->actingAs($firstHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $firstBranch), [
+            'completion_note' => 'Cabang pertama telah selesai sebelum pengujian transaksi cabang terakhir.',
+        ])
+        ->assertRedirect();
+
+    $realRecordAudit = app(RecordAudit::class);
+    $auditCall = 0;
+    $this->mock(RecordAudit::class, function (MockInterface $mock) use ($realRecordAudit, &$auditCall): void {
+        $mock->shouldReceive('execute')
+            ->twice()
+            ->andReturnUsing(function (...$arguments) use ($realRecordAudit, &$auditCall): AuditLog {
+                $auditCall++;
+
+                if ($auditCall === 2) {
+                    throw new RuntimeException('Simulated aggregate completion audit failure.');
+                }
+
+                return $realRecordAudit->execute(...$arguments);
+            });
+    });
+
+    expect(fn () => app(CompleteDispositionBranch::class)->execute(
+        $finalHead['user'],
+        $finalBranch,
+        'Cabang terakhir harus rollback ketika audit penyelesaian surat gagal.',
+    ))->toThrow(RuntimeException::class, 'Simulated aggregate completion audit failure.');
+
+    expect($finalBranch->refresh()->status)->toBe(DispositionRecipientStatus::Pending)
+        ->and($finalBranch->completed_at)->toBeNull()
+        ->and($finalBranch->completed_by_user_id)->toBeNull()
+        ->and($finalBranch->completed_by_position_assignment_id)->toBeNull()
+        ->and($finalBranch->completion_note)->toBeNull()
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::InProgress)
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionCompleted->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::LetterCompleted->value)->count())->toBe(0);
+});
+
+test('branch mutation limiter is shared across lifecycle endpoints', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $branch = $fixture['branches'][0];
+    $head = $fixture['heads'][0];
+
+    for ($attempt = 1; $attempt <= 60; $attempt++) {
+        $this->actingAs($head['user'])
+            ->postJson(route('back-office.dispositions.inbox.branch.follow-ups.store', $branch), [
+                'note' => 'Pendek',
+            ])
+            ->assertUnprocessable();
+    }
+
+    $this->actingAs($head['user'])
+        ->postJson(route('back-office.dispositions.inbox.branch.start', $branch))
+        ->assertTooManyRequests();
+
+    expect($branch->refresh()->status)->toBe(DispositionRecipientStatus::Pending)
+        ->and(DispositionFollowUp::query()->count())->toBe(0);
+});
+
+test('executive inbox fails closed for inconsistent route and branch graphs', function (): void {
+    $fixture = m6IndependentBranchFixture();
+
+    DB::table('letter_routes')
+        ->where('id', $fixture['route']->getKey())
+        ->update(['status' => LetterRouteStatus::Pending->value]);
+
+    $this->actingAs($fixture['executive']['user'])
+        ->get(route('back-office.executive.inbox.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('inbox.data', 0)
+            ->where('summary.pending', 0)
+            ->where('summary.in_progress', 0));
+
+    DB::table('letter_routes')
+        ->where('id', $fixture['route']->getKey())
+        ->update(['status' => LetterRouteStatus::Completed->value]);
+    DB::table('disposition_recipients')
+        ->where('id', $fixture['branches'][0]->getKey())
+        ->update(['recipient_position_id' => $fixture['assistant']['position']->getKey()]);
+
+    $this->actingAs($fixture['executive']['user'])
+        ->getJson(route('back-office.executive.inbox.show', $fixture['route']))
+        ->assertConflict();
+
+    $this->actingAs($fixture['executive']['user'])
+        ->getJson(route('back-office.executive.inbox.index', ['progress' => 'UNKNOWN']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('progress');
 });
