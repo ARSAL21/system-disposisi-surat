@@ -20,6 +20,10 @@ enum AuditAction: string
     case LetterRegistered = 'LETTER_REGISTERED';
     case LetterRouted = 'LETTER_ROUTED';
     case DispositionCreated = 'DISPOSITION_CREATED';
+    case DispositionStarted = 'DISPOSITION_STARTED';
+    case FollowUpAdded = 'FOLLOW_UP_ADDED';
+    case DispositionCompleted = 'DISPOSITION_COMPLETED';
+    case LetterCompleted = 'LETTER_COMPLETED';
     case InstructionLabelCreated = 'INSTRUCTION_LABEL_CREATED';
     case InstructionLabelUpdated = 'INSTRUCTION_LABEL_UPDATED';
     case InstructionLabelStatusChanged = 'INSTRUCTION_LABEL_STATUS_CHANGED';

@@ -6,6 +6,8 @@ use App\Enums\AccountType;
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
 use App\Models\Disposition;
+use App\Models\DispositionFollowUp;
+use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
@@ -120,6 +122,24 @@ final class LetterActivityQuery
                     $dispositions
                         ->where('subject_type', 'disposition')
                         ->where('action', AuditAction::DispositionCreated->value);
+                })
+                ->orWhere(function (Builder $recipients): void {
+                    $recipients
+                        ->where('subject_type', 'disposition_recipient')
+                        ->whereIn('action', [
+                            AuditAction::DispositionStarted->value,
+                            AuditAction::DispositionCompleted->value,
+                        ]);
+                })
+                ->orWhere(function (Builder $followUps): void {
+                    $followUps
+                        ->where('subject_type', 'disposition_follow_up')
+                        ->where('action', AuditAction::FollowUpAdded->value);
+                })
+                ->orWhere(function (Builder $completedLetters): void {
+                    $completedLetters
+                        ->where('subject_type', 'incoming_letter')
+                        ->where('action', AuditAction::LetterCompleted->value);
                 });
         });
     }
@@ -156,8 +176,17 @@ final class LetterActivityQuery
         $dispositionIds = Disposition::query()
             ->select('id')
             ->whereIn('incoming_letter_id', clone $letterIds);
+        $recipientIds = DispositionRecipient::query()
+            ->select('disposition_recipients.id')
+            ->join('dispositions', 'dispositions.id', '=', 'disposition_recipients.disposition_id')
+            ->whereIn('dispositions.incoming_letter_id', clone $letterIds);
+        $followUpIds = DispositionFollowUp::query()
+            ->select('disposition_follow_ups.id')
+            ->join('disposition_recipients', 'disposition_recipients.id', '=', 'disposition_follow_ups.disposition_recipient_id')
+            ->join('dispositions', 'dispositions.id', '=', 'disposition_recipients.disposition_id')
+            ->whereIn('dispositions.incoming_letter_id', clone $letterIds);
 
-        $query->where(function (Builder $target) use ($submissionIds, $letterIds, $documentIds, $routeIds, $dispositionIds): void {
+        $query->where(function (Builder $target) use ($submissionIds, $letterIds, $documentIds, $routeIds, $dispositionIds, $recipientIds, $followUpIds): void {
             $target
                 ->where(function (Builder $submission) use ($submissionIds): void {
                     $submission
@@ -183,6 +212,16 @@ final class LetterActivityQuery
                     $disposition
                         ->where('subject_type', 'disposition')
                         ->whereIn('subject_id', $dispositionIds);
+                })
+                ->orWhere(function (Builder $recipient) use ($recipientIds): void {
+                    $recipient
+                        ->where('subject_type', 'disposition_recipient')
+                        ->whereIn('subject_id', $recipientIds);
+                })
+                ->orWhere(function (Builder $followUp) use ($followUpIds): void {
+                    $followUp
+                        ->where('subject_type', 'disposition_follow_up')
+                        ->whereIn('subject_id', $followUpIds);
                 });
         });
     }

@@ -48,6 +48,10 @@ final class LetterActivityCatalog
             AuditAction::LetterRegistered->value => 'Surat diregistrasi',
             AuditAction::LetterRouted->value => 'Surat diarahkan ke pimpinan',
             AuditAction::DispositionCreated->value => 'Disposisi dibuat',
+            AuditAction::DispositionStarted->value => 'Penanganan disposisi dimulai',
+            AuditAction::FollowUpAdded->value => 'Catatan tindak lanjut ditambahkan',
+            AuditAction::DispositionCompleted->value => 'Cabang disposisi diselesaikan',
+            AuditAction::LetterCompleted->value => 'Seluruh disposisi surat selesai',
             AuditAction::DocumentVersionCreated->value => 'Versi dokumen resmi dibuat',
         ];
     }
