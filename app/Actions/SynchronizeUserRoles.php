@@ -47,7 +47,7 @@ class SynchronizeUserRoles
                     ->get();
 
                 if ($requestedRoles->contains(
-                    fn (Role $role): bool => AuthorizationCatalog::isProtectedRole($role->name),
+                    fn (Role $role): bool => ! AuthorizationCatalog::isAssignableRole($role->name),
                 )) {
                     throw ValidationException::withMessages([
                         'role_ids' => 'Protected role tidak dapat dikelola melalui web.',
@@ -69,14 +69,14 @@ class SynchronizeUserRoles
                     ->orderBy('id')
                     ->lockForUpdate()
                     ->get();
-                $currentCustomRoles = $currentRoles->reject(
-                    fn (Role $role): bool => AuthorizationCatalog::isProtectedRole($role->name),
+                $currentAssignableRoles = $currentRoles->filter(
+                    fn (Role $role): bool => AuthorizationCatalog::isAssignableRole($role->name),
                 );
-                $protectedRoles = $currentRoles->filter(
-                    fn (Role $role): bool => AuthorizationCatalog::isProtectedRole($role->name),
+                $restrictedRoles = $currentRoles->reject(
+                    fn (Role $role): bool => AuthorizationCatalog::isAssignableRole($role->name),
                 );
 
-                $addedRoleIds = array_diff($requestedRoleIds, $currentCustomRoles->modelKeys());
+                $addedRoleIds = array_diff($requestedRoleIds, $currentAssignableRoles->modelKeys());
 
                 if ($addedRoleIds !== [] && (! $lockedTarget->is_active || ! $lockedTarget->hasVerifiedEmail())) {
                     throw ValidationException::withMessages([
@@ -86,7 +86,7 @@ class SynchronizeUserRoles
 
                 $oldRoleNames = $this->roleNames($currentRoles);
                 $newRoleIds = array_values(array_unique([
-                    ...$protectedRoles->modelKeys(),
+                    ...$restrictedRoles->modelKeys(),
                     ...$requestedRoles->modelKeys(),
                 ]));
                 $newRoles = Role::query()
