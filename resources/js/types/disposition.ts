@@ -31,9 +31,13 @@ export type DispositionInstructionSnapshot = {
     name: string;
 };
 
-export type FirstDispositionReceipt = {
+export type FirstDispositionRecipient = {
     status: DispositionRecipientStatus;
     recipient_position: DispositionPositionOption;
+};
+
+export type FirstDispositionReceipt = {
+    recipients: FirstDispositionRecipient[];
     instructions: DispositionInstructionSnapshot[];
     instruction_note: string | null;
     disposed_by: RoutingActor;
@@ -50,7 +54,7 @@ export type FirstDispositionRoutes = {
 };
 
 export type CreateFirstDispositionPayload = {
-    recipient_position_id: number;
+    recipient_position_ids: number[];
     instruction_label_ids: number[];
     instruction_note: string;
 };
@@ -102,6 +106,42 @@ export type ForwardDispositionCapabilities = {
     can_forward_disposition: boolean;
 };
 
+export type DispositionFollowUp = {
+    note: string;
+    created_at: string;
+    created_by: RoutingActor;
+};
+
+export type DispositionBranchLifecycle = {
+    status: DispositionRecipientStatus;
+    received_at: string;
+    started_at: string | null;
+    completed_at: string | null;
+    completion_note: string | null;
+    completed_by: RoutingActor | null;
+    follow_ups: DispositionFollowUp[];
+};
+
+export type DispositionBranchCapabilities = {
+    can_start_branch: boolean;
+    can_add_follow_up: boolean;
+    can_complete_branch: boolean;
+};
+
+export type DispositionBranchRoutes = {
+    start?: string;
+    follow_up?: string;
+    complete?: string;
+};
+
+export type AddDispositionFollowUpPayload = {
+    note: string;
+};
+
+export type CompleteDispositionBranchPayload = {
+    completion_note: string;
+};
+
 export type ForwardedDispositionRecipient = {
     recipient_position: DispositionPositionOption;
     status: DispositionRecipientStatus;
@@ -116,7 +156,35 @@ export type ForwardDispositionReceipt = {
     disposed_at: string;
 };
 
-export type DispositionInboxDetailRoutes = {
+export type AssistantBranchMonitorItem = DispositionBranchLifecycle & {
+    recipient_position: DispositionPositionOption;
+};
+
+export type AssistantBranchMonitor = {
+    total: number;
+    pending: number;
+    in_progress: number;
+    completed: number;
+    percent_complete: number;
+    branches: AssistantBranchMonitorItem[];
+};
+
+export type ExecutiveBranchProgressPhase =
+    'AWAITING_DECISION' | 'AWAITING_FORWARDING' | 'IN_PROGRESS' | 'COMPLETED';
+
+export type ExecutiveBranchProgress = {
+    phase: ExecutiveBranchProgressPhase;
+    total: number;
+    pending: number;
+    in_progress: number;
+    completed: number;
+    percent_complete: number;
+};
+
+export type DispositionInboxDetailCapabilities =
+    ForwardDispositionCapabilities & Partial<DispositionBranchCapabilities>;
+
+export type DispositionInboxDetailRoutes = DispositionBranchRoutes & {
     index: string;
     store?: string;
 };

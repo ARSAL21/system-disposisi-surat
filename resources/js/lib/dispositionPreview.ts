@@ -1,11 +1,14 @@
 import { previewLetterRoutingItems } from '@/lib/letterRoutingPreview';
 import type {
+    AssistantBranchMonitor,
+    DispositionBranchLifecycle,
     DispositionInboxItem,
     DispositionInboxSummary,
     DispositionInstructionLabel,
     DispositionInstructionLabelOption,
     DispositionPositionOption,
     FirstDispositionReceipt,
+    ForwardDispositionReceipt,
 } from '@/types';
 
 export const previewAssistantPositions: DispositionPositionOption[] = [
@@ -148,8 +151,12 @@ export const previewDispositionInstructionLabels: DispositionInstructionLabelOpt
     ];
 
 export const previewFirstDispositionReceipt: FirstDispositionReceipt = {
-    status: 'PENDING',
-    recipient_position: previewAssistantPositions[0],
+    recipients: [
+        {
+            status: 'PENDING',
+            recipient_position: previewAssistantPositions[0],
+        },
+    ],
     instructions: [
         { code: 'UNTUK_DITINDAKLANJUTI', name: 'Untuk ditindaklanjuti' },
         { code: 'SEGERA', name: 'Segera' },
@@ -196,14 +203,214 @@ export const previewDispositionInboxItems: DispositionInboxItem[] = [
             },
         ],
         instruction_note: null,
-        status: 'IN_PROGRESS',
+        status: 'COMPLETED',
         received_at: '2026-08-30T14:26:00+08:00',
         current_document: previewLetterRoutingItems[3].current_document,
         links: {
             show: '/back-office/previews/dispositions/inbox/recipients/702',
         },
     },
+    {
+        recipient_id: 703,
+        letter: previewLetterRoutingItems[3],
+        sender: {
+            name: 'Drs. Abdul Malik, M.Si.',
+            position: 'Asisten Pemerintahan dan Kesejahteraan Rakyat',
+            unit: 'Sekretariat Daerah',
+        },
+        recipient_position: previewSectionHeadPositions[2],
+        instructions: [
+            {
+                code: 'UNTUK_DITINDAKLANJUTI',
+                name: 'Untuk ditindaklanjuti',
+            },
+            { code: 'SEGERA', name: 'Segera' },
+        ],
+        instruction_note:
+            'Siapkan telaah dampak ekonomi dan koordinasikan data pendukung dengan perangkat daerah terkait.',
+        status: 'PENDING',
+        received_at: '2026-09-01T10:15:00+08:00',
+        current_document: previewLetterRoutingItems[3].current_document,
+        links: {
+            show: '/back-office/previews/dispositions/inbox/recipients/703',
+        },
+    },
+    {
+        recipient_id: 704,
+        letter: previewLetterRoutingItems[2],
+        sender: {
+            name: 'Drs. Abdul Malik, M.Si.',
+            position: 'Asisten Pemerintahan dan Kesejahteraan Rakyat',
+            unit: 'Sekretariat Daerah',
+        },
+        recipient_position: previewSectionHeadPositions[1],
+        instructions: [
+            { code: 'UNTUK_DIPELAJARI', name: 'Untuk dipelajari' },
+            {
+                code: 'UNTUK_DIKOORDINASIKAN',
+                name: 'Untuk dikoordinasikan',
+            },
+        ],
+        instruction_note:
+            'Telaah dasar hukum dan siapkan poin yang memerlukan keputusan pimpinan.',
+        status: 'IN_PROGRESS',
+        received_at: '2026-09-01T08:40:00+08:00',
+        current_document: previewLetterRoutingItems[2].current_document,
+        links: {
+            show: '/back-office/previews/dispositions/inbox/recipients/704',
+        },
+    },
+    {
+        recipient_id: 705,
+        letter: previewLetterRoutingItems[2],
+        sender: {
+            name: 'Drs. Abdul Malik, M.Si.',
+            position: 'Asisten Pemerintahan dan Kesejahteraan Rakyat',
+            unit: 'Sekretariat Daerah',
+        },
+        recipient_position: previewSectionHeadPositions[0],
+        instructions: [
+            {
+                code: 'UNTUK_DITINDAKLANJUTI',
+                name: 'Untuk ditindaklanjuti',
+            },
+        ],
+        instruction_note:
+            'Koordinasikan jadwal dan kesiapan bahan bersama unit terkait.',
+        status: 'COMPLETED',
+        received_at: '2026-08-31T09:10:00+08:00',
+        current_document: previewLetterRoutingItems[2].current_document,
+        links: {
+            show: '/back-office/previews/dispositions/inbox/recipients/705',
+        },
+    },
 ];
+
+const previewBranchActors = {
+    pemerintahan: {
+        name: 'Drs. Arman Saleh, M.Si.',
+        position: 'Kepala Bagian Pemerintahan',
+        unit: 'Bagian Pemerintahan',
+    },
+    hukum: {
+        name: 'Nurlina, S.H., M.H.',
+        position: 'Kepala Bagian Hukum',
+        unit: 'Bagian Hukum',
+    },
+};
+
+export const previewDispositionBranches: Record<
+    number,
+    DispositionBranchLifecycle
+> = {
+    703: {
+        status: 'PENDING',
+        received_at: '2026-09-01T10:15:00+08:00',
+        started_at: null,
+        completed_at: null,
+        completion_note: null,
+        completed_by: null,
+        follow_ups: [],
+    },
+    704: {
+        status: 'IN_PROGRESS',
+        received_at: '2026-09-01T08:40:00+08:00',
+        started_at: '2026-09-01T09:05:00+08:00',
+        completed_at: null,
+        completion_note: null,
+        completed_by: null,
+        follow_ups: [
+            {
+                note: 'Telaah awal telah dilakukan. Dua pasal memerlukan konfirmasi dari perangkat daerah pengusul.',
+                created_at: '2026-09-01T09:42:00+08:00',
+                created_by: previewBranchActors.hukum,
+            },
+            {
+                note: 'Bahan klarifikasi sudah diterima dan sedang diselaraskan dengan regulasi terbaru.',
+                created_at: '2026-09-01T11:18:00+08:00',
+                created_by: previewBranchActors.hukum,
+            },
+        ],
+    },
+    705: {
+        status: 'COMPLETED',
+        received_at: '2026-08-31T09:10:00+08:00',
+        started_at: '2026-08-31T09:32:00+08:00',
+        completed_at: '2026-09-01T08:25:00+08:00',
+        completion_note:
+            'Koordinasi jadwal telah selesai. Bahan rapat dan daftar peserta sudah diteruskan kepada sekretariat pimpinan.',
+        completed_by: previewBranchActors.pemerintahan,
+        follow_ups: [
+            {
+                note: 'Konfirmasi awal dengan tiga unit terkait telah dilakukan.',
+                created_at: '2026-08-31T11:20:00+08:00',
+                created_by: previewBranchActors.pemerintahan,
+            },
+            {
+                note: 'Jadwal final dan bahan rapat telah disepakati bersama.',
+                created_at: '2026-09-01T08:10:00+08:00',
+                created_by: previewBranchActors.pemerintahan,
+            },
+        ],
+    },
+};
+
+export const previewForwardedDispositionReceipt: ForwardDispositionReceipt = {
+    instructions: [
+        { code: 'UNTUK_DITINDAKLANJUTI', name: 'Untuk ditindaklanjuti' },
+        {
+            code: 'UNTUK_DIKOORDINASIKAN',
+            name: 'Untuk dikoordinasikan',
+        },
+    ],
+    instruction_note:
+        'Kerjakan sesuai kewenangan masing-masing dan laporkan perkembangan melalui jurnal cabang.',
+    recipients: [
+        {
+            recipient_position: previewSectionHeadPositions[0],
+            status: previewDispositionBranches[705].status,
+            received_at: previewDispositionBranches[705].received_at,
+        },
+        {
+            recipient_position: previewSectionHeadPositions[1],
+            status: previewDispositionBranches[704].status,
+            received_at: previewDispositionBranches[704].received_at,
+        },
+        {
+            recipient_position: previewSectionHeadPositions[2],
+            status: previewDispositionBranches[703].status,
+            received_at: previewDispositionBranches[703].received_at,
+        },
+    ],
+    disposed_by: {
+        name: 'Drs. Abdul Malik, M.Si.',
+        position: 'Asisten Pemerintahan dan Kesejahteraan Rakyat',
+        unit: 'Sekretariat Daerah',
+    },
+    disposed_at: '2026-09-01T08:35:00+08:00',
+};
+
+export const previewAssistantBranchMonitor: AssistantBranchMonitor = {
+    total: 3,
+    pending: 1,
+    in_progress: 1,
+    completed: 1,
+    percent_complete: 33,
+    branches: [
+        {
+            recipient_position: previewSectionHeadPositions[0],
+            ...previewDispositionBranches[705],
+        },
+        {
+            recipient_position: previewSectionHeadPositions[1],
+            ...previewDispositionBranches[704],
+        },
+        {
+            recipient_position: previewSectionHeadPositions[2],
+            ...previewDispositionBranches[703],
+        },
+    ],
+};
 
 export const previewDispositionInboxSummary: DispositionInboxSummary = {
     pending: 5,
