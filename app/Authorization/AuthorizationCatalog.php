@@ -100,6 +100,12 @@ final class AuthorizationCatalog
                     'description' => 'Membuat disposisi kepada jabatan di bawahnya sesuai hierarki resmi.',
                     'group' => 'Disposisi Surat',
                 ],
+                PermissionName::ProcessDispositions => [
+                    'name' => $permission->value,
+                    'label' => 'Proses cabang disposisi',
+                    'description' => 'Memulai, mencatat tindak lanjut, dan menyelesaikan cabang disposisi milik jabatan aktif Kepala Bagian.',
+                    'group' => 'Disposisi Surat',
+                ],
                 PermissionName::ViewDispositionInstructions => [
                     'name' => $permission->value,
                     'label' => 'Lihat katalog instruksi disposisi',
@@ -158,6 +164,11 @@ final class AuthorizationCatalog
         return in_array($roleName, self::roleNames(), true);
     }
 
+    public static function isAssignableRole(string $roleName): bool
+    {
+        return $roleName !== RoleName::SuperAdmin->value;
+    }
+
     /** @return list<string> */
     public static function permissionsFor(RoleName $role): array
     {
@@ -177,11 +188,48 @@ final class AuthorizationCatalog
                 PermissionName::ViewExecutiveInbox->value,
                 PermissionName::ViewDispositions->value,
                 PermissionName::CreateDispositions->value,
+                PermissionName::ProcessDispositions->value,
                 PermissionName::ViewDispositionInstructions->value,
                 PermissionName::ManageDispositionInstructions->value,
                 PermissionName::ViewIntake->value,
                 PermissionName::ScreenIntake->value,
                 PermissionName::DecideIntake->value,
+            ],
+            RoleName::LetterOfficer => [
+                PermissionName::ViewIntake->value,
+                PermissionName::ScreenIntake->value,
+                PermissionName::ViewLetterActivities->value,
+                PermissionName::ViewDocumentVersions->value,
+                PermissionName::ViewLetterRouting->value,
+            ],
+            RoleName::GeneralAffairsHead => [
+                PermissionName::ViewIntake->value,
+                PermissionName::DecideIntake->value,
+                PermissionName::ViewLetterActivities->value,
+                PermissionName::ViewDocumentVersions->value,
+                PermissionName::CreateDocumentVersions->value,
+                PermissionName::ViewLetterRouting->value,
+                PermissionName::CreateLetterRouting->value,
+                PermissionName::ViewDispositions->value,
+                PermissionName::ProcessDispositions->value,
+                PermissionName::ViewDispositionInstructions->value,
+            ],
+            RoleName::ExecutiveLeader => [
+                PermissionName::ViewExecutiveInbox->value,
+                PermissionName::CreateDispositions->value,
+                PermissionName::ViewDocumentVersions->value,
+                PermissionName::ViewLetterActivities->value,
+                PermissionName::ViewDispositionInstructions->value,
+            ],
+            RoleName::Assistant => [
+                PermissionName::ViewDispositions->value,
+                PermissionName::CreateDispositions->value,
+                PermissionName::ViewDispositionInstructions->value,
+            ],
+            RoleName::SectionHead => [
+                PermissionName::ViewDispositions->value,
+                PermissionName::ProcessDispositions->value,
+                PermissionName::ViewDispositionInstructions->value,
             ],
         };
     }
