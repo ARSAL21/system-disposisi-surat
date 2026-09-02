@@ -26,6 +26,7 @@ class ExecutiveInboxController extends Controller
         ListExecutiveInboxRequest $request,
         ExecutiveInboxQuery $inboxQuery,
         LetterRoutingPresenter $presenter,
+        DispositionPresenter $dispositionPresenter,
     ): Response {
         /** @var User $user */
         $user = $request->user();
@@ -37,7 +38,12 @@ class ExecutiveInboxController extends Controller
         return Inertia::render('back-office/executive/inbox/Index', [
             'inbox' => [
                 'data' => $paginator->getCollection()
-                    ->map(fn (LetterRoute $letterRoute): array => $presenter->inboxRoute($letterRoute))
+                    ->map(fn (LetterRoute $letterRoute): array => [
+                        ...$presenter->inboxRoute($letterRoute),
+                        'branch_progress' => $dispositionPresenter->executiveBranchProgress(
+                            $letterRoute->disposition,
+                        ),
+                    ])
                     ->values()
                     ->all(),
                 'pagination' => $this->pagination($paginator),
@@ -73,6 +79,8 @@ class ExecutiveInboxController extends Controller
             'disposition.recipients.recipientPosition.positionLevel:id,code',
             'disposition.recipients.recipientPosition.organizationalUnit:id,name',
             'disposition.recipients.recipientPosition.activeAssignment.user:id,name,account_type,is_active,email_verified_at',
+            'disposition.recipients.childDispositions.recipients:id,disposition_id,recipient_position_id,status',
+            'disposition.recipients.childDispositions.recipients.recipientPosition.positionLevel:id,code',
         ]);
         $firstDisposition = $letterRoute->disposition;
         $canCreateDisposition = Gate::allows('createDisposition', $letterRoute)
@@ -99,6 +107,7 @@ class ExecutiveInboxController extends Controller
             'firstDisposition' => $firstDisposition instanceof Disposition
                 ? $dispositionPresenter->firstDisposition($firstDisposition)
                 : null,
+            'branchProgress' => $dispositionPresenter->executiveBranchProgress($firstDisposition),
             'capabilities' => [
                 'can_create_disposition' => $canCreateDisposition,
             ],
