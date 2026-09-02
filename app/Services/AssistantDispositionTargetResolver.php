@@ -52,54 +52,75 @@ class AssistantDispositionTargetResolver
             ->get();
     }
 
-    /** @return array{Position, PositionAssignment} */
-    public function lockAvailablePosition(
-        int $positionId,
+    /**
+     * @param  list<int>  $positionIds
+     * @return Collection<int, array{Position, PositionAssignment}>
+     */
+    public function lockAvailablePositions(
+        array $positionIds,
         int $actorPositionId,
         int $actorUserId,
-    ): array {
-        if ($positionId === $actorPositionId) {
+    ): Collection {
+        $ids = array_values(array_unique($positionIds));
+
+        sort($ids, SORT_NUMERIC);
+
+        if (count($ids) < 1 || count($ids) > 3 || count($ids) !== count($positionIds)) {
             $this->throwUnavailable();
         }
 
-        $position = $this->eligiblePositionsQuery()
-            ->whereKey($positionId)
+        $positions = $this->eligiblePositionsQuery()
+            ->whereIn('positions.id', $ids)
             ->where('positions.id', '!=', $actorPositionId)
+            ->orderBy('positions.id')
             ->lockForUpdate()
-            ->first();
+            ->get()
+            ->keyBy(fn (Position $position): int => (int) $position->getKey());
 
-        if (! $position instanceof Position) {
+        if ($positions->count() !== count($ids)) {
             $this->throwUnavailable();
         }
 
-        $assignments = PositionAssignment::query()
-            ->where('position_id', $position->getKey())
-            ->where('started_at', '<=', now())
-            ->whereNull('ended_at')
-            ->lockForUpdate()
-            ->limit(2)
-            ->get();
+        $resolved = new Collection;
 
-        if ($assignments->count() !== 1) {
-            $this->throwUnavailable();
+        foreach ($ids as $positionId) {
+            $position = $positions->get($positionId);
+
+            if (! $position instanceof Position) {
+                $this->throwUnavailable();
+            }
+
+            $assignments = PositionAssignment::query()
+                ->where('position_id', $position->getKey())
+                ->where('started_at', '<=', now())
+                ->whereNull('ended_at')
+                ->lockForUpdate()
+                ->limit(2)
+                ->get();
+
+            if ($assignments->count() !== 1) {
+                $this->throwUnavailable();
+            }
+
+            $assignment = $assignments->firstOrFail();
+            $holder = User::query()
+                ->whereKey($assignment->user_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $holder instanceof User
+                || $holder->account_type !== AccountType::InternalAccount
+                || ! $holder->is_active
+                || ! $holder->hasVerifiedEmail()
+                || (int) $assignment->user_id === $actorUserId
+            ) {
+                $this->throwUnavailable();
+            }
+
+            $resolved->push([$position, $assignment]);
         }
 
-        $assignment = $assignments->firstOrFail();
-        $holder = User::query()
-            ->whereKey($assignment->user_id)
-            ->lockForUpdate()
-            ->first();
-
-        if (! $holder instanceof User
-            || $holder->account_type !== AccountType::InternalAccount
-            || ! $holder->is_active
-            || ! $holder->hasVerifiedEmail()
-            || (int) $assignment->user_id === $actorUserId
-        ) {
-            $this->throwUnavailable();
-        }
-
-        return [$position, $assignment];
+        return $resolved;
     }
 
     /** @return Builder<Position> */
@@ -115,7 +136,7 @@ class AssistantDispositionTargetResolver
     private function throwUnavailable(): never
     {
         throw ValidationException::withMessages([
-            'recipient_position_id' => 'Asisten tujuan tidak tersedia, tidak memiliki pejabat aktif, atau bukan bawahan yang sah.',
+            'recipient_position_ids' => 'Satu atau lebih Asisten tujuan tidak tersedia, tidak memiliki pejabat aktif, atau bukan bawahan yang sah.',
         ]);
     }
 }

@@ -55,6 +55,25 @@ class DispositionPositionAssignmentResolver
             ->exists();
     }
 
+    public function hasSectionHeadAssignment(User $user): bool
+    {
+        return $this->sectionHeadQuery($user)->exists();
+    }
+
+    public function hasSectionHeadAssignmentForPosition(User $user, int $positionId): bool
+    {
+        return $this->sectionHeadQuery($user)
+            ->where('position_id', $positionId)
+            ->exists();
+    }
+
+    public function lockSectionHeadAssignmentForPosition(User $user, int $positionId): PositionAssignment
+    {
+        return $this->lockExactlyOne(
+            $this->sectionHeadQuery($user)->where('position_id', $positionId),
+        );
+    }
+
     /** @return list<int> */
     public function assistantPositionIds(User $user): array
     {
@@ -111,6 +130,12 @@ class DispositionPositionAssignmentResolver
     private function assistantQuery(User $user): Builder
     {
         return $this->positionLevelQuery($user, OrganizationCatalog::ASSISTANT_LEVEL);
+    }
+
+    /** @return Builder<PositionAssignment> */
+    private function sectionHeadQuery(User $user): Builder
+    {
+        return $this->positionLevelQuery($user, OrganizationCatalog::SECTION_HEAD_LEVEL);
     }
 
     /** @return Builder<PositionAssignment> */
