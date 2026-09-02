@@ -10,6 +10,7 @@ export * from './letter-activity';
 export * from './letter-routing';
 export * from './navigation';
 export * from './organization';
+export * from './periodic-report';
 export * from './privilege-audit';
 export * from './submission';
 export * from './ui';
