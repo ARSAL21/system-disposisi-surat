@@ -17,6 +17,16 @@ class DispositionStateConflict extends RuntimeException
         return new self('Routing ini sudah memiliki disposisi pertama.');
     }
 
+    public static function staleBranch(): self
+    {
+        return new self('Status surat atau cabang disposisi telah berubah. Muat ulang halaman sebelum melanjutkan.');
+    }
+
+    public static function inconsistentGraph(): self
+    {
+        return new self('Graph disposisi tidak konsisten sehingga penanganan cabang dihentikan.');
+    }
+
     public function render(): JsonResponse
     {
         return response()->json([
