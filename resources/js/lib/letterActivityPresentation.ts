@@ -15,6 +15,10 @@ export const letterActivityActionLabels: Record<LetterActivityAction, string> =
         LETTER_REGISTERED: 'Surat diregistrasi',
         LETTER_ROUTED: 'Surat diarahkan ke pimpinan',
         DISPOSITION_CREATED: 'Disposisi pertama dibuat',
+        DISPOSITION_STARTED: 'Penanganan disposisi dimulai',
+        FOLLOW_UP_ADDED: 'Catatan tindak lanjut ditambahkan',
+        DISPOSITION_COMPLETED: 'Cabang disposisi diselesaikan',
+        LETTER_COMPLETED: 'Seluruh disposisi surat selesai',
         DOCUMENT_VERSION_CREATED: 'Dokumen resmi dikunci',
     };
 
@@ -36,6 +40,13 @@ export const letterActivityActionDescriptions: Record<
         'Bagian Umum mengarahkan surat resmi kepada satu pimpinan tujuan.',
     DISPOSITION_CREATED:
         'Wali Kota atau Sekretaris Daerah mengirim disposisi pertama kepada Asisten.',
+    DISPOSITION_STARTED:
+        'Kepala Bagian mulai menangani cabang disposisi milik jabatannya.',
+    FOLLOW_UP_ADDED:
+        'Perkembangan pekerjaan dicatat pada jurnal cabang disposisi.',
+    DISPOSITION_COMPLETED:
+        'Satu cabang Kepala Bagian ditutup dengan hasil penyelesaian final.',
+    LETTER_COMPLETED: 'Seluruh cabang Kepala Bagian telah selesai ditangani.',
     DOCUMENT_VERSION_CREATED:
         'Versi dokumen resmi dan sidik jari SHA-256 dicatat.',
 };
@@ -46,12 +57,14 @@ export function letterActivityActionClass(
     if (
         action === 'LETTER_REGISTERED' ||
         action === 'LETTER_ROUTED' ||
-        action === 'DISPOSITION_CREATED'
+        action === 'DISPOSITION_CREATED' ||
+        action === 'DISPOSITION_COMPLETED' ||
+        action === 'LETTER_COMPLETED'
     ) {
         return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300';
     }
 
-    if (action === 'DOCUMENT_VERSION_CREATED') {
+    if (action === 'DOCUMENT_VERSION_CREATED' || action === 'FOLLOW_UP_ADDED') {
         return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950/50 dark:text-violet-300';
     }
 
