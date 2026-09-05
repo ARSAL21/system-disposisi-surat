@@ -38,10 +38,7 @@ const inputEmail = ref(props.email);
         class="space-y-4.5"
     >
         <div class="space-y-1.5">
-            <Label
-                for="email"
-                class="text-xs font-semibold text-foreground"
-            >
+            <Label for="email" class="text-xs font-semibold text-foreground">
                 Alamat Email
             </Label>
             <div class="relative">
@@ -64,10 +61,7 @@ const inputEmail = ref(props.email);
         </div>
 
         <div class="space-y-1.5">
-            <Label
-                for="password"
-                class="text-xs font-semibold text-foreground"
-            >
+            <Label for="password" class="text-xs font-semibold text-foreground">
                 Kata Sandi Baru
             </Label>
             <PasswordInput
