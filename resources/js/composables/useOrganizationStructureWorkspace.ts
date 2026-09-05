@@ -17,6 +17,8 @@ export function useOrganizationStructureWorkspace(
     const statusDialogOpen = ref(false);
     const selectedUnit = ref<OrganizationalUnit | null>(null);
     const selectedPosition = ref<OrganizationPosition | null>(null);
+    const presetParentId = ref<number | null>(null);
+    const presetUnitId = ref<number | null>(null);
     let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
     watch(
@@ -85,13 +87,21 @@ export function useOrganizationStructureWorkspace(
         visit(changes);
     }
 
-    function openUnit(unit: OrganizationalUnit | null): void {
+    function openUnit(
+        unit: OrganizationalUnit | null,
+        parentId: number | null = null,
+    ): void {
         selectedUnit.value = unit;
+        presetParentId.value = parentId;
         unitDialogOpen.value = true;
     }
 
-    function openPosition(position: OrganizationPosition | null): void {
+    function openPosition(
+        position: OrganizationPosition | null,
+        unitId: number | null = null,
+    ): void {
         selectedPosition.value = position;
+        presetUnitId.value = unitId;
         positionDialogOpen.value = true;
     }
 
@@ -109,6 +119,8 @@ export function useOrganizationStructureWorkspace(
         statusDialogOpen,
         selectedUnit,
         selectedPosition,
+        presetParentId,
+        presetUnitId,
         statusResource,
         summaryItems,
         visit,

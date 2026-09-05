@@ -9,7 +9,11 @@ const emit = defineEmits<{
 const tabs = [
     { value: 'levels' as const, label: 'Level Workflow', icon: Layers3 },
     { value: 'units' as const, label: 'Unit Organisasi', icon: Building2 },
-    { value: 'positions' as const, label: 'Daftar Jabatan', icon: BriefcaseBusiness },
+    {
+        value: 'positions' as const,
+        label: 'Daftar Jabatan',
+        icon: BriefcaseBusiness,
+    },
 ];
 </script>
 

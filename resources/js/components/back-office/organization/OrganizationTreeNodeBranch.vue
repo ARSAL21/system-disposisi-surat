@@ -9,10 +9,7 @@ import {
     GitFork,
 } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
-import type {
-    OrganizationTreeNode,
-    OrganizationTreePosition,
-} from '@/types';
+import type { OrganizationTreeNode, OrganizationTreePosition } from '@/types';
 
 defineProps<{
     node: OrganizationTreeNode;
@@ -60,8 +57,8 @@ function getLevelIcon(code: string) {
 
 function isUnitMatched(unit: OrganizationTreeNode, query: string): boolean {
     if (!query) {
-return true;
-}
+        return true;
+    }
 
     const q = query.toLowerCase();
     const matchName = unit.name.toLowerCase().includes(q);
@@ -77,10 +74,13 @@ return true;
     return matchName || matchCode || matchPosition;
 }
 
-function isPositionMatched(pos: OrganizationTreePosition, query: string): boolean {
+function isPositionMatched(
+    pos: OrganizationTreePosition,
+    query: string,
+): boolean {
     if (!query) {
-return true;
-}
+        return true;
+    }
 
     const q = query.toLowerCase();
 
@@ -96,8 +96,8 @@ function filterPositions(
     mode: string,
 ): OrganizationTreePosition[] {
     if (mode === 'units_only') {
-return [];
-}
+        return [];
+    }
 
     if (mode === 'occupied_only') {
         return positions.filter((p) => p.active_assignment !== null);
@@ -117,7 +117,9 @@ return [];
         <div
             class="group relative rounded-2xl border bg-card p-4 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-slate-900"
             :class="[
-                depth === 0 ? 'w-80 border-indigo-500/40' : 'w-72 border-border/80',
+                depth === 0
+                    ? 'w-80 border-indigo-500/40'
+                    : 'w-72 border-border/80',
                 isUnitMatched(node, searchQuery) && searchQuery
                     ? 'border-indigo-500 ring-2 ring-indigo-500/50'
                     : 'hover:border-indigo-500/60',
@@ -139,7 +141,7 @@ return [];
             <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2 truncate">
                     <div
-                        class="flex size-7.5 items-center justify-center rounded-xl font-bold text-xs"
+                        class="flex size-7.5 items-center justify-center rounded-xl text-xs font-bold"
                         :class="[
                             depth === 0
                                 ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300'
@@ -159,14 +161,16 @@ return [];
                             v-else
                             class="text-[10px] font-semibold text-muted-foreground"
                         >
-                            {{ depth === 0 ? 'Unit Induk' : 'Bagian / Sub-unit' }}
+                            {{
+                                depth === 0 ? 'Unit Induk' : 'Bagian / Sub-unit'
+                            }}
                         </span>
                     </div>
                 </div>
 
                 <Badge
                     :variant="node.is_active ? 'outline' : 'secondary'"
-                    class="shrink-0 text-[9px] px-1.5 py-0"
+                    class="shrink-0 px-1.5 py-0 text-[9px]"
                 >
                     {{ node.is_active ? 'Aktif' : 'Nonaktif' }}
                 </Badge>
@@ -187,7 +191,9 @@ return [];
                 v-if="filterPositions(node.positions, viewMode).length > 0"
                 class="mt-3 space-y-1.5 border-t border-border/50 pt-2.5"
             >
-                <div class="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
+                <div
+                    class="flex items-center justify-between text-[10px] font-semibold text-muted-foreground"
+                >
                     <span>Jabatan ({{ node.positions.length }})</span>
                 </div>
 
@@ -207,10 +213,14 @@ return [];
                             class="size-3.5 shrink-0 text-indigo-600 dark:text-indigo-400"
                         />
                         <div class="truncate">
-                            <p class="truncate font-semibold text-foreground text-[11px]">
+                            <p
+                                class="truncate text-[11px] font-semibold text-foreground"
+                            >
                                 {{ pos.name }}
                             </p>
-                            <p class="truncate text-[10px] text-muted-foreground">
+                            <p
+                                class="truncate text-[10px] text-muted-foreground"
+                            >
                                 {{
                                     pos.active_assignment
                                         ? pos.active_assignment.user.name
@@ -222,7 +232,7 @@ return [];
 
                     <Badge
                         variant="outline"
-                        class="shrink-0 text-[8px] px-1.5 py-0 font-medium"
+                        class="shrink-0 px-1.5 py-0 text-[8px] font-medium"
                         :class="getLevelBadgeClass(pos.level.code)"
                     >
                         {{ pos.level.name.split(' ')[0] }}
@@ -231,7 +241,9 @@ return [];
             </div>
 
             <!-- Card Footer: Inspector & Collapse Button -->
-            <div class="mt-3.5 flex items-center justify-between border-t border-border/60 pt-2 text-[11px]">
+            <div
+                class="mt-3.5 flex items-center justify-between border-t border-border/60 pt-2 text-[11px]"
+            >
                 <button
                     type="button"
                     class="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
@@ -258,7 +270,11 @@ return [];
 
         <!-- Recursive Children Tree Branches -->
         <div
-            v-if="node.children && node.children.length > 0 && !collapsedUnitIds.has(node.id)"
+            v-if="
+                node.children &&
+                node.children.length > 0 &&
+                !collapsedUnitIds.has(node.id)
+            "
             class="flex flex-col items-center"
         >
             <!-- Vertical Line Down -->
