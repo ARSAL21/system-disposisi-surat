@@ -38,6 +38,7 @@ class IntakeApprovalPositionAssignmentResolver
     {
         return PositionAssignment::query()
             ->where('user_id', $user->getKey())
+            ->where('started_at', '<=', now())
             ->whereNull('ended_at')
             ->whereHas('position', fn (Builder $query) => $query
                 ->where('is_active', true)
