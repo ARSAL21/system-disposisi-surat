@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Reporting\ReportLetterQuery;
 use App\Reporting\ReportScopeResolver;
 use App\Services\DocumentVersionPositionAssignmentResolver;
+use App\Services\IncomingRegisterPositionAssignmentResolver;
 use App\Services\LetterRoutingPositionAssignmentResolver;
 use Illuminate\Auth\Access\Response;
 
@@ -19,7 +20,23 @@ class IncomingLetterPolicy
         private readonly LetterRoutingPositionAssignmentResolver $routingPositionAssignmentResolver,
         private readonly ReportScopeResolver $reportScopeResolver,
         private readonly ReportLetterQuery $reportLetterQuery,
+        private readonly IncomingRegisterPositionAssignmentResolver $incomingRegisterPositionAssignmentResolver,
     ) {}
+
+    public function viewAnyRegister(User $user): Response
+    {
+        if (! $this->isEligibleInternalUser($user)) {
+            return Response::denyAsNotFound();
+        }
+
+        if (! $user->can(PermissionName::ViewIncomingRegister->value)) {
+            return Response::deny('You do not have permission to view the incoming letter register.');
+        }
+
+        return $this->incomingRegisterPositionAssignmentResolver->hasActiveAssignment($user)
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
 
     public function viewAny(User $user): Response
     {
