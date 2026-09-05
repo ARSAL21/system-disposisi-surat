@@ -17,10 +17,14 @@ import { login } from '@/routes';
                     <FileSignature class="size-5" />
                 </div>
                 <div class="flex flex-col">
-                    <span class="font-['Syne',sans-serif] text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    <span
+                        class="font-['Syne',sans-serif] text-base font-extrabold tracking-tight text-slate-900 dark:text-white"
+                    >
                         E-Disposisi
                     </span>
-                    <span class="font-mono text-[9px] font-semibold tracking-wider text-muted-foreground uppercase">
+                    <span
+                        class="font-mono text-[9px] font-semibold tracking-wider text-muted-foreground uppercase"
+                    >
                         Tata Naskah Dinas
                     </span>
                 </div>
