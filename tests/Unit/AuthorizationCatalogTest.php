@@ -39,6 +39,12 @@ test('authorization catalog exposes unique role and permission names', function 
             PermissionName::ViewIntake->value,
             PermissionName::ScreenIntake->value,
             PermissionName::DecideIntake->value,
+            PermissionName::CreateManualIntake->value,
+            PermissionName::ViewIncomingRegister->value,
+            PermissionName::ViewLetterResponses->value,
+            PermissionName::ContributeLetterResponses->value,
+            PermissionName::ReviewLetterResponses->value,
+            PermissionName::AuthorizeLetterResponses->value,
         ])
         ->toHaveCount(count(array_unique(AuthorizationCatalog::permissionNames())));
 });
@@ -55,6 +61,8 @@ test('operational roles expose least privilege capability bundles', function ():
         PermissionName::ViewLetterActivities->value,
         PermissionName::ViewDocumentVersions->value,
         PermissionName::ViewLetterRouting->value,
+        PermissionName::CreateManualIntake->value,
+        PermissionName::ViewIncomingRegister->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::GeneralAffairsHead))->toBe([
         PermissionName::ViewIntake->value,
         PermissionName::DecideIntake->value,
@@ -68,6 +76,9 @@ test('operational roles expose least privilege capability bundles', function ():
         PermissionName::ViewReports->value,
         PermissionName::ExportReports->value,
         PermissionName::ViewDispositionInstructions->value,
+        PermissionName::ViewLetterResponses->value,
+        PermissionName::ContributeLetterResponses->value,
+        PermissionName::ViewIncomingRegister->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::ExecutiveLeader))->toBe([
         PermissionName::ViewExecutiveInbox->value,
         PermissionName::CreateDispositions->value,
@@ -76,18 +87,27 @@ test('operational roles expose least privilege capability bundles', function ():
         PermissionName::ViewReports->value,
         PermissionName::ExportReports->value,
         PermissionName::ViewDispositionInstructions->value,
+        PermissionName::ViewLetterResponses->value,
+        PermissionName::ContributeLetterResponses->value,
+        PermissionName::ReviewLetterResponses->value,
+        PermissionName::AuthorizeLetterResponses->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::Assistant))->toBe([
         PermissionName::ViewDispositions->value,
         PermissionName::CreateDispositions->value,
         PermissionName::ViewReports->value,
         PermissionName::ExportReports->value,
         PermissionName::ViewDispositionInstructions->value,
+        PermissionName::ViewLetterResponses->value,
+        PermissionName::ContributeLetterResponses->value,
+        PermissionName::ReviewLetterResponses->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::SectionHead))->toBe([
         PermissionName::ViewDispositions->value,
         PermissionName::ProcessDispositions->value,
         PermissionName::ViewReports->value,
         PermissionName::ExportReports->value,
         PermissionName::ViewDispositionInstructions->value,
+        PermissionName::ViewLetterResponses->value,
+        PermissionName::ContributeLetterResponses->value,
     ]);
 });
 
