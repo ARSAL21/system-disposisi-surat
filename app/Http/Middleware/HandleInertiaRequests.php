@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
 use App\Models\User;
+use App\Reporting\ReportScopeResolver;
 use App\Services\DispositionPositionAssignmentResolver;
 use App\Services\DocumentVersionPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
@@ -107,6 +108,8 @@ class HandleInertiaRequests extends Middleware
                 'can_process_dispositions' => false,
                 'can_view_disposition_instructions' => false,
                 'can_manage_disposition_instructions' => false,
+                'can_view_reports' => false,
+                'can_export_reports' => false,
                 'can_view_intake' => false,
                 'can_screen_intake' => false,
                 'can_decide_intake' => false,
@@ -144,6 +147,7 @@ class HandleInertiaRequests extends Middleware
             && $user->can(PermissionName::ProcessDispositions->value);
         $canProcessDisposition = $hasDispositionProcessPermission
             && $dispositionResolver->hasSectionHeadAssignment($user);
+        $hasReportPosition = app(ReportScopeResolver::class)->resolve($user) !== null;
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -162,6 +166,10 @@ class HandleInertiaRequests extends Middleware
             'can_process_dispositions' => $canProcessDisposition,
             'can_view_disposition_instructions' => $user->can(PermissionName::ViewDispositionInstructions->value),
             'can_manage_disposition_instructions' => $user->can(PermissionName::ManageDispositionInstructions->value),
+            'can_view_reports' => $hasReportPosition
+                && $user->can(PermissionName::ViewReports->value),
+            'can_export_reports' => $hasReportPosition
+                && $user->can(PermissionName::ExportReports->value),
             'can_view_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ViewIntake->value),
             'can_screen_intake' => $hasIntakePosition

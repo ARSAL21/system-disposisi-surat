@@ -19,6 +19,8 @@ enum PermissionName: string
     case ViewDispositions = 'dispositions.view';
     case CreateDispositions = 'dispositions.create';
     case ProcessDispositions = 'dispositions.process';
+    case ViewReports = 'reports.view';
+    case ExportReports = 'reports.export';
     case ViewDispositionInstructions = 'disposition-instructions.view';
     case ManageDispositionInstructions = 'disposition-instructions.manage';
     case ViewIntake = 'intake.view';

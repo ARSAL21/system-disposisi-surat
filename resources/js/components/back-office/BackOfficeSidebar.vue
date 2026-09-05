@@ -3,7 +3,9 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     Activity,
     Archive,
+    BookOpenCheck,
     ClipboardCheck,
+    FilePlus2,
     History,
     Inbox,
     Landmark,
@@ -11,6 +13,7 @@ import {
     ListChecks,
     MailOpen,
     Network,
+    ChartNoAxesCombined,
     Route as RouteIcon,
     ShieldCheck,
     UserRoundCog,
@@ -54,6 +57,37 @@ const mainNavItems = computed<NavItem[]>(() => {
             isActive: currentPath.value.startsWith(
                 '/back-office/intake/submissions',
             ),
+        });
+    }
+
+    const isM81Preview =
+        currentPath.value.startsWith('/back-office/previews/intake/manual') ||
+        currentPath.value.startsWith('/back-office/previews/incoming-letters');
+
+    if (page.props.auth.capabilities.can_create_manual_intake || isM81Preview) {
+        const manualIntakePath = isM81Preview
+            ? '/back-office/previews/intake/manual/create'
+            : '/back-office/intake/manual/create';
+        items.push({
+            title: 'Catat Surat Manual',
+            href: manualIntakePath,
+            icon: FilePlus2,
+            isActive: currentPath.value.startsWith(manualIntakePath),
+        });
+    }
+
+    if (
+        page.props.auth.capabilities.can_view_incoming_register ||
+        isM81Preview
+    ) {
+        const incomingRegisterPath = isM81Preview
+            ? '/back-office/previews/incoming-letters'
+            : '/back-office/incoming-letters';
+        items.push({
+            title: 'Buku Surat Masuk',
+            href: incomingRegisterPath,
+            icon: BookOpenCheck,
+            isActive: currentPath.value.startsWith(incomingRegisterPath),
         });
     }
 
@@ -108,6 +142,22 @@ const mainNavItems = computed<NavItem[]>(() => {
                 /^\/back-office\/letters\/[^/]+\/documents$/.test(
                     currentPath.value,
                 ),
+        });
+    }
+
+    const isReportPreview = currentPath.value.startsWith(
+        '/back-office/previews/reports',
+    );
+
+    if (page.props.auth.capabilities.can_view_reports || isReportPreview) {
+        const reportPath = isReportPreview
+            ? '/back-office/previews/reports'
+            : '/back-office/reports';
+        items.push({
+            title: 'Laporan Periodik',
+            href: reportPath,
+            icon: ChartNoAxesCombined,
+            isActive: currentPath.value.startsWith(reportPath),
         });
     }
 
