@@ -55,7 +55,7 @@ const content = computed(() =>
     >
         <!-- Ambient Decorative Glow -->
         <div
-            class="pointer-events-none absolute -right-16 -top-20 size-72 rounded-full bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-transparent blur-3xl dark:from-indigo-600/20"
+            class="pointer-events-none absolute -top-20 -right-16 size-72 rounded-full bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-transparent blur-3xl dark:from-indigo-600/20"
             aria-hidden="true"
         />
         <div
@@ -63,7 +63,9 @@ const content = computed(() =>
             aria-hidden="true"
         />
 
-        <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div
+            class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
+        >
             <div class="max-w-3xl space-y-3">
                 <!-- Top Badges Row -->
                 <div class="flex flex-wrap items-center gap-2">
@@ -93,7 +95,9 @@ const content = computed(() =>
 
                 <!-- Eyebrow & Title -->
                 <div>
-                    <p class="font-mono text-xs font-bold tracking-widest text-indigo-600 dark:text-indigo-400 uppercase">
+                    <p
+                        class="font-mono text-xs font-bold tracking-widest text-indigo-600 uppercase dark:text-indigo-400"
+                    >
                         {{ content.eyebrow }}
                     </p>
                     <h1
@@ -104,7 +108,9 @@ const content = computed(() =>
                     </h1>
                 </div>
 
-                <p class="max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm sm:leading-relaxed">
+                <p
+                    class="max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm sm:leading-relaxed"
+                >
                     {{ content.description }}
                 </p>
             </div>
@@ -114,14 +120,20 @@ const content = computed(() =>
                 <div
                     class="flex items-start gap-3.5 rounded-2xl border border-border/80 bg-background/80 p-4 text-xs shadow-xs backdrop-blur-md dark:bg-slate-950/60"
                 >
-                    <div class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    <div
+                        class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    >
                         <ShieldCheck class="size-4.5" />
                     </div>
                     <div class="space-y-0.5">
-                        <span class="font-mono text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                        <span
+                            class="font-mono text-[10px] font-bold tracking-wider text-emerald-700 uppercase dark:text-emerald-300"
+                        >
                             Sistem Penegakan Invarian
                         </span>
-                        <p class="text-xs leading-relaxed text-muted-foreground">
+                        <p
+                            class="text-xs leading-relaxed text-muted-foreground"
+                        >
                             {{ content.assurance }}
                         </p>
                     </div>

@@ -48,7 +48,8 @@ const entries = computed<SummaryEntry[]>(() => {
                 helper: 'Sedang di tingkat Asisten',
                 icon: RouteIcon,
                 gradient: 'from-indigo-500/15 via-indigo-500/5 to-transparent',
-                iconColor: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10',
+                iconColor:
+                    'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10',
                 borderAccent: 'border-indigo-500/30 hover:border-indigo-500/60',
                 pulse: false,
             },
@@ -67,9 +68,12 @@ const entries = computed<SummaryEntry[]>(() => {
                 value: props.inboxSummary?.completed ?? 0,
                 helper: 'Seluruh cabang tuntas',
                 icon: CheckCircle2,
-                gradient: 'from-emerald-500/15 via-emerald-500/5 to-transparent',
-                iconColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
-                borderAccent: 'border-emerald-500/30 hover:border-emerald-500/60',
+                gradient:
+                    'from-emerald-500/15 via-emerald-500/5 to-transparent',
+                iconColor:
+                    'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+                borderAccent:
+                    'border-emerald-500/30 hover:border-emerald-500/60',
                 pulse: false,
             },
             {
@@ -78,7 +82,8 @@ const entries = computed<SummaryEntry[]>(() => {
                 helper: 'Arus masuk hari kerja',
                 icon: Clock3,
                 gradient: 'from-purple-500/15 via-purple-500/5 to-transparent',
-                iconColor: 'text-purple-600 dark:text-purple-400 bg-purple-500/10',
+                iconColor:
+                    'text-purple-600 dark:text-purple-400 bg-purple-500/10',
                 borderAccent: 'border-purple-500/30 hover:border-purple-500/60',
                 pulse: false,
             },
@@ -112,7 +117,8 @@ const entries = computed<SummaryEntry[]>(() => {
             helper: 'Selesai di routing',
             icon: Send,
             gradient: 'from-emerald-500/15 via-emerald-500/5 to-transparent',
-            iconColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+            iconColor:
+                'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
             borderAccent: 'border-emerald-500/30 hover:border-emerald-500/60',
             pulse: false,
         },
@@ -128,7 +134,11 @@ const entries = computed<SummaryEntry[]>(() => {
                 ? 'grid-cols-1 sm:grid-cols-3'
                 : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-5',
         ]"
-        :aria-label="mode === 'routing' ? 'Ringkasan antrean routing' : 'Ringkasan inbox pimpinan'"
+        :aria-label="
+            mode === 'routing'
+                ? 'Ringkasan antrean routing'
+                : 'Ringkasan inbox pimpinan'
+        "
     >
         <article
             v-for="entry in entries"
@@ -145,10 +155,14 @@ const entries = computed<SummaryEntry[]>(() => {
 
             <div class="relative flex items-center justify-between gap-3">
                 <div class="space-y-1">
-                    <p class="font-mono text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                    <p
+                        class="font-mono text-[11px] font-bold tracking-wider text-muted-foreground uppercase"
+                    >
                         {{ entry.label }}
                     </p>
-                    <p class="font-['Syne',sans-serif] text-3xl font-extrabold text-foreground tabular-nums sm:text-4xl">
+                    <p
+                        class="font-['Syne',sans-serif] text-3xl font-extrabold text-foreground tabular-nums sm:text-4xl"
+                    >
                         {{ entry.value }}
                     </p>
                     <p class="text-[11px] font-medium text-muted-foreground">
@@ -163,7 +177,7 @@ const entries = computed<SummaryEntry[]>(() => {
                     <component :is="entry.icon" class="size-6" />
                     <span
                         v-if="entry.pulse"
-                        class="absolute -top-1 -right-1 size-3 rounded-full bg-amber-500 ring-4 ring-card animate-pulse"
+                        class="absolute -top-1 -right-1 size-3 animate-pulse rounded-full bg-amber-500 ring-4 ring-card"
                     />
                 </div>
             </div>
