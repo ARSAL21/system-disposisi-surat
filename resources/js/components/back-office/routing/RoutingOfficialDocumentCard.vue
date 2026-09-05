@@ -37,19 +37,28 @@ function copyHash() {
 </script>
 
 <template>
-    <section class="rounded-3xl border border-indigo-500/30 bg-card p-6 shadow-sm dark:border-indigo-500/20 dark:bg-slate-900/80">
+    <section
+        class="rounded-3xl border border-indigo-500/30 bg-card p-6 shadow-sm dark:border-indigo-500/20 dark:bg-slate-900/80"
+    >
         <!-- Header -->
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4 dark:border-border/40">
+        <div
+            class="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4 dark:border-border/40"
+        >
             <div class="flex items-center gap-3">
-                <div class="flex size-10 items-center justify-center rounded-2xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400">
+                <div
+                    class="flex size-10 items-center justify-center rounded-2xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400"
+                >
                     <FileCheck2 class="size-5" />
                 </div>
                 <div>
-                    <h2 class="font-['Syne',sans-serif] text-base font-bold text-foreground sm:text-lg">
+                    <h2
+                        class="font-['Syne',sans-serif] text-base font-bold text-foreground sm:text-lg"
+                    >
                         Berkas Naskah Dinas Resmi
                     </h2>
                     <p class="text-xs text-muted-foreground">
-                        Dokumen acuan tunggal yang terikat dengan sidik jari kriptografis.
+                        Dokumen acuan tunggal yang terikat dengan sidik jari
+                        kriptografis.
                     </p>
                 </div>
             </div>
@@ -64,24 +73,37 @@ function copyHash() {
 
         <!-- File Metadata Grid -->
         <div class="mt-5 space-y-4">
-            <div class="rounded-2xl border border-border/70 bg-background/80 p-4 dark:bg-slate-950/60">
-                <p class="text-xs font-bold text-foreground break-all">
+            <div
+                class="rounded-2xl border border-border/70 bg-background/80 p-4 dark:bg-slate-950/60"
+            >
+                <p class="text-xs font-bold break-all text-foreground">
                     {{ document.original_filename }}
                 </p>
 
-                <div class="mt-3 grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs dark:border-border/40">
+                <div
+                    class="mt-3 grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs dark:border-border/40"
+                >
                     <div>
-                        <span class="font-mono text-[10px] text-muted-foreground uppercase">Format</span>
+                        <span
+                            class="font-mono text-[10px] text-muted-foreground uppercase"
+                            >Format</span
+                        >
                         <p class="font-semibold text-foreground">PDF Dinas</p>
                     </div>
                     <div>
-                        <span class="font-mono text-[10px] text-muted-foreground uppercase">Ukuran Berkas</span>
+                        <span
+                            class="font-mono text-[10px] text-muted-foreground uppercase"
+                            >Ukuran Berkas</span
+                        >
                         <p class="font-semibold text-foreground tabular-nums">
                             {{ formatRoutingFileSize(document.size_bytes) }}
                         </p>
                     </div>
                     <div>
-                        <span class="font-mono text-[10px] text-muted-foreground uppercase">Direkam Pada</span>
+                        <span
+                            class="font-mono text-[10px] text-muted-foreground uppercase"
+                            >Direkam Pada</span
+                        >
                         <p class="font-semibold text-foreground tabular-nums">
                             {{ formatRoutingDateTime(document.recorded_at) }}
                         </p>
@@ -90,14 +112,22 @@ function copyHash() {
             </div>
 
             <!-- SHA-256 Fingerprint Block with Copy Button -->
-            <div class="flex items-center justify-between gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-3.5 text-xs">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <Fingerprint class="size-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <div
+                class="flex items-center justify-between gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-3.5 text-xs"
+            >
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <Fingerprint
+                        class="size-5 shrink-0 text-indigo-600 dark:text-indigo-400"
+                    />
                     <div class="min-w-0">
-                        <span class="font-mono text-[10px] font-bold text-muted-foreground uppercase">
+                        <span
+                            class="font-mono text-[10px] font-bold text-muted-foreground uppercase"
+                        >
                             Sidik Jari Digital SHA-256:
                         </span>
-                        <code class="block font-mono text-[10px] text-indigo-600 dark:text-indigo-400 truncate">
+                        <code
+                            class="block truncate font-mono text-[10px] text-indigo-600 dark:text-indigo-400"
+                        >
                             {{ document.sha256 }}
                         </code>
                     </div>
@@ -105,7 +135,7 @@ function copyHash() {
 
                 <button
                     type="button"
-                    class="inline-flex items-center gap-1 shrink-0 rounded-xl bg-indigo-600/10 px-2.5 py-1 font-mono text-[10px] font-bold text-indigo-700 transition-colors hover:bg-indigo-600/20 dark:text-indigo-300"
+                    class="inline-flex shrink-0 items-center gap-1 rounded-xl bg-indigo-600/10 px-2.5 py-1 font-mono text-[10px] font-bold text-indigo-700 transition-colors hover:bg-indigo-600/20 dark:text-indigo-300"
                     @click="copyHash"
                 >
                     <Check v-if="isCopied" class="size-3 text-emerald-500" />
@@ -115,7 +145,7 @@ function copyHash() {
             </div>
 
             <!-- Document Actions: Preview & Download -->
-            <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-1">
+            <div class="grid grid-cols-1 gap-2.5 pt-1 sm:grid-cols-2">
                 <template v-if="preview">
                     <Button
                         type="button"
@@ -123,7 +153,9 @@ function copyHash() {
                         class="h-11 rounded-2xl border-border/80 text-xs font-bold"
                         @click="$emit('preview')"
                     >
-                        <Eye class="mr-2 size-4 text-indigo-600 dark:text-indigo-400" />
+                        <Eye
+                            class="mr-2 size-4 text-indigo-600 dark:text-indigo-400"
+                        />
                         <span>Pratinjau Naskah PDF</span>
                     </Button>
                     <Button
@@ -132,7 +164,9 @@ function copyHash() {
                         class="h-11 rounded-2xl border-border/80 text-xs font-bold"
                         @click="$emit('download')"
                     >
-                        <Download class="mr-2 size-4 text-indigo-600 dark:text-indigo-400" />
+                        <Download
+                            class="mr-2 size-4 text-indigo-600 dark:text-indigo-400"
+                        />
                         <span>Unduh Berkas Asli</span>
                     </Button>
                 </template>
@@ -147,7 +181,9 @@ function copyHash() {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <Eye class="mr-2 size-4 text-indigo-600 dark:text-indigo-400" />
+                            <Eye
+                                class="mr-2 size-4 text-indigo-600 dark:text-indigo-400"
+                            />
                             <span>Pratinjau Naskah PDF</span>
                         </a>
                     </Button>
@@ -157,7 +193,9 @@ function copyHash() {
                         class="h-11 rounded-2xl border-border/80 text-xs font-bold"
                     >
                         <a :href="document.download_url">
-                            <Download class="mr-2 size-4 text-indigo-600 dark:text-indigo-400" />
+                            <Download
+                                class="mr-2 size-4 text-indigo-600 dark:text-indigo-400"
+                            />
                             <span>Unduh Berkas Asli</span>
                         </a>
                     </Button>

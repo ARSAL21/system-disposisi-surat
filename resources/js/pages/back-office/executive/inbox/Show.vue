@@ -255,18 +255,26 @@ onBeforeUnmount(() => {
             <Alert v-if="interfaceNotice" class="rounded-2xl">
                 <FileWarning class="size-4" />
                 <AlertTitle>Pratinjau Lokal Berkas</AlertTitle>
-                <AlertDescription class="text-xs">{{ interfaceNotice }}</AlertDescription>
+                <AlertDescription class="text-xs">{{
+                    interfaceNotice
+                }}</AlertDescription>
             </Alert>
 
             <Alert
                 v-if="successNotice"
                 class="rounded-2xl border-emerald-500/30 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-950/30"
             >
-                <CircleCheck class="size-4 text-emerald-600 dark:text-emerald-400" />
-                <AlertTitle class="text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                <CircleCheck
+                    class="size-4 text-emerald-600 dark:text-emerald-400"
+                />
+                <AlertTitle
+                    class="text-xs font-bold text-emerald-800 dark:text-emerald-200"
+                >
                     Disposisi Ditampilkan Pada Mode Simulasi
                 </AlertTitle>
-                <AlertDescription class="text-xs text-emerald-700 dark:text-emerald-300">
+                <AlertDescription
+                    class="text-xs text-emerald-700 dark:text-emerald-300"
+                >
                     {{ successNotice }}
                 </AlertDescription>
             </Alert>
@@ -325,7 +333,8 @@ onBeforeUnmount(() => {
             <FileWarning class="size-4" />
             <AlertTitle>Route Surat Tidak Ditemukan</AlertTitle>
             <AlertDescription class="text-xs">
-                Data naskah dinas tidak ditemukan atau Anda tidak memiliki hak akses untuk memeriksa rincian disposisi ini.
+                Data naskah dinas tidak ditemukan atau Anda tidak memiliki hak
+                akses untuk memeriksa rincian disposisi ini.
             </AlertDescription>
         </Alert>
     </main>
