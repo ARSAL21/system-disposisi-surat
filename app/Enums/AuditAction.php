@@ -17,6 +17,7 @@ enum AuditAction: string
     case SubmissionReturnedToStaff = 'SUBMISSION_RETURNED_TO_STAFF';
     case SubmissionRejected = 'SUBMISSION_REJECTED';
     case SubmissionDraftDeleted = 'SUBMISSION_DRAFT_DELETED';
+    case ManualSubmissionCreated = 'MANUAL_SUBMISSION_CREATED';
     case LetterRegistered = 'LETTER_REGISTERED';
     case LetterRouted = 'LETTER_ROUTED';
     case DispositionCreated = 'DISPOSITION_CREATED';
@@ -24,6 +25,11 @@ enum AuditAction: string
     case FollowUpAdded = 'FOLLOW_UP_ADDED';
     case DispositionCompleted = 'DISPOSITION_COMPLETED';
     case LetterCompleted = 'LETTER_COMPLETED';
+    case LetterResponseDossierOpened = 'LETTER_RESPONSE_DOSSIER_OPENED';
+    case LetterResponseDocumentVersionCreated = 'LETTER_RESPONSE_DOCUMENT_VERSION_CREATED';
+    case LetterResponseDocumentReturned = 'LETTER_RESPONSE_DOCUMENT_RETURNED';
+    case LetterResponseMandateAuthorized = 'LETTER_RESPONSE_MANDATE_AUTHORIZED';
+    case LetterResponseDossierFinalized = 'LETTER_RESPONSE_DOSSIER_FINALIZED';
     case InstructionLabelCreated = 'INSTRUCTION_LABEL_CREATED';
     case InstructionLabelUpdated = 'INSTRUCTION_LABEL_UPDATED';
     case InstructionLabelStatusChanged = 'INSTRUCTION_LABEL_STATUS_CHANGED';

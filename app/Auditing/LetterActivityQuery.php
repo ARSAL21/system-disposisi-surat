@@ -57,11 +57,15 @@ final class LetterActivityQuery
         return [
             'total' => (clone $query)->count(),
             'received' => (clone $query)->whereIn('action', [
+                AuditAction::ManualSubmissionCreated->value,
                 AuditAction::SubmissionSubmitted->value,
                 AuditAction::SubmissionResubmitted->value,
             ])->count(),
             'awaiting_approval' => (clone $query)
-                ->where('action', AuditAction::SubmissionReadyForApproval->value)
+                ->whereIn('action', [
+                    AuditAction::ManualSubmissionCreated->value,
+                    AuditAction::SubmissionReadyForApproval->value,
+                ])
                 ->count(),
             'registered' => (clone $query)
                 ->where('action', AuditAction::LetterRegistered->value)
@@ -139,7 +143,14 @@ final class LetterActivityQuery
                 ->orWhere(function (Builder $completedLetters): void {
                     $completedLetters
                         ->where('subject_type', 'incoming_letter')
-                        ->where('action', AuditAction::LetterCompleted->value);
+                        ->whereIn('action', [
+                            AuditAction::LetterCompleted->value,
+                            AuditAction::LetterResponseDossierOpened->value,
+                            AuditAction::LetterResponseDocumentVersionCreated->value,
+                            AuditAction::LetterResponseDocumentReturned->value,
+                            AuditAction::LetterResponseMandateAuthorized->value,
+                            AuditAction::LetterResponseDossierFinalized->value,
+                        ]);
                 });
         });
     }

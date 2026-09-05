@@ -20,6 +20,7 @@ final class LetterActivityCatalog
     public static function submissionActions(): array
     {
         return [
+            AuditAction::ManualSubmissionCreated->value,
             AuditAction::SubmissionSubmitted->value,
             AuditAction::SubmissionResubmitted->value,
             AuditAction::SubmissionRevisionRequested->value,
@@ -39,6 +40,7 @@ final class LetterActivityCatalog
     public static function actionLabels(): array
     {
         return [
+            AuditAction::ManualSubmissionCreated->value => 'Surat fisik dicatat',
             AuditAction::SubmissionSubmitted->value => 'Surat diajukan',
             AuditAction::SubmissionResubmitted->value => 'Surat diajukan kembali',
             AuditAction::SubmissionRevisionRequested->value => 'Perbaikan diminta',
@@ -53,6 +55,11 @@ final class LetterActivityCatalog
             AuditAction::DispositionCompleted->value => 'Cabang disposisi diselesaikan',
             AuditAction::LetterCompleted->value => 'Seluruh disposisi surat selesai',
             AuditAction::DocumentVersionCreated->value => 'Versi dokumen resmi dibuat',
+            AuditAction::LetterResponseDossierOpened->value => 'Dossier balasan dibuka',
+            AuditAction::LetterResponseDocumentVersionCreated->value => 'Versi bahan balasan dibuat',
+            AuditAction::LetterResponseDocumentReturned->value => 'Bahan balasan dikembalikan',
+            AuditAction::LetterResponseMandateAuthorized->value => 'Mandat balasan dibuat',
+            AuditAction::LetterResponseDossierFinalized->value => 'Rencana balasan difinalisasi',
         ];
     }
 
