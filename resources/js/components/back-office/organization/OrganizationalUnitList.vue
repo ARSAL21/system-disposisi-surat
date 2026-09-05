@@ -14,32 +14,39 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type {
     OrganizationalUnit,
+    OrganizationalUnitOption,
     OrganizationTreeData,
     Paginated,
+    PositionLevel,
 } from '@/types';
 
 defineProps<{
     units: Paginated<OrganizationalUnit>;
     tree: OrganizationTreeData;
+    allUnits?: OrganizationalUnitOption[];
+    levels?: PositionLevel[];
     assignmentsRoute: string;
     canMutate: boolean;
+    activationUrl?: string;
 }>();
 
 const emit = defineEmits<{
     create: [];
+    createSubUnit: [parentId: number | null];
     edit: [unit: OrganizationalUnit];
     status: [unit: OrganizationalUnit];
     createPosition: [];
+    createPositionInUnit: [unitId: number | null];
 }>();
 
-const displayMode = ref<'table' | 'chart'>('table');
+const displayMode = ref<'table' | 'chart'>('chart');
 </script>
 
 <template>
     <div class="space-y-6">
         <!-- View Switcher & Action Header Card -->
         <div
-            class="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm"
+            class="flex flex-col gap-4 rounded-2xl border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
         >
             <div>
                 <h2 class="text-base font-bold text-foreground sm:text-lg">
@@ -94,7 +101,7 @@ const displayMode = ref<'table' | 'chart'>('table');
                 </div>
 
                 <Button
-                    class="min-h-10 gap-1.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-xs font-semibold text-white shadow-sm"
+                    class="min-h-10 gap-1.5 rounded-xl bg-blue-700 text-xs font-semibold text-white shadow-sm hover:bg-blue-800"
                     :disabled="!canMutate"
                     @click="emit('create')"
                 >
@@ -110,10 +117,15 @@ const displayMode = ref<'table' | 'chart'>('table');
         <div v-if="displayMode === 'chart'">
             <OrganizationChartViewer
                 :tree="tree"
+                :all-units="allUnits"
+                :levels="levels"
                 :assignments-route="assignmentsRoute"
                 :can-mutate="canMutate"
-                @create-unit="emit('create')"
-                @create-position="emit('createPosition')"
+                :activation-url="activationUrl"
+                @create-unit="emit('createSubUnit', $event ?? null)"
+                @create-position="emit('createPositionInUnit', $event ?? null)"
+                @edit-unit="emit('edit', $event as any)"
+                @status-unit="emit('status', $event as any)"
             />
         </div>
 
@@ -138,7 +150,9 @@ const displayMode = ref<'table' | 'chart'>('table');
                         </span>
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
-                                <h3 class="truncate font-medium text-foreground">
+                                <h3
+                                    class="truncate font-medium text-foreground"
+                                >
                                     {{ unit.name }}
                                 </h3>
                                 <Badge
@@ -149,7 +163,9 @@ const displayMode = ref<'table' | 'chart'>('table');
                                     {{ unit.is_active ? 'Aktif' : 'Nonaktif' }}
                                 </Badge>
                             </div>
-                            <p class="mt-1 truncate text-sm text-muted-foreground">
+                            <p
+                                class="mt-1 truncate text-sm text-muted-foreground"
+                            >
                                 {{ unit.code || 'Tanpa kode' }} · Induk:
                                 {{ unit.parent?.name || 'Root (Unit Utama)' }}
                             </p>
@@ -187,7 +203,10 @@ const displayMode = ref<'table' | 'chart'>('table');
                     </div>
                 </article>
             </div>
-            <div v-else class="grid min-h-56 place-items-center p-8 text-center">
+            <div
+                v-else
+                class="grid min-h-56 place-items-center p-8 text-center"
+            >
                 <div>
                     <Building2
                         class="mx-auto size-8 text-muted-foreground"

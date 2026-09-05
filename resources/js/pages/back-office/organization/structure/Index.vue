@@ -35,6 +35,8 @@ const {
     statusDialogOpen,
     selectedUnit,
     selectedPosition,
+    presetParentId,
+    presetUnitId,
     statusResource,
     summaryItems,
     visit,
@@ -73,7 +75,10 @@ const {
             "
         />
         <OrganizationFilterBar
-            v-if="activeFilters.section !== 'levels' && activeFilters.section !== 'chart'"
+            v-if="
+                activeFilters.section !== 'levels' &&
+                activeFilters.section !== 'chart'
+            "
             :filters="activeFilters"
             :levels="levels"
             :units="unitOptions"
@@ -96,10 +101,15 @@ const {
             v-else-if="units"
             :units="units"
             :tree="tree"
+            :all-units="unitOptions"
+            :levels="levels"
             :assignments-route="routes.assignments"
             :can-mutate="mutationSecurity.can_mutate"
+            :activation-url="mutationSecurity.activation_url"
             @create="openUnit(null)"
+            @create-sub-unit="openUnit(null, $event)"
             @create-position="openPosition(null)"
+            @create-position-in-unit="openPosition(null, $event)"
             @edit="openUnit"
             @status="openStatus"
         >
@@ -128,12 +138,14 @@ const {
         <OrganizationalUnitDialog
             v-model:open="unitDialogOpen"
             :unit="selectedUnit"
+            :preset-parent-id="presetParentId"
             :options="unitOptions"
             :store-url="routes.store_unit"
         />
         <PositionDialog
             v-model:open="positionDialogOpen"
             :position="selectedPosition"
+            :preset-unit-id="presetUnitId"
             :levels="levels"
             :units="unitOptions"
             :store-url="routes.store_position"
