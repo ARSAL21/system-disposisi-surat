@@ -34,6 +34,7 @@ class CreateOnlineSubmission
             $submission->external_letter_date = $attributes['external_letter_date'] ?? null;
             $submission->subject = $attributes['subject'];
             $submission->summary = $attributes['summary'] ?? null;
+            $submission->received_at = null;
             $submission->submitted_at = null;
             $submission->save();
 
