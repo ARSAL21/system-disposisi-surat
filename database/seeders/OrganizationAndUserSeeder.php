@@ -255,7 +255,7 @@ class OrganizationAndUserSeeder extends Seeder
                 'email' => $user->email,
                 'account_type' => $user->account_type->value,
                 'is_active' => $user->is_active,
-                'email_verified_at' => $user->email_verified_at?->toISOString(),
+                'email_verified_at' => $user->email_verified_at->toISOString(),
             ],
             metadata: $this->auditMetadata('internal_account_provisioned'),
         );

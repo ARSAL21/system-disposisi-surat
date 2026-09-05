@@ -32,6 +32,8 @@ test('authorization catalog exposes unique role and permission names', function 
             PermissionName::ViewDispositions->value,
             PermissionName::CreateDispositions->value,
             PermissionName::ProcessDispositions->value,
+            PermissionName::ViewReports->value,
+            PermissionName::ExportReports->value,
             PermissionName::ViewDispositionInstructions->value,
             PermissionName::ManageDispositionInstructions->value,
             PermissionName::ViewIntake->value,
@@ -63,20 +65,28 @@ test('operational roles expose least privilege capability bundles', function ():
         PermissionName::CreateLetterRouting->value,
         PermissionName::ViewDispositions->value,
         PermissionName::ProcessDispositions->value,
+        PermissionName::ViewReports->value,
+        PermissionName::ExportReports->value,
         PermissionName::ViewDispositionInstructions->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::ExecutiveLeader))->toBe([
         PermissionName::ViewExecutiveInbox->value,
         PermissionName::CreateDispositions->value,
         PermissionName::ViewDocumentVersions->value,
         PermissionName::ViewLetterActivities->value,
+        PermissionName::ViewReports->value,
+        PermissionName::ExportReports->value,
         PermissionName::ViewDispositionInstructions->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::Assistant))->toBe([
         PermissionName::ViewDispositions->value,
         PermissionName::CreateDispositions->value,
+        PermissionName::ViewReports->value,
+        PermissionName::ExportReports->value,
         PermissionName::ViewDispositionInstructions->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::SectionHead))->toBe([
         PermissionName::ViewDispositions->value,
         PermissionName::ProcessDispositions->value,
+        PermissionName::ViewReports->value,
+        PermissionName::ExportReports->value,
         PermissionName::ViewDispositionInstructions->value,
     ]);
 });

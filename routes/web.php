@@ -26,13 +26,19 @@ use App\Http\Controllers\BackOffice\Intake\IntakeApprovalController;
 use App\Http\Controllers\BackOffice\Intake\IntakeApprovalDocumentController;
 use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionController;
 use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionDocumentController;
+use App\Http\Controllers\BackOffice\Intake\ManualIntakeController;
+use App\Http\Controllers\BackOffice\Intake\ResubmitManualIntakeController;
 use App\Http\Controllers\BackOffice\Intake\ScreenSubmissionController;
+use App\Http\Controllers\BackOffice\Intake\StoreManualIntakeController;
 use App\Http\Controllers\BackOffice\Intake\SubmissionDecisionController;
+use App\Http\Controllers\BackOffice\IncomingRegister\IncomingRegisterController;
 use App\Http\Controllers\BackOffice\Organization\ActivateOrganizationMutationController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationalUnitController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationStructureController;
 use App\Http\Controllers\BackOffice\Organization\PositionAssignmentController;
 use App\Http\Controllers\BackOffice\Organization\PositionController;
+use App\Http\Controllers\BackOffice\Reporting\PeriodicReportController;
+use App\Http\Controllers\BackOffice\Reporting\PeriodicReportExportController;
 use App\Http\Controllers\BackOffice\Routing\ExecutiveInboxController;
 use App\Http\Controllers\BackOffice\Routing\ExecutiveInboxDocumentController;
 use App\Http\Controllers\BackOffice\Routing\LetterRoutingController;
@@ -177,7 +183,31 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.reports.index');
                     Route::inertia('previews/reports/letters/{incomingLetter}', 'back-office/reports/Show', ['preview' => true])
                         ->name('previews.reports.show');
+                    Route::inertia('previews/intake/manual/create', 'back-office/intake/manual/Create', ['preview' => true])
+                        ->name('previews.intake.manual.create');
+                    Route::inertia('previews/incoming-letters', 'back-office/incoming-letters/Index', ['preview' => true])
+                        ->name('previews.incoming-letters.index');
                 }
+
+                Route::get('incoming-letters', IncomingRegisterController::class)
+                    ->middleware('can:'.PermissionName::ViewIncomingRegister->value)
+                    ->name('incoming-letters.index');
+
+                Route::prefix('intake/manual')
+                    ->name('intake.manual.')
+                    ->middleware('can:'.PermissionName::CreateManualIntake->value)
+                    ->group(function (): void {
+                        Route::get('create', [ManualIntakeController::class, 'create'])
+                            ->name('create');
+                        Route::post('/', StoreManualIntakeController::class)
+                            ->middleware('throttle:manual-intake-upload')
+                            ->name('store');
+                        Route::get('{submission}/edit', [ManualIntakeController::class, 'edit'])
+                            ->name('edit');
+                        Route::post('{submission}/resubmit', ResubmitManualIntakeController::class)
+                            ->middleware('throttle:manual-intake-upload')
+                            ->name('resubmit');
+                    });
 
                 Route::get('documents', DocumentArchiveController::class)
                     ->middleware('can:'.PermissionName::ViewDocumentVersions->value)
@@ -296,6 +326,28 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                 Route::get('workflow/instruction-labels', [InstructionLabelController::class, 'index'])
                     ->middleware('can:'.PermissionName::ViewDispositionInstructions->value)
                     ->name('workflow.instruction-labels.index');
+
+                Route::prefix('reports')
+                    ->name('reports.')
+                    ->middleware('can:'.PermissionName::ViewReports->value)
+                    ->group(function (): void {
+                        Route::get('/', [PeriodicReportController::class, 'index'])
+                            ->name('index');
+                        Route::get('letters/{incomingLetter}', [PeriodicReportController::class, 'show'])
+                            ->name('show');
+                        Route::get('exports/summary', [PeriodicReportExportController::class, 'summary'])
+                            ->middleware([
+                                'can:'.PermissionName::ExportReports->value,
+                                'throttle:report-export',
+                            ])
+                            ->name('exports.summary');
+                        Route::get('exports/letters', [PeriodicReportExportController::class, 'letters'])
+                            ->middleware([
+                                'can:'.PermissionName::ExportReports->value,
+                                'throttle:report-export',
+                            ])
+                            ->name('exports.letters');
+                    });
 
                 Route::prefix('intake')
                     ->name('intake.')
@@ -453,3 +505,9 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+
+if (app()->environment('local', 'development')) {
+    Route::get('/preview-error/{code}', function (int $code) {
+        abort($code);
+    })->where('code', '401|402|403|404|419|429|500|503');
+}

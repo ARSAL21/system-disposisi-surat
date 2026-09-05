@@ -44,6 +44,8 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', false)
             ->where('auth.capabilities.can_manage_disposition_instructions', false),
         );
@@ -76,6 +78,8 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', false)
             ->where('auth.capabilities.can_manage_disposition_instructions', false)
             ->missing('auth.user.roles')
@@ -103,6 +107,8 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', false)
             ->where('auth.capabilities.can_manage_disposition_instructions', false),
         );
@@ -130,6 +136,8 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', false)
             ->where('auth.capabilities.can_manage_disposition_instructions', false)
             ->missing('auth.user.roles')
@@ -204,6 +212,8 @@ test('critical administrator capabilities remain protected by MFA', function ():
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', true)
             ->where('auth.capabilities.can_manage_disposition_instructions', true),
         );
