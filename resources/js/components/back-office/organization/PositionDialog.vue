@@ -24,6 +24,7 @@ import type {
 const props = defineProps<{
     open: boolean;
     position: OrganizationPosition | null;
+    presetUnitId?: number | null;
     levels: PositionLevel[];
     units: OrganizationalUnitOption[];
     storeUrl: string;
@@ -42,7 +43,7 @@ const form = useForm<{
 });
 
 watch(
-    () => [props.open, props.position] as const,
+    () => [props.open, props.position, props.presetUnitId] as const,
     () => {
         if (!props.open) {
             return;
@@ -54,7 +55,9 @@ watch(
         form.position_level_id =
             props.position?.position_level_id ?? props.levels[0]?.id ?? null;
         form.organizational_unit_id =
-            props.position?.organizational_unit_id ?? null;
+            props.position?.organizational_unit_id ??
+            props.presetUnitId ??
+            null;
     },
     { immediate: true },
 );
