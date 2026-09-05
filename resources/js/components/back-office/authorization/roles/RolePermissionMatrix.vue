@@ -58,8 +58,8 @@ const isDirty = computed(() => {
     const original = [...props.role.permissions].sort();
 
     if (current.length !== original.length) {
-return true;
-}
+        return true;
+    }
 
     return current.some((val, index) => val !== original[index]);
 });
@@ -103,8 +103,8 @@ function isChecked(permissionName: string): boolean {
 
 function togglePermission(permissionName: string, checked: boolean) {
     if (!isEditable.value) {
-return;
-}
+        return;
+    }
 
     if (checked) {
         if (!selectedPermissions.value.includes(permissionName)) {
@@ -122,8 +122,8 @@ return;
 
 function selectAllInGroup(perms: AuthorizationPermission[]) {
     if (!isEditable.value) {
-return;
-}
+        return;
+    }
 
     const names = perms.map((p) => p.name);
     selectedPermissions.value = Array.from(
@@ -133,8 +133,8 @@ return;
 
 function deselectAllInGroup(perms: AuthorizationPermission[]) {
     if (!isEditable.value) {
-return;
-}
+        return;
+    }
 
     const names = new Set(perms.map((p) => p.name));
     selectedPermissions.value = selectedPermissions.value.filter(
@@ -149,8 +149,8 @@ function resetChanges() {
 // Save directly via PUT request
 function savePermissions() {
     if (!isEditable.value || isSaving.value) {
-return;
-}
+        return;
+    }
 
     isSaving.value = true;
     router.put(
@@ -191,7 +191,8 @@ return;
             <LockKeyhole class="size-4 shrink-0" />
             <div class="flex-1">
                 <span class="font-bold">Role Terlindungi (Sistem):</span>
-                Hak akses role ini terstandarisasi read-only dan otomatis disinkronisasi melalui katalog resmi.
+                Hak akses role ini terstandarisasi read-only dan otomatis
+                disinkronisasi melalui katalog resmi.
             </div>
         </div>
 
@@ -202,7 +203,8 @@ return;
             <ShieldAlert class="size-4 shrink-0" />
             <div class="flex-1">
                 <span class="font-bold">Akun Anda Sendiri:</span>
-                Modifikasi hak akses role yang sedang Anda pegang dinonaktifkan untuk mencegah privilege escalation & accidental lockout.
+                Modifikasi hak akses role yang sedang Anda pegang dinonaktifkan
+                untuk mencegah privilege escalation & accidental lockout.
             </div>
         </div>
 
@@ -213,19 +215,22 @@ return;
             <FolderLock class="size-4 shrink-0" />
             <div class="flex-1">
                 <span class="font-bold">Mode Perubahan Terkunci:</span>
-                Aktifkan konfirmasi password di banner keamanan atas untuk mengedit permission role ini.
+                Aktifkan konfirmasi password di banner keamanan atas untuk
+                mengedit permission role ini.
             </div>
         </div>
 
         <!-- Category Filter Pills -->
         <div class="flex flex-wrap items-center gap-1.5 pt-1">
-            <span class="text-[11px] font-semibold text-muted-foreground mr-1">Kategori:</span>
+            <span class="mr-1 text-[11px] font-semibold text-muted-foreground"
+                >Kategori:</span
+            >
             <button
                 type="button"
                 class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
                 :class="[
                     activeCategoryFilter === 'all'
-                        ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                        ? 'bg-primary font-semibold text-primary-foreground shadow-xs'
                         : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
                 ]"
                 @click="activeCategoryFilter = 'all'"
@@ -239,7 +244,7 @@ return;
                 class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
                 :class="[
                     activeCategoryFilter === cat
-                        ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                        ? 'bg-primary font-semibold text-primary-foreground shadow-xs'
                         : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
                 ]"
                 @click="activeCategoryFilter = cat"
@@ -256,21 +261,33 @@ return;
                 class="rounded-2xl border border-border/70 bg-muted/20 p-4"
             >
                 <!-- Group Header -->
-                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5">
+                <div
+                    class="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5"
+                >
                     <div class="flex items-center gap-2">
-                        <div class="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <div
+                            class="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
                             <KeyRound class="size-3.5" />
                         </div>
-                        <h4 class="text-xs font-bold text-foreground uppercase tracking-wider">
+                        <h4
+                            class="text-xs font-bold tracking-wider text-foreground uppercase"
+                        >
                             {{ groupName }}
                         </h4>
                         <span class="text-[11px] text-muted-foreground">
-                            ({{ perms.filter((p) => isChecked(p.name)).length }} / {{ perms.length }} aktif)
+                            ({{
+                                perms.filter((p) => isChecked(p.name)).length
+                            }}
+                            / {{ perms.length }} aktif)
                         </span>
                     </div>
 
                     <!-- Quick Group Select / Deselect if Editable -->
-                    <div v-if="isEditable" class="flex items-center gap-1.5 text-xs">
+                    <div
+                        v-if="isEditable"
+                        class="flex items-center gap-1.5 text-xs"
+                    >
                         <button
                             type="button"
                             class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10"
@@ -282,7 +299,7 @@ return;
                         <span class="text-muted-foreground/40">·</span>
                         <button
                             type="button"
-                            class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                             @click="deselectAllInGroup(perms)"
                         >
                             <RotateCcw class="size-3" />
@@ -297,39 +314,50 @@ return;
                         v-for="perm in perms"
                         :key="perm.name"
                         :for="`perm-${role.id}-${perm.name}`"
-                        class="group relative flex cursor-pointer select-none items-start gap-3 rounded-xl border p-3 transition-all duration-200"
+                        class="group relative flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all duration-200 select-none"
                         :class="[
                             isChecked(perm.name)
                                 ? 'border-indigo-500/50 bg-indigo-50/60 shadow-xs dark:border-indigo-500/40 dark:bg-indigo-950/30'
                                 : 'border-border/60 bg-card/60 hover:border-border hover:bg-muted/40 dark:bg-slate-900/40',
-                            !isEditable ? 'cursor-not-allowed opacity-80' : 'hover:shadow-xs',
+                            !isEditable
+                                ? 'cursor-not-allowed opacity-80'
+                                : 'hover:shadow-xs',
                         ]"
                     >
-                        <div class="pt-0.5 shrink-0">
+                        <div class="shrink-0 pt-0.5">
                             <Checkbox
                                 :id="`perm-${role.id}-${perm.name}`"
                                 :model-value="isChecked(perm.name)"
                                 :disabled="!isEditable"
                                 class="size-4.5 rounded-md"
-                                @update:model-value="togglePermission(perm.name, Boolean($event))"
+                                @update:model-value="
+                                    togglePermission(perm.name, Boolean($event))
+                                "
                             />
                         </div>
 
                         <div class="min-w-0 flex-1 space-y-1">
                             <div class="flex items-start justify-between gap-1">
                                 <span
-                                    class="text-xs font-semibold leading-tight text-foreground transition-colors group-hover:text-primary"
-                                    :class="{ 'text-indigo-700 dark:text-indigo-300 font-bold': isChecked(perm.name) }"
+                                    class="text-xs leading-tight font-semibold text-foreground transition-colors group-hover:text-primary"
+                                    :class="{
+                                        'font-bold text-indigo-700 dark:text-indigo-300':
+                                            isChecked(perm.name),
+                                    }"
                                 >
                                     {{ perm.label }}
                                 </span>
                             </div>
 
-                            <p class="font-mono text-[10px] text-muted-foreground/80 break-all">
+                            <p
+                                class="font-mono text-[10px] break-all text-muted-foreground/80"
+                            >
                                 {{ perm.name }}
                             </p>
 
-                            <p class="text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
+                            <p
+                                class="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground"
+                            >
                                 {{ perm.description }}
                             </p>
                         </div>
@@ -344,7 +372,9 @@ return;
             class="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-500/40 bg-card p-4 shadow-xl shadow-indigo-500/10 backdrop-blur-xl dark:bg-slate-900"
         >
             <div class="flex items-center gap-2">
-                <div class="flex size-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                <div
+                    class="flex size-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                >
                     <Info class="size-4" />
                 </div>
                 <div>
@@ -352,7 +382,12 @@ return;
                         Perubahan Belum Disimpan
                     </p>
                     <p class="text-[11px] text-muted-foreground">
-                        {{ selectedPermissions.length }} permission dipilih untuk role <span class="font-semibold text-foreground">{{ role.name }}</span>.
+                        {{ selectedPermissions.length }} permission dipilih
+                        untuk role
+                        <span class="font-semibold text-foreground">{{
+                            role.name
+                        }}</span
+                        >.
                     </p>
                 </div>
             </div>
@@ -362,7 +397,7 @@ return;
                     type="button"
                     variant="outline"
                     size="sm"
-                    class="h-9 rounded-xl text-xs gap-1.5"
+                    class="h-9 gap-1.5 rounded-xl text-xs"
                     :disabled="isSaving"
                     @click="resetChanges"
                 >
@@ -373,13 +408,15 @@ return;
                 <Button
                     type="button"
                     size="sm"
-                    class="h-9 rounded-xl bg-indigo-600 px-4 text-xs font-semibold text-white shadow-md hover:bg-indigo-700 gap-1.5"
+                    class="h-9 gap-1.5 rounded-xl bg-indigo-600 px-4 text-xs font-semibold text-white shadow-md hover:bg-indigo-700"
                     :disabled="isSaving"
                     @click="savePermissions"
                 >
                     <Spinner v-if="isSaving" class="size-3.5" />
                     <Save v-else class="size-3.5" />
-                    <span>{{ isSaving ? 'Menyimpan...' : 'Simpan Permission' }}</span>
+                    <span>{{
+                        isSaving ? 'Menyimpan...' : 'Simpan Permission'
+                    }}</span>
                 </Button>
             </div>
         </div>
