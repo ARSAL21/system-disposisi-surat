@@ -112,6 +112,7 @@ export type ReportAggregateGraphNode = {
     recipient_position: ReportProcessPosition;
     progress: PeriodicReportBranchProgress;
     last_activity_at: string | null;
+    average_completion_hours?: number | null;
     attention: ReportGraphAttention;
 };
 
@@ -183,6 +184,7 @@ export type ReportProcessSectionBranch = {
     received_at: string;
     started_at: string | null;
     completed_at: string | null;
+    turnaround_hours?: number | null;
     instructions: ReportProcessInstruction[];
     instruction_note: string | null;
     disposed_by: RoutingActor;
@@ -223,7 +225,7 @@ export type ReportProcessDetail = {
         target_position: ReportProcessPosition;
         routed_by: RoutingActor;
         routed_at: string;
-    };
+    } | null;
     branches: ReportProcessAssistantBranch[];
     progress: PeriodicReportBranchProgress;
     visibility_note: string;
@@ -263,6 +265,7 @@ export type PeriodicReportDetailPageProps = {
     senderBreakdown?: PeriodicReportSenderBreakdown[];
     trend?: PeriodicReportTrendPoint[];
     letters?: PaginatedPeriodicReportLetters;
+    organizationGraph?: PeriodicReportOrganizationGraph;
     filters?: PeriodicReportFilters;
     scope?: PeriodicReportScope;
     canExport?: boolean;

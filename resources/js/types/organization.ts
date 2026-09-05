@@ -113,6 +113,10 @@ export type OrganizationTreePosition = {
         name: string;
         hierarchy_order: number;
     };
+    links?: {
+        update: string;
+        status: string;
+    };
     active_assignment: {
         id: number;
         started_at: string;
@@ -134,6 +138,10 @@ export type OrganizationTreeNode = {
     positions_count: number;
     children: OrganizationTreeNode[];
     positions: OrganizationTreePosition[];
+    links?: {
+        update: string;
+        status: string;
+    };
 };
 
 export type OrganizationTreeData = {

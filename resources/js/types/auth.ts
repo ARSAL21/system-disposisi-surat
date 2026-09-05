@@ -36,6 +36,8 @@ export type AuthCapabilities = {
     can_view_intake: boolean;
     can_screen_intake: boolean;
     can_decide_intake: boolean;
+    can_create_manual_intake: boolean;
+    can_view_incoming_register: boolean;
 };
 
 export type Auth = {
