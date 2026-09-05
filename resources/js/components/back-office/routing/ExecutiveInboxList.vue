@@ -20,14 +20,21 @@ defineEmits<{ reset: [] }>();
             v-if="routes.length === 0"
             class="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-dashed border-border/80 bg-card/60 p-8 text-center backdrop-blur-sm dark:border-border/60 dark:bg-slate-900/60"
         >
-            <div class="flex size-14 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400">
+            <div
+                class="flex size-14 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400"
+            >
                 <Inbox class="size-7" />
             </div>
-            <h2 class="mt-4 font-['Syne',sans-serif] text-lg font-bold text-foreground">
+            <h2
+                class="mt-4 font-['Syne',sans-serif] text-lg font-bold text-foreground"
+            >
                 Tidak Ada Surat di Inbox Pimpinan
             </h2>
-            <p class="mt-1.5 max-w-md text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                Tidak ditemukan berkas naskah dinas yang sesuai dengan parameter pencarian, filter fase, atau rentang tanggal ini.
+            <p
+                class="mt-1.5 max-w-md text-xs leading-relaxed text-muted-foreground sm:text-sm"
+            >
+                Tidak ditemukan berkas naskah dinas yang sesuai dengan parameter
+                pencarian, filter fase, atau rentang tanggal ini.
             </p>
             <Button
                 type="button"

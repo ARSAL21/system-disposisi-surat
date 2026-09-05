@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import {
-    ArrowRight,
-    Building2,
-    Clock3,
-    FileText,
-} from '@lucide/vue';
+import { ArrowRight, Building2, Clock3, FileText } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,14 +44,22 @@ function getPhaseBadgeClass(phase: string): string {
 </script>
 
 <template>
-    <div class="overflow-x-auto rounded-3xl border border-border/80 bg-card shadow-sm dark:border-border/60 dark:bg-slate-900/80">
+    <div
+        class="overflow-x-auto rounded-3xl border border-border/80 bg-card shadow-sm dark:border-border/60 dark:bg-slate-900/80"
+    >
         <table class="w-full min-w-5xl text-left text-xs">
             <caption class="sr-only">
                 Daftar surat resmi yang diterima pimpinan
             </caption>
-            <thead class="border-b border-border/70 bg-muted/50 dark:border-border/50">
-                <tr class="font-mono text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                    <th scope="col" class="px-5 py-3.5">Naskah Surat & Agenda</th>
+            <thead
+                class="border-b border-border/70 bg-muted/50 dark:border-border/50"
+            >
+                <tr
+                    class="font-mono text-[11px] font-bold tracking-wider text-muted-foreground uppercase"
+                >
+                    <th scope="col" class="px-5 py-3.5">
+                        Naskah Surat & Agenda
+                    </th>
                     <th scope="col" class="px-5 py-3.5">Instansi Pengirim</th>
                     <th scope="col" class="px-5 py-3.5">Diarahkan Oleh</th>
                     <th scope="col" class="px-5 py-3.5">Fase & Status</th>
@@ -73,14 +76,20 @@ function getPhaseBadgeClass(phase: string): string {
                     <!-- Column 1: Subject & Agenda -->
                     <td class="max-w-xs px-5 py-4 align-top">
                         <div class="flex items-start gap-3">
-                            <span class="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400">
+                            <span
+                                class="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400"
+                            >
                                 <FileText class="size-4" />
                             </span>
                             <div class="min-w-0">
-                                <p class="line-clamp-2 font-semibold text-foreground">
+                                <p
+                                    class="line-clamp-2 font-semibold text-foreground"
+                                >
                                     {{ route.letter.subject }}
                                 </p>
-                                <p class="mt-1 font-mono text-[10px] text-muted-foreground">
+                                <p
+                                    class="mt-1 font-mono text-[10px] text-muted-foreground"
+                                >
                                     #{{ route.letter.agenda_number }}
                                 </p>
                             </div>
@@ -90,7 +99,9 @@ function getPhaseBadgeClass(phase: string): string {
                     <!-- Column 2: Sender -->
                     <td class="px-5 py-4 align-top">
                         <div class="flex items-start gap-2">
-                            <Building2 class="mt-0.5 size-3.5 shrink-0 text-indigo-500" />
+                            <Building2
+                                class="mt-0.5 size-3.5 shrink-0 text-indigo-500"
+                            />
                             <span class="font-medium text-foreground">
                                 {{ route.letter.sender_organization_name }}
                             </span>
@@ -99,12 +110,18 @@ function getPhaseBadgeClass(phase: string): string {
 
                     <!-- Column 3: Routed by -->
                     <td class="px-5 py-4 align-top">
-                        <div v-if="route.letter.current_route" class="space-y-0.5">
+                        <div
+                            v-if="route.letter.current_route"
+                            class="space-y-0.5"
+                        >
                             <p class="font-semibold text-foreground">
                                 {{ route.letter.current_route.routed_by.name }}
                             </p>
                             <p class="text-[11px] text-muted-foreground">
-                                {{ route.letter.current_route.routed_by.position }}
+                                {{
+                                    route.letter.current_route.routed_by
+                                        .position
+                                }}
                             </p>
                         </div>
                         <span v-else class="text-muted-foreground">-</span>
@@ -112,11 +129,15 @@ function getPhaseBadgeClass(phase: string): string {
 
                     <!-- Column 4: Phase & Status -->
                     <td class="px-5 py-4 align-top">
-                        <div class="flex flex-col gap-1.5 items-start">
+                        <div class="flex flex-col items-start gap-1.5">
                             <Badge
                                 variant="outline"
                                 class="px-2 py-0.5 font-mono text-[10px] font-bold"
-                                :class="getPhaseBadgeClass(route.branch_progress.phase)"
+                                :class="
+                                    getPhaseBadgeClass(
+                                        route.branch_progress.phase,
+                                    )
+                                "
                             >
                                 {{ getPhaseLabel(route.branch_progress.phase) }}
                             </Badge>
@@ -125,18 +146,32 @@ function getPhaseBadgeClass(phase: string): string {
                                 v-if="route.letter.current_route"
                                 variant="outline"
                                 class="px-2 py-0.5 font-mono text-[10px] font-bold"
-                                :class="initialRouteStatusClass(route.letter.current_route.status)"
+                                :class="
+                                    initialRouteStatusClass(
+                                        route.letter.current_route.status,
+                                    )
+                                "
                             >
-                                {{ initialRouteStatusLabels[route.letter.current_route.status] }}
+                                {{
+                                    initialRouteStatusLabels[
+                                        route.letter.current_route.status
+                                    ]
+                                }}
                             </Badge>
                         </div>
                     </td>
 
                     <!-- Column 5: Time -->
                     <td class="px-5 py-4 align-top">
-                        <div class="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+                        <div
+                            class="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground"
+                        >
                             <Clock3 class="size-3.5" />
-                            <span>{{ formatRoutingDateTime(route.received_in_inbox_at) }}</span>
+                            <span>{{
+                                formatRoutingDateTime(
+                                    route.received_in_inbox_at,
+                                )
+                            }}</span>
                         </div>
                     </td>
 
