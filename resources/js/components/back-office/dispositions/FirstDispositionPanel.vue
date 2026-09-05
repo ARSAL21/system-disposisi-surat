@@ -165,20 +165,27 @@ function confirmDisposition(): void {
 </script>
 
 <template>
-    <div class="rounded-3xl border border-indigo-500/30 bg-card p-6 shadow-lg shadow-indigo-500/5 dark:border-indigo-500/20 dark:bg-slate-900/90">
+    <div
+        class="rounded-3xl border border-indigo-500/30 bg-card p-6 shadow-lg shadow-indigo-500/5 dark:border-indigo-500/20 dark:bg-slate-900/90"
+    >
         <!-- Header -->
-        <div class="flex items-start gap-3.5 border-b border-border/70 pb-5 dark:border-border/50">
+        <div
+            class="flex items-start gap-3.5 border-b border-border/70 pb-5 dark:border-border/50"
+        >
             <div
                 class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-600/10 text-indigo-600 shadow-xs dark:bg-indigo-400/10 dark:text-indigo-400"
             >
                 <ClipboardList class="size-5" />
             </div>
             <div>
-                <h3 class="font-['Syne',sans-serif] text-base font-bold text-foreground sm:text-lg">
+                <h3
+                    class="font-['Syne',sans-serif] text-base font-bold text-foreground sm:text-lg"
+                >
                     Form Lembar Disposisi Pimpinan
                 </h3>
                 <p class="mt-0.5 text-xs text-muted-foreground">
-                    Tunjuk 1-3 Asisten penerima dan tetapkan instruksi kebijakan terarah.
+                    Tunjuk 1-3 Asisten penerima dan tetapkan instruksi kebijakan
+                    terarah.
                 </p>
             </div>
         </div>
@@ -188,7 +195,9 @@ function confirmDisposition(): void {
                 <Info class="size-4" />
                 <AlertTitle>Akses Baca-Saja</AlertTitle>
                 <AlertDescription class="text-xs">
-                    Surat dapat diperiksa, tetapi jabatan aktif Anda tidak memiliki kewenangan membuat disposisi pertama untuk route ini.
+                    Surat dapat diperiksa, tetapi jabatan aktif Anda tidak
+                    memiliki kewenangan membuat disposisi pertama untuk route
+                    ini.
                 </AlertDescription>
             </Alert>
 
@@ -200,20 +209,24 @@ function confirmDisposition(): void {
                 <UsersRound class="size-4" />
                 <AlertTitle>Asisten Penerima Belum Tersedia</AlertTitle>
                 <AlertDescription class="text-xs">
-                    Belum ada jabatan Asisten dengan satu pemegang aktif yang dapat diverifikasi di sistem.
+                    Belum ada jabatan Asisten dengan satu pemegang aktif yang
+                    dapat diverifikasi di sistem.
                 </AlertDescription>
             </Alert>
 
             <!-- Recipient Assistant Selection -->
             <fieldset class="space-y-3">
                 <div class="flex items-center justify-between gap-3">
-                    <legend class="font-mono text-xs font-bold text-foreground uppercase tracking-wider">
+                    <legend
+                        class="font-mono text-xs font-bold tracking-wider text-foreground uppercase"
+                    >
                         Asisten Penerima <span class="text-destructive">*</span>
                     </legend>
                     <span
                         class="rounded-full bg-indigo-500/10 px-2.5 py-0.5 font-mono text-[11px] font-bold text-indigo-700 dark:text-indigo-300"
                     >
-                        {{ selectedPositions.length }}/{{ maximumRecipients }} Dipilih
+                        {{ selectedPositions.length }}/{{ maximumRecipients }}
+                        Dipilih
                     </span>
                 </div>
 
@@ -237,7 +250,9 @@ function confirmDisposition(): void {
                     >
                         <Checkbox
                             :id="`assistant-recipient-${position.id}`"
-                            :model-value="selectedPositionIds.includes(position.id)"
+                            :model-value="
+                                selectedPositionIds.includes(position.id)
+                            "
                             :disabled="
                                 !canCreate ||
                                 processing ||
@@ -245,14 +260,24 @@ function confirmDisposition(): void {
                                 !position.holder_name
                             "
                             class="mt-0.5"
-                            @update:model-value="toggleRecipient(position.id, $event === true)"
+                            @update:model-value="
+                                toggleRecipient(position.id, $event === true)
+                            "
                         />
                         <span class="min-w-0">
-                            <span class="block text-xs font-bold text-foreground">
+                            <span
+                                class="block text-xs font-bold text-foreground"
+                            >
                                 {{ position.name }}
                             </span>
-                            <span class="mt-0.5 block text-[11px] text-muted-foreground">
-                                Pejabat: {{ position.holder_name ?? 'Jabatan belum terisi' }}
+                            <span
+                                class="mt-0.5 block text-[11px] text-muted-foreground"
+                            >
+                                Pejabat:
+                                {{
+                                    position.holder_name ??
+                                    'Jabatan belum terisi'
+                                }}
                             </span>
                         </span>
                     </label>
@@ -262,7 +287,9 @@ function confirmDisposition(): void {
 
             <!-- Instructions -->
             <fieldset class="space-y-3">
-                <legend class="font-mono text-xs font-bold text-foreground uppercase tracking-wider">
+                <legend
+                    class="font-mono text-xs font-bold tracking-wider text-foreground uppercase"
+                >
                     Instruksi Disposisi <span class="text-destructive">*</span>
                 </legend>
 
@@ -283,18 +310,24 @@ function confirmDisposition(): void {
                     >
                         <Checkbox
                             :id="`instruction-label-${label.id}`"
-                            :model-value="selectedInstructionIds.includes(label.id)"
+                            :model-value="
+                                selectedInstructionIds.includes(label.id)
+                            "
                             :disabled="!canCreate || processing"
                             class="mt-0.5"
-                            @update:model-value="toggleInstruction(label.id, $event === true)"
+                            @update:model-value="
+                                toggleInstruction(label.id, $event === true)
+                            "
                         />
                         <span class="min-w-0">
-                            <span class="block text-xs font-bold text-foreground">
+                            <span
+                                class="block text-xs font-bold text-foreground"
+                            >
                                 {{ label.name }}
                             </span>
                             <span
                                 v-if="label.description"
-                                class="mt-0.5 block text-[11px] text-muted-foreground leading-relaxed"
+                                class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground"
                             >
                                 {{ label.description }}
                             </span>
@@ -307,12 +340,19 @@ function confirmDisposition(): void {
             <!-- Additional Notes -->
             <div class="space-y-2">
                 <div class="flex items-center justify-between gap-3">
-                    <Label for="disposition-note" class="font-mono text-xs font-bold uppercase tracking-wider">
+                    <Label
+                        for="disposition-note"
+                        class="font-mono text-xs font-bold tracking-wider uppercase"
+                    >
                         Catatan Tambahan Pimpinan
                     </Label>
                     <span
                         class="font-mono text-[10px] tabular-nums"
-                        :class="noteLength > 2000 ? 'font-bold text-destructive' : 'text-muted-foreground'"
+                        :class="
+                            noteLength > 2000
+                                ? 'font-bold text-destructive'
+                                : 'text-muted-foreground'
+                        "
                     >
                         {{ noteLength }}/2.000
                     </span>
@@ -323,7 +363,7 @@ function confirmDisposition(): void {
                     rows="4"
                     maxlength="2000"
                     :disabled="!canCreate || processing"
-                    class="min-h-24 w-full resize-y rounded-2xl border border-border/80 bg-background/80 px-3.5 py-2.5 text-xs text-foreground shadow-xs transition-all focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 disabled:opacity-50"
+                    class="min-h-24 w-full resize-y rounded-2xl border border-border/80 bg-background/80 px-3.5 py-2.5 text-xs text-foreground shadow-xs transition-all focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 focus:outline-none disabled:opacity-50"
                     placeholder="Instruksi spesifik atau batas waktu khusus dari pimpinan..."
                     @input="delete localErrors.instruction_note"
                 />
@@ -331,10 +371,16 @@ function confirmDisposition(): void {
             </div>
 
             <!-- Invariant Assurance Notice -->
-            <div class="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/40 p-3.5 text-xs">
-                <ShieldCheck class="mt-0.5 size-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
-                <p class="leading-relaxed text-muted-foreground text-[11px]">
-                    Disposisi tercatat atas jabatan eksekutif aktif. Setelah dikirim, alur berpindah ke meja Asisten dan dicatat permanen dalam audit log.
+            <div
+                class="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/40 p-3.5 text-xs"
+            >
+                <ShieldCheck
+                    class="mt-0.5 size-4 shrink-0 text-indigo-600 dark:text-indigo-400"
+                />
+                <p class="text-[11px] leading-relaxed text-muted-foreground">
+                    Disposisi tercatat atas jabatan eksekutif aktif. Setelah
+                    dikirim, alur berpindah ke meja Asisten dan dicatat permanen
+                    dalam audit log.
                 </p>
             </div>
 
