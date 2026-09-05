@@ -1069,6 +1069,41 @@ Pergantian pejabat membuat Position Assignment baru tanpa mengubah recipient.
 Karena itu reporting berikutnya memakai `completed_at`, Position recipient, dan
 assignment historis tanpa menyalin nama pejabat atau unit ke tabel cabang.
 
+## Aggregate Letter State M7.2
+
+M7.2 tidak menambah migration atau kolom aggregate. Status tersimpan pada
+`incoming_letters.status` tetap dihitung dari seluruh recipient terminal level
+`SECTION_HEAD` dan diperbarui dalam transaction yang sama dengan penyelesaian
+cabang terakhir. Tabel `letter_routes`, `dispositions`, dan
+`disposition_recipients` tetap menjadi sumber kebenaran workflow.
+
+## Reporting Read Model M7.3
+
+M7.3 tidak menambah migration, materialized view, kolom aggregate, maupun tabel
+snapshot. Laporan dibentuk dari sumber persistence yang sudah tersedia:
+
+| Metrik | Sumber waktu/data |
+| --- | --- |
+| Submission online/manual | `letter_submissions.submitted_at`, `source` |
+| Surat diterima | `incoming_letters.received_at` |
+| Mulai diproses | `MIN(dispositions.created_at)` untuk disposition dengan `source_route_id` |
+| Surat selesai | `MAX(disposition_recipients.completed_at)` seluruh recipient `SECTION_HEAD`, hanya jika seluruhnya `COMPLETED` |
+| Durasi surat | `incoming_letters.received_at` sampai waktu surat selesai |
+| Durasi cabang | `disposition_recipients.received_at` sampai `completed_at` |
+
+Authorized query memakai relasi `letter_routes`, `dispositions`,
+`disposition_recipients`, `positions`, `position_levels`, dan
+`position_assignments` untuk membatasi scope sebelum hydration. Aggregate dan
+pagination dijalankan melalui query terpisah sehingga pergantian halaman tidak
+mengubah KPI. Index yang sudah ada pada waktu, status, recipient, dan foreign
+key dipakai terlebih dahulu; index reporting baru hanya boleh ditambahkan
+setelah profiling pada data produksi menunjukkan kebutuhan nyata.
+
+Ekspor daftar memakai `chunkById` dan tidak membuat salinan persistence. Isi
+instruksi, jurnal tindak lanjut, dan hasil penyelesaian sengaja tidak menjadi
+kolom CSV, walaupun detail tersebut dapat dibaca melalui presenter UI yang
+terotorisasi.
+
 ---
 
 # 16. Audit Trail

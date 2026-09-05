@@ -656,6 +656,59 @@ kedua cabang `COMPLETED`, satu surat `COMPLETED`, dan tepat satu audit
 `LETTER_COMPLETED`. Dua request bersamaan pada cabang yang sama menghasilkan
 satu keberhasilan dan satu respons stale-state `409`. Suite SQLite tetap
 menguji invariant transaksi, tetapi bukan pengganti verifikasi row lock MySQL.
+Test ini dijalankan melalui grup `mysql-concurrency` dengan
+`RUN_MYSQL_CONCURRENCY_TESTS=true`; test gagal tertutup jika nama database tidak
+mengikuti pola khusus `disposisi_surat_concurrency_test_*`.
+
+---
+
+## 14.3 Aggregate Letter State M7.2
+
+M7.2 menetapkan agregasi dari M6.3 sebagai satu-satunya sumber perubahan status
+surat setelah disposisi dimulai. Selama sedikitnya satu recipient terminal
+`SECTION_HEAD` belum selesai, surat tetap `IN_PROGRESS`. Setelah seluruh
+recipient terminal selesai, service aggregate mengubah surat menjadi
+`COMPLETED` di dalam transaction dan lock surat yang sama dengan penyelesaian
+cabang terakhir.
+
+Graph tanpa cabang terminal atau graph dengan hierarchy/status yang tidak
+konsisten ditolak dengan `409`. Hanya transaksi yang benar-benar melakukan
+transition surat yang menulis audit `LETTER_COMPLETED`; frontend tidak dapat
+menentukan atau mengubah aggregate letter state.
+
+---
+
+## 14.4 Laporan Periodik M7.3
+
+Reporting bersifat read-only dan tidak memperkenalkan transition, status, atau
+jalur penyelesaian baru. Sumber waktu laporan mengikuti kejadian domain:
+
+* submission online/manual dihitung pada `submitted_at`;
+* surat diterima dihitung pada `incoming_letters.received_at`;
+* mulai diproses dihitung pada disposition pertama yang bersumber dari initial
+  route;
+* surat selesai hanya dihitung ketika terdapat recipient terminal dan seluruh
+  recipient `SECTION_HEAD` selesai, memakai timestamp penyelesaian terakhir;
+* durasi cabang dimulai dari `received_at` recipient dan berakhir di
+  `completed_at` recipient tersebut.
+
+Filter tanggal inklusif memakai zona waktu kantor dan dibatasi maksimum 366
+hari. Pemilihan basis kejadian hanya mengubah collection surat yang ditampilkan;
+masing-masing KPI dan seri tren tetap dihitung dari timestamp domainnya pada
+periode yang sama. Pagination tidak boleh memengaruhi aggregate.
+
+Visibility drilldown mengikuti graph yang sudah tersimpan: eksekutif global,
+Asisten hanya subtree recipient miliknya, dan Kepala Bagian hanya terminal
+branch Position miliknya. Kepala Bagian Umum mempunyai aggregate global tetapi
+tidak boleh memakai aggregate tersebut untuk membaca detail atau catatan cabang
+lain. Semua batas diterapkan di query database. Beberapa Position Assignment
+aktif milik user yang sama digabung sebagai union scope.
+
+Ekspor tidak mengubah state dan tidak memuat instruksi, follow-up, atau hasil
+akhir. Detail UI boleh memuat ketiganya hanya setelah Policy surat dan scope
+cabang lolos. Permission kurang menghasilkan `403`, Position/resource di luar
+scope menghasilkan `404`, filter invalid menghasilkan `422`, dan limiter ekspor
+menghasilkan `429`.
 
 ---
 

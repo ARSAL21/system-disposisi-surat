@@ -1196,6 +1196,55 @@ yang sama dan dicatat menggunakan identitas serta assignment barunya. UI
 mengunci aksi secara sinkron saat request dimulai dan menampilkan cabang final
 sebagai histori read-only.
 
+## 24.8 Aggregate Letter State (M7.2)
+
+M7.2 meresmikan service aggregate M6.3 sebagai jalur tunggal perubahan
+`incoming_letters.status` dari `IN_PROGRESS` menjadi `COMPLETED`. Service
+tersebut bekerja dalam transaction penyelesaian cabang, setelah surat dan
+seluruh recipient terminal dikunci secara deterministik.
+
+Surat tetap `IN_PROGRESS` selama ada cabang terminal yang belum selesai.
+Transition menjadi `COMPLETED` terjadi tepat sekali setelah semua recipient
+level `SECTION_HEAD` selesai dan menghasilkan tepat satu audit
+`LETTER_COMPLETED`. Graph kosong atau tidak konsisten gagal tertutup dengan
+respons konflik dan tidak diperbaiki oleh frontend.
+
+## 24.9 Laporan Periodik dan Drilldown Proses (M7.3)
+
+Laporan periodik adalah read model terotorisasi di atas data intake, surat
+resmi, routing, disposisi, recipient, dan jurnal tindak lanjut yang sudah ada.
+Fitur ini tidak menambah workflow state maupun tabel reporting. Endpoint
+produksi terdiri dari halaman agregat, drilldown satu surat, serta ekspor CSV
+ringkasan dan daftar surat.
+
+Authorization selalu menggabungkan permission dan Position Assignment aktif:
+
+* Wali Kota/Sekda memperoleh agregat kota dan detail lengkap seluruh pohon;
+* Kepala Bagian Umum memperoleh agregat global, tetapi daftar/detail hanya
+  untuk surat yang memiliki cabang Bagian Umum;
+* Asisten memperoleh recipient miliknya dan cabang Kepala Bagian yang langsung
+  berada di bawah recipient tersebut;
+* Kepala Bagian memperoleh cabang Position miliknya sendiri;
+* Petugas Surat dan super-admin tanpa Position bisnis tidak memperoleh akses.
+
+Beberapa assignment aktif digabung sebagai union. Scope surat dan relasi cabang
+diterapkan pada query database sebelum record dimuat. Presenter detail laporan
+berdiri sendiri agar kebutuhan drilldown tidak memperlebar payload inbox M6.
+Email, ID Position Assignment, disk/path dokumen, IP, data autentikasi, dan
+metadata audit mentah tidak pernah menjadi props laporan.
+
+KPI menggunakan waktu kejadian domain: submission memakai `submitted_at`, surat
+diterima memakai `received_at`, proses dimulai memakai waktu disposition awal,
+dan penyelesaian memakai `MAX(completed_at)` seluruh recipient terminal setelah
+semuanya selesai. Rentang tanggal bersifat inklusif, maksimum 366 hari, dan
+dikonversi dari zona waktu kantor ke UTC. Tren memilih bucket harian, mingguan,
+atau bulanan berdasarkan panjang periode.
+
+Ekspor CSV dihasilkan secara streaming dan chunked, memakai UTF-8 BOM, header
+download privat, serta sanitasi formula spreadsheet. CSV tidak memuat instruksi,
+follow-up, atau completion note. Endpoint ekspor memakai limiter bersama 10
+request/menit per user dan 30 request/menit per IP.
+
 ---
 
 # 25. Audit Architecture

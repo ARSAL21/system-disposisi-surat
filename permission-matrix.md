@@ -26,10 +26,10 @@ disinkronkan secara exact melalui `authorization:sync`, tetapi selain
 | Role | Permission |
 | --- | --- |
 | `petugas-surat` | `intake.view`, `intake.screen`, `letter-activities.view`, `document-versions.view`, `letter-routing.view` |
-| `kabag-umum` | `intake.view`, `intake.decide`, `letter-activities.view`, `document-versions.view`, `document-versions.create`, `letter-routing.view`, `letter-routing.create`, `dispositions.view`, `dispositions.process`, `disposition-instructions.view` |
-| `pimpinan-eksekutif` | `executive-inbox.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `disposition-instructions.view` |
-| `asisten` | `dispositions.view`, `dispositions.create`, `disposition-instructions.view` |
-| `kepala-bagian` | `dispositions.view`, `dispositions.process`, `disposition-instructions.view` |
+| `kabag-umum` | `intake.view`, `intake.decide`, `letter-activities.view`, `document-versions.view`, `document-versions.create`, `letter-routing.view`, `letter-routing.create`, `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view` |
+| `pimpinan-eksekutif` | `executive-inbox.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `reports.view`, `reports.export`, `disposition-instructions.view` |
+| `asisten` | `dispositions.view`, `dispositions.create`, `reports.view`, `reports.export`, `disposition-instructions.view` |
+| `kepala-bagian` | `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view` |
 
 Role adalah capability bundle, bukan identitas jabatan. Wali Kota dan Sekda
 berbagi role `pimpinan-eksekutif`, tetapi resource yang dapat diakses tetap
@@ -245,6 +245,34 @@ kepada custom role eksekutif, Asisten, Kepala Bagian, dan pengelola workflow
 melalui UI RBAC. Role Kepala Bagian yang menangani recipient membutuhkan
 `dispositions.view` dan `dispositions.process`; role eksekutif dan Asisten tidak
 memerlukan `dispositions.process`.
+
+## Penambahan M7.3 Laporan Periodik
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `reports.view` | Katalog capability untuk membuka agregat dan drilldown laporan sesuai Position bisnis aktif. |
+| `super-admin` | `reports.export` | Katalog capability untuk mengekspor ringkasan dan daftar surat terotorisasi dalam CSV. |
+
+Kedua permission disinkronkan secara exact kepada `super-admin`, `kabag-umum`,
+`pimpinan-eksekutif`, `asisten`, dan `kepala-bagian`. `petugas-surat` tidak
+menerimanya. Permission tidak menjadi global bypass; tanpa Position pada level
+`EXECUTIVE_ENTRY`, `ASSISTANT`, atau `SECTION_HEAD` yang sah, resource laporan
+ditolak sebagai `404`.
+
+| Position aktif | Aggregate | Daftar/detail |
+| --- | --- | --- |
+| Wali Kota/Sekda | Seluruh kota | Seluruh proses dan seluruh cabang |
+| Kepala Bagian Umum | Operasional global | Cabang Bagian Umum miliknya |
+| Asisten | Subtree Asisten | Recipient Asisten dan seluruh child branch langsung |
+| Kepala Bagian lain | Cabang sendiri | Cabang Position sendiri |
+
+Assignment aktif ganda menghasilkan union scope. Capability Inertia
+`can_view_reports` dan `can_export_reports` hanya bernilai benar jika permission
+dan scope Position sama-sama valid. Ekspor tetap memakai authorized query yang
+sama seperti UI dan dilindungi limiter.
+
+Setelah deployment M7.3, jalankan `php artisan authorization:sync`, kemudian
+berikan permission baru kepada custom role struktural yang memang memerlukannya.
 
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
