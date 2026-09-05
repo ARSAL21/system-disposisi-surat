@@ -26,15 +26,17 @@ final class PeriodicReportPresenter
 
     /**
      * @param  Collection<int, IncomingLetter>  $letters
+     * @param  array{date_from: string, date_to: string, source: string, event: string, status: string, search: string}|null  $filters
      * @return list<array<string, mixed>>
      */
-    public function letters(Collection $letters, User $user): array
+    public function letters(Collection $letters, User $user, ?array $filters = null): array
     {
         $participantCodes = $this->participantPositionCodes($letters, $user);
 
         return array_values($letters->map(fn (IncomingLetter $letter): array => $this->letter(
             $letter,
             $participantCodes[(int) $letter->getKey()] ?? [],
+            $filters,
         ))->all());
     }
 
@@ -89,9 +91,10 @@ final class PeriodicReportPresenter
 
     /**
      * @param  list<string>  $participantCodes
+     * @param  array{date_from: string, date_to: string, source: string, event: string, status: string, search: string}|null  $filters
      * @return array<string, mixed>
      */
-    private function letter(IncomingLetter $letter, array $participantCodes): array
+    private function letter(IncomingLetter $letter, array $participantCodes, ?array $filters): array
     {
         $total = (int) $letter->getAttribute('report_branch_total');
         $completed = (int) $letter->getAttribute('report_branch_completed');
@@ -123,7 +126,10 @@ final class PeriodicReportPresenter
                 'percent_complete' => $total === 0 ? 0 : (int) floor(($completed / $total) * 100),
             ],
             'links' => [
-                'detail' => route('back-office.reports.show', $letter),
+                'detail' => route('back-office.reports.show', [
+                    'incomingLetter' => $letter,
+                    ...($filters ?? []),
+                ]),
             ],
         ];
     }

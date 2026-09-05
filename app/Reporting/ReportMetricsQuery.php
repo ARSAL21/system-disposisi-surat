@@ -113,7 +113,9 @@ final class ReportMetricsQuery
      */
     public function senderBreakdown(User $user, array $filters): array
     {
-        $rows = $this->letterQuery->aggregate($user, $filters)
+        $scope = $this->letterQuery->aggregate($user, $filters);
+        $total = max(1, (clone $scope)->count('incoming_letters.id'));
+        $rows = $scope
             ->join('sender_organizations', 'sender_organizations.id', '=', 'incoming_letters.sender_organization_id')
             ->selectRaw('sender_organizations.name as sender_name, COUNT(DISTINCT incoming_letters.id) as aggregate_total')
             ->groupBy('sender_organizations.id', 'sender_organizations.name')
@@ -121,12 +123,11 @@ final class ReportMetricsQuery
             ->orderBy('sender_organizations.name')
             ->limit(10)
             ->get();
-        $largest = max(1, (int) ($rows->first()?->getAttribute('aggregate_total') ?? 0));
 
         return array_values($rows->map(fn (IncomingLetter $row): array => [
             'name' => (string) $row->getAttribute('sender_name'),
             'total' => (int) $row->getAttribute('aggregate_total'),
-            'percent' => (int) round(((int) $row->getAttribute('aggregate_total') / $largest) * 100),
+            'percent' => (int) round(((int) $row->getAttribute('aggregate_total') / $total) * 100),
         ])->all());
     }
 

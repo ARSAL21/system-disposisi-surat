@@ -112,9 +112,10 @@ final class ReportOrganizationGraphQuery
                         $terminalRecipient->recipientPosition,
                     );
                     $activityAt = $this->lastActivityAt($terminalRecipient);
-                    $this->addStatus($section, $terminalRecipient->status->value, $activityAt);
-                    $this->addStatus($assistant, $terminalRecipient->status->value, $activityAt);
-                    $this->addStatus($executive, $terminalRecipient->status->value, $activityAt);
+                    $completionDuration = $this->completionDurationSeconds($terminalRecipient);
+                    $this->addStatus($section, $terminalRecipient->status->value, $activityAt, $completionDuration);
+                    $this->addStatus($assistant, $terminalRecipient->status->value, $activityAt, $completionDuration);
+                    $this->addStatus($executive, $terminalRecipient->status->value, $activityAt, $completionDuration);
                     $assistant['children'][$sectionKey] = $section;
                 }
 
@@ -145,19 +146,29 @@ final class ReportOrganizationGraphQuery
             'counts' => ['pending' => 0, 'in_progress' => 0, 'completed' => 0],
             'last_activity_at' => null,
             'oldest_attention_at' => null,
+            'completion_duration_seconds' => 0,
             'children' => [],
         ];
     }
 
     /** @param array<string, mixed> $node */
-    private function addStatus(array &$node, string $status, ?CarbonInterface $activityAt): void
-    {
+    private function addStatus(
+        array &$node,
+        string $status,
+        ?CarbonInterface $activityAt,
+        ?int $completionDurationSeconds = null,
+    ): void {
         $key = match ($status) {
             DispositionRecipientStatus::Completed->value => 'completed',
             DispositionRecipientStatus::InProgress->value => 'in_progress',
             default => 'pending',
         };
         $node['counts'][$key]++;
+
+        if ($key === 'completed' && $completionDurationSeconds !== null) {
+            $node['completion_duration_seconds'] += $completionDurationSeconds;
+        }
+
         $this->touch($node, $activityAt);
 
         if ($status !== DispositionRecipientStatus::Completed->value
@@ -195,6 +206,23 @@ final class ReportOrganizationGraphQuery
         return $timestamps->sortByDesc(fn (CarbonInterface $timestamp): int => $timestamp->getTimestamp())->first();
     }
 
+    private function completionDurationSeconds(DispositionRecipient $recipient): ?int
+    {
+        if ($recipient->status !== DispositionRecipientStatus::Completed
+            || ! $recipient->received_at instanceof CarbonInterface
+            || ! $recipient->completed_at instanceof CarbonInterface) {
+            return null;
+        }
+
+        $seconds = (int) $recipient->received_at->diffInSeconds($recipient->completed_at, false);
+
+        if ($seconds < 0) {
+            throw DispositionStateConflict::inconsistentGraph();
+        }
+
+        return $seconds;
+    }
+
     /**
      * @param  array<string, mixed>  $node
      * @return array<string, mixed>
@@ -227,6 +255,9 @@ final class ReportOrganizationGraphQuery
             'last_activity_at' => $node['last_activity_at'] instanceof CarbonInterface
                 ? $node['last_activity_at']->toISOString()
                 : null,
+            'average_completion_hours' => $counts['completed'] === 0
+                ? null
+                : round(($node['completion_duration_seconds'] / $counts['completed']) / 3600, 1),
             'attention' => [
                 'needs_attention' => $idleHours !== null,
                 'idle_hours' => $idleHours,
