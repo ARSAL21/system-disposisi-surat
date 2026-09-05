@@ -7,9 +7,11 @@ use App\Models\User;
 use App\Reporting\ReportScopeResolver;
 use App\Services\DispositionPositionAssignmentResolver;
 use App\Services\DocumentVersionPositionAssignmentResolver;
+use App\Services\IncomingRegisterPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\IntakePositionAssignmentResolver;
 use App\Services\LetterRoutingPositionAssignmentResolver;
+use App\LetterResponses\LetterResponseScopeQuery;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -113,6 +115,12 @@ class HandleInertiaRequests extends Middleware
                 'can_view_intake' => false,
                 'can_screen_intake' => false,
                 'can_decide_intake' => false,
+                'can_create_manual_intake' => false,
+                'can_view_incoming_register' => false,
+                'can_view_letter_responses' => false,
+                'can_contribute_letter_responses' => false,
+                'can_review_letter_responses' => false,
+                'can_authorize_letter_responses' => false,
             ];
         }
 
@@ -123,6 +131,12 @@ class HandleInertiaRequests extends Middleware
         $hasApprovalPermission = $user->can(PermissionName::DecideIntake->value);
         $hasApprovalPosition = $hasApprovalPermission
             && app(IntakeApprovalPositionAssignmentResolver::class)->hasActiveAssignment($user);
+        $hasManualIntakePermission = $user->can(PermissionName::CreateManualIntake->value);
+        $hasManualIntakePosition = $hasManualIntakePermission
+            && app(IntakePositionAssignmentResolver::class)->hasActiveAssignment($user);
+        $hasIncomingRegisterPermission = $user->can(PermissionName::ViewIncomingRegister->value);
+        $hasIncomingRegisterPosition = $hasIncomingRegisterPermission
+            && app(IncomingRegisterPositionAssignmentResolver::class)->hasActiveAssignment($user);
         $hasDocumentVersionPermission = $user->can(PermissionName::ViewDocumentVersions->value);
         $hasDocumentVersionPosition = $hasDocumentVersionPermission
             && app(DocumentVersionPositionAssignmentResolver::class)->hasViewingAssignment($user);
@@ -148,6 +162,7 @@ class HandleInertiaRequests extends Middleware
         $canProcessDisposition = $hasDispositionProcessPermission
             && $dispositionResolver->hasSectionHeadAssignment($user);
         $hasReportPosition = app(ReportScopeResolver::class)->resolve($user) !== null;
+        $hasLetterResponsePosition = app(LetterResponseScopeQuery::class)->hasBusinessScope($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -175,6 +190,16 @@ class HandleInertiaRequests extends Middleware
             'can_screen_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ScreenIntake->value),
             'can_decide_intake' => $hasApprovalPosition,
+            'can_create_manual_intake' => $hasManualIntakePosition,
+            'can_view_incoming_register' => $hasIncomingRegisterPosition,
+            'can_view_letter_responses' => $hasLetterResponsePosition
+                && $user->can(PermissionName::ViewLetterResponses->value),
+            'can_contribute_letter_responses' => $hasLetterResponsePosition
+                && $user->can(PermissionName::ContributeLetterResponses->value),
+            'can_review_letter_responses' => $hasLetterResponsePosition
+                && $user->can(PermissionName::ReviewLetterResponses->value),
+            'can_authorize_letter_responses' => $hasLetterResponsePosition
+                && $user->can(PermissionName::AuthorizeLetterResponses->value),
         ];
     }
 }

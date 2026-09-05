@@ -148,6 +148,42 @@ final class AuthorizationCatalog
                     'description' => 'Mengembalikan hasil pemeriksaan kepada petugas, menolak pengajuan, atau meregistrasikannya sebagai surat masuk resmi.',
                     'group' => 'Penerimaan Surat',
                 ],
+                PermissionName::CreateManualIntake => [
+                    'name' => $permission->value,
+                    'label' => 'Catat surat masuk manual',
+                    'description' => 'Mencatat surat fisik, mengunggah hasil scan, dan mengajukannya kepada Kepala Bagian Umum.',
+                    'group' => 'Penerimaan Surat',
+                ],
+                PermissionName::ViewIncomingRegister => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat buku agenda surat masuk',
+                    'description' => 'Melihat seluruh surat masuk resmi dari kanal online dan manual.',
+                    'group' => 'Penerimaan Surat',
+                ],
+                PermissionName::ViewLetterResponses => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat dossier balasan',
+                    'description' => 'Melihat dossier penyusunan balasan sesuai Position dan subtree yang menjadi kewenangannya.',
+                    'group' => 'Balasan Surat',
+                ],
+                PermissionName::ContributeLetterResponses => [
+                    'name' => $permission->value,
+                    'label' => 'Berkontribusi pada balasan',
+                    'description' => 'Mengunggah bahan teknis, proposal Asisten, atau konsolidasi eksekutif sesuai kewenangan Position.',
+                    'group' => 'Balasan Surat',
+                ],
+                PermissionName::ReviewLetterResponses => [
+                    'name' => $permission->value,
+                    'label' => 'Tinjau bahan balasan',
+                    'description' => 'Mengembalikan versi bahan atau proposal kepada Position penyusunnya dengan alasan tercatat.',
+                    'group' => 'Balasan Surat',
+                ],
+                PermissionName::AuthorizeLetterResponses => [
+                    'name' => $permission->value,
+                    'label' => 'Otorisasi balasan resmi',
+                    'description' => 'Membuat mandat surat balasan dan memfinalisasi rencana balasan sebagai eksekutif penerima.',
+                    'group' => 'Balasan Surat',
+                ],
             },
             PermissionName::cases(),
         ));
@@ -208,6 +244,12 @@ final class AuthorizationCatalog
                 PermissionName::ViewIntake->value,
                 PermissionName::ScreenIntake->value,
                 PermissionName::DecideIntake->value,
+                PermissionName::CreateManualIntake->value,
+                PermissionName::ViewIncomingRegister->value,
+                PermissionName::ViewLetterResponses->value,
+                PermissionName::ContributeLetterResponses->value,
+                PermissionName::ReviewLetterResponses->value,
+                PermissionName::AuthorizeLetterResponses->value,
             ],
             RoleName::LetterOfficer => [
                 PermissionName::ViewIntake->value,
@@ -215,6 +257,8 @@ final class AuthorizationCatalog
                 PermissionName::ViewLetterActivities->value,
                 PermissionName::ViewDocumentVersions->value,
                 PermissionName::ViewLetterRouting->value,
+                PermissionName::CreateManualIntake->value,
+                PermissionName::ViewIncomingRegister->value,
             ],
             RoleName::GeneralAffairsHead => [
                 PermissionName::ViewIntake->value,
@@ -229,6 +273,9 @@ final class AuthorizationCatalog
                 PermissionName::ViewReports->value,
                 PermissionName::ExportReports->value,
                 PermissionName::ViewDispositionInstructions->value,
+                PermissionName::ViewLetterResponses->value,
+                PermissionName::ContributeLetterResponses->value,
+                PermissionName::ViewIncomingRegister->value,
             ],
             RoleName::ExecutiveLeader => [
                 PermissionName::ViewExecutiveInbox->value,
@@ -238,6 +285,10 @@ final class AuthorizationCatalog
                 PermissionName::ViewReports->value,
                 PermissionName::ExportReports->value,
                 PermissionName::ViewDispositionInstructions->value,
+                PermissionName::ViewLetterResponses->value,
+                PermissionName::ContributeLetterResponses->value,
+                PermissionName::ReviewLetterResponses->value,
+                PermissionName::AuthorizeLetterResponses->value,
             ],
             RoleName::Assistant => [
                 PermissionName::ViewDispositions->value,
@@ -245,6 +296,9 @@ final class AuthorizationCatalog
                 PermissionName::ViewReports->value,
                 PermissionName::ExportReports->value,
                 PermissionName::ViewDispositionInstructions->value,
+                PermissionName::ViewLetterResponses->value,
+                PermissionName::ContributeLetterResponses->value,
+                PermissionName::ReviewLetterResponses->value,
             ],
             RoleName::SectionHead => [
                 PermissionName::ViewDispositions->value,
@@ -252,6 +306,8 @@ final class AuthorizationCatalog
                 PermissionName::ViewReports->value,
                 PermissionName::ExportReports->value,
                 PermissionName::ViewDispositionInstructions->value,
+                PermissionName::ViewLetterResponses->value,
+                PermissionName::ContributeLetterResponses->value,
             ],
         };
     }

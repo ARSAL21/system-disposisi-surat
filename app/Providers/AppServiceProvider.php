@@ -10,6 +10,7 @@ use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
 use App\Models\InstructionLabel;
 use App\Models\LetterRoute;
+use App\Models\LetterResponseDossier;
 use App\Models\User;
 use App\Policies\AuditLogPolicy;
 use App\Policies\DispositionPolicy;
@@ -17,6 +18,7 @@ use App\Policies\DispositionRecipientPolicy;
 use App\Policies\IncomingLetterPolicy;
 use App\Policies\InstructionLabelPolicy;
 use App\Policies\LetterRoutePolicy;
+use App\Policies\LetterResponseDossierPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use Carbon\CarbonImmutable;
@@ -60,6 +62,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(DispositionRecipient::class, DispositionRecipientPolicy::class);
         Gate::policy(InstructionLabel::class, InstructionLabelPolicy::class);
         Gate::policy(LetterRoute::class, LetterRoutePolicy::class);
+        Gate::policy(LetterResponseDossier::class, LetterResponseDossierPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
     }
@@ -136,6 +139,11 @@ class AppServiceProvider extends ServiceProvider
             Limit::perHour(30)->by('document-version-upload:ip:'.$request->ip()),
         ]);
 
+        RateLimiter::for('manual-intake-upload', fn (Request $request): array => [
+            Limit::perHour(10)->by('manual-intake-upload:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perHour(30)->by('manual-intake-upload:ip:'.$request->ip()),
+        ]);
+
         RateLimiter::for('letter-routing-create', fn (Request $request): array => [
             Limit::perMinute(30)->by('letter-routing-create:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perMinute(60)->by('letter-routing-create:ip:'.$request->ip()),
@@ -154,6 +162,16 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('report-export', fn (Request $request): array => [
             Limit::perMinute(10)->by('report-export:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perMinute(30)->by('report-export:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('letter-response-upload', fn (Request $request): array => [
+            Limit::perHour(20)->by('letter-response-upload:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perHour(60)->by('letter-response-upload:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('letter-response-mutation', fn (Request $request): array => [
+            Limit::perMinute(60)->by('letter-response-mutation:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(120)->by('letter-response-mutation:ip:'.$request->ip()),
         ]);
     }
 }

@@ -26,4 +26,10 @@ enum PermissionName: string
     case ViewIntake = 'intake.view';
     case ScreenIntake = 'intake.screen';
     case DecideIntake = 'intake.decide';
+    case CreateManualIntake = 'intake.create-manual';
+    case ViewIncomingRegister = 'incoming-register.view';
+    case ViewLetterResponses = 'letter-responses.view';
+    case ContributeLetterResponses = 'letter-responses.contribute';
+    case ReviewLetterResponses = 'letter-responses.review';
+    case AuthorizeLetterResponses = 'letter-responses.authorize';
 }
