@@ -15,4 +15,5 @@ enum AuditDomain: string
     case Disposition = 'disposition';
     case WorkflowConfiguration = 'workflow_configuration';
     case Document = 'document';
+    case Correspondence = 'correspondence';
 }

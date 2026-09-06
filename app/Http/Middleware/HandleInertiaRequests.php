@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
+use App\LetterResponses\LetterResponseScopeQuery;
 use App\Models\User;
 use App\Reporting\ReportScopeResolver;
 use App\Services\DispositionPositionAssignmentResolver;
@@ -11,7 +12,6 @@ use App\Services\IncomingRegisterPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\IntakePositionAssignmentResolver;
 use App\Services\LetterRoutingPositionAssignmentResolver;
-use App\LetterResponses\LetterResponseScopeQuery;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
