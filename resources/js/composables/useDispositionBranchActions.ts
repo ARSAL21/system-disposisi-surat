@@ -100,7 +100,7 @@ export function useDispositionBranchActions({
             return;
         }
 
-        postBranchAction('complete', routes.value?.complete, payload);
+        postBranchAction('complete', routes.value?.complete, payload, true);
     }
 
     function currentActor() {
@@ -129,7 +129,8 @@ export function useDispositionBranchActions({
     function postBranchAction(
         action: BranchAction,
         url: string | undefined,
-        payload: Record<string, string>,
+        payload: Record<string, string | File | null>,
+        forceFormData = false,
     ): void {
         if (processingAction.value) {
             return;
@@ -145,6 +146,7 @@ export function useDispositionBranchActions({
 
         processingAction.value = action;
         router.post(url, payload, {
+            forceFormData,
             preserveScroll: true,
             onError: (responseErrors) => {
                 errors.value = responseErrors;

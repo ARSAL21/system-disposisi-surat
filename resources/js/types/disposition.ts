@@ -140,6 +140,8 @@ export type AddDispositionFollowUpPayload = {
 
 export type CompleteDispositionBranchPayload = {
     completion_note: string;
+    technical_document: File | null;
+    technical_document_note: string | null;
 };
 
 export type ForwardedDispositionRecipient = {

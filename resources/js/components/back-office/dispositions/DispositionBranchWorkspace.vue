@@ -359,7 +359,7 @@ const hasAnyAction = computed(
         v-model:open="completionDialogOpen"
         :direct-completion="branch.status === 'PENDING'"
         :processing="processingAction === 'complete'"
-        :error="errors?.completion_note"
+        :errors="errors"
         @confirm="emit('complete', $event)"
     />
 </template>
