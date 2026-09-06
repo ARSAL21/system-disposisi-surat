@@ -40,7 +40,10 @@ defineProps<{ submission: SenderContact }>();
                     <div class="min-w-0">
                         <dt class="text-xs text-muted-foreground">Email</dt>
                         <dd class="mt-1 font-medium break-all">
-                            {{ submission.contact_email }}
+                            {{
+                                submission.contact_email ??
+                                'Tidak dicantumkan'
+                            }}
                         </dd>
                     </div>
                 </div>

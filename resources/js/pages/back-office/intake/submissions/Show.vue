@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import { FileWarning } from '@lucide/vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { FilePenLine, FileWarning } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import IntakeAuthorityPanel from '@/components/back-office/intake/IntakeAuthorityPanel.vue';
 import IntakeDetailHeader from '@/components/back-office/intake/IntakeDetailHeader.vue';
@@ -11,6 +11,7 @@ import SubmissionDocumentReview from '@/components/back-office/intake/Submission
 import SubmissionOverviewCard from '@/components/back-office/intake/SubmissionOverviewCard.vue';
 import SubmissionTimeline from '@/components/back-office/intake/SubmissionTimeline.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { intakeRoutes } from '@/lib/intakePresentation';
 import type {
     IntakeReviewOutcome,
@@ -114,6 +115,19 @@ function submitScreening(outcome: IntakeReviewOutcome): void {
                     <AlertDescription>
                         {{ submission.internal_revision_note }}
                     </AlertDescription>
+                    <Button
+                        v-if="
+                            submission.capabilities.can_revise_manual &&
+                            submission.links.manual_revision
+                        "
+                        as-child
+                        class="mt-4 min-h-11 rounded-xl bg-orange-700 text-white hover:bg-orange-800"
+                    >
+                        <Link :href="submission.links.manual_revision">
+                            <FilePenLine class="size-4" aria-hidden="true" />
+                            Perbaiki data atau scan surat
+                        </Link>
+                    </Button>
                 </Alert>
                 <ScreeningChecklistCard
                     :items="checklist"

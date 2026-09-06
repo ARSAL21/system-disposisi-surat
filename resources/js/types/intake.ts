@@ -39,12 +39,13 @@ export type IntakeSubmission = {
     status: IntakeSubmissionStatus;
     sender_organization_name: string;
     contact_name: string;
-    contact_email: string;
+    contact_email: string | null;
     contact_phone: string | null;
     external_letter_number: string | null;
     external_letter_date: string | null;
     subject: string;
     summary: string | null;
+    received_at: string | null;
     submitted_at: string | null;
     created_at: string | null;
     document: IntakeDocument | null;
@@ -55,12 +56,14 @@ export type IntakeSubmission = {
     capabilities: {
         can_screen: boolean;
         can_download_document: boolean;
+        can_revise_manual: boolean;
     };
     links: {
         show: string;
         screen: string;
         document_preview: string | null;
         document_download: string | null;
+        manual_revision: string | null;
     };
 };
 
