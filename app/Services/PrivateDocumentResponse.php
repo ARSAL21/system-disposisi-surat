@@ -5,7 +5,11 @@ namespace App\Services;
 use App\Exceptions\DocumentStorageConflict;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
+use App\Models\LetterResponseDocumentVersion;
+use App\Models\LetterResponseDossier;
 use App\Models\LetterSubmission;
+use App\Models\OutgoingLetter;
+use App\Models\OutgoingLetterDocumentVersion;
 use App\Models\SubmissionDocument;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -48,6 +52,66 @@ class PrivateDocumentResponse
         LetterDocument $document,
     ): StreamedResponse {
         return $this->buildLetterDocumentResponse($incomingLetter, $document, asDownload: true);
+    }
+
+    public function previewLetterResponseDocument(
+        LetterResponseDossier $dossier,
+        LetterResponseDocumentVersion $version,
+    ): StreamedResponse {
+        return $this->buildLetterResponseDocument($dossier, $version, false);
+    }
+
+    public function downloadLetterResponseDocument(
+        LetterResponseDossier $dossier,
+        LetterResponseDocumentVersion $version,
+    ): StreamedResponse {
+        return $this->buildLetterResponseDocument($dossier, $version, true);
+    }
+
+    public function previewOutgoingLetterDocument(
+        OutgoingLetter $letter,
+        OutgoingLetterDocumentVersion $version,
+    ): StreamedResponse {
+        return $this->buildOutgoingLetterDocument($letter, $version, false);
+    }
+
+    public function downloadOutgoingLetterDocument(
+        OutgoingLetter $letter,
+        OutgoingLetterDocumentVersion $version,
+    ): StreamedResponse {
+        return $this->buildOutgoingLetterDocument($letter, $version, true);
+    }
+
+    private function buildOutgoingLetterDocument(
+        OutgoingLetter $letter,
+        OutgoingLetterDocumentVersion $version,
+        bool $asDownload,
+    ): StreamedResponse {
+        app(OutgoingLetterDocumentStorage::class)->validate($letter, $version);
+
+        return $this->buildStorageResponse(
+            disk: $version->storage_disk,
+            path: $version->storage_path,
+            originalFilename: $version->original_filename,
+            fallbackId: 'surat-keluar-'.$letter->public_id,
+            asDownload: $asDownload,
+        );
+    }
+
+    private function buildLetterResponseDocument(
+        LetterResponseDossier $dossier,
+        LetterResponseDocumentVersion $version,
+        bool $asDownload,
+    ): StreamedResponse {
+        app(LetterResponseDocumentStorage::class)->validate($dossier, $version);
+
+        return $this->buildStorageResponse(
+            disk: $version->storage_disk,
+            path: $version->storage_path,
+            originalFilename: $version->original_filename,
+            fallbackId: 'balasan-'.$dossier->public_id,
+            asDownload: $asDownload,
+        );
     }
 
     private function buildResponse(
