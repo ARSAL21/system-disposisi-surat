@@ -28,6 +28,7 @@ use LogicException;
  * @property-read User|null $completedBy
  * @property-read PositionAssignment|null $completedByPositionAssignment
  * @property-read Collection<int, DispositionFollowUp> $followUps
+ * @property-read Collection<int, LetterResponseDocument> $responseDocuments
  */
 #[UsePolicy(DispositionRecipientPolicy::class)]
 class DispositionRecipient extends Model
@@ -144,5 +145,11 @@ class DispositionRecipient extends Model
         return $this->hasMany(DispositionFollowUp::class)
             ->orderBy('created_at')
             ->orderBy('id');
+    }
+
+    /** @return HasMany<LetterResponseDocument, $this> */
+    public function responseDocuments(): HasMany
+    {
+        return $this->hasMany(LetterResponseDocument::class, 'source_recipient_id');
     }
 }

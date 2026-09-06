@@ -38,6 +38,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, LetterRoute> $routes
  * @property-read LetterRoute|null $currentRoute
  * @property-read Collection<int, Disposition> $dispositions
+ * @property-read LetterResponseDossier|null $responseDossier
  */
 #[UsePolicy(IncomingLetterPolicy::class)]
 class IncomingLetter extends Model
@@ -124,5 +125,11 @@ class IncomingLetter extends Model
     public function dispositions(): HasMany
     {
         return $this->hasMany(Disposition::class);
+    }
+
+    /** @return HasOne<LetterResponseDossier, $this> */
+    public function responseDossier(): HasOne
+    {
+        return $this->hasOne(LetterResponseDossier::class);
     }
 }
