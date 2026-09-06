@@ -22,6 +22,8 @@ class CompleteDispositionBranchController extends Controller
             $actor,
             $dispositionRecipient,
             $request->completionNote(),
+            $request->technicalDocument(),
+            $request->technicalDocumentNote(),
         );
 
         return to_route('back-office.dispositions.inbox.show', $dispositionRecipient)

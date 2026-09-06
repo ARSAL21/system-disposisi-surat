@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, CircleAlert, LockKeyhole } from '@lucide/vue';
+import { CheckCircle2, CircleAlert, FileUp, LockKeyhole } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -22,7 +22,7 @@ const props = defineProps<{
     open: boolean;
     directCompletion?: boolean;
     processing?: boolean;
-    error?: string;
+    errors?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -31,15 +31,19 @@ const emit = defineEmits<{
 }>();
 
 const completionNote = ref('');
+const technicalDocument = ref<File | null>(null);
+const technicalDocumentNote = ref('');
 const localError = ref('');
 const noteLength = computed(() => completionNote.value.length);
-const mergedError = computed(() => props.error || localError.value);
+const mergedError = computed(() => props.errors?.completion_note || localError.value);
 
 watch(
     () => props.open,
     (open) => {
         if (!open) {
             completionNote.value = '';
+            technicalDocument.value = null;
+            technicalDocumentNote.value = '';
             localError.value = '';
         }
     },
@@ -64,8 +68,44 @@ function confirmCompletion(): void {
         return;
     }
 
+    const normalizedTechnicalNote = technicalDocumentNote.value.trim();
+
+    if (technicalDocument.value && normalizedTechnicalNote.length < minimumNoteLength) {
+        localError.value = `Catatan bahan teknis minimal ${minimumNoteLength} karakter.`;
+
+        return;
+    }
+
     localError.value = '';
-    emit('confirm', { completion_note: normalizedNote });
+    emit('confirm', {
+        completion_note: normalizedNote,
+        technical_document: technicalDocument.value,
+        technical_document_note: technicalDocument.value ? normalizedTechnicalNote : null,
+    });
+}
+
+function chooseTechnicalDocument(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    if (file && (file.type !== 'application/pdf' || !file.name.toLowerCase().endsWith('.pdf'))) {
+        localError.value = 'Bahan teknis harus berupa berkas PDF.';
+        input.value = '';
+        technicalDocument.value = null;
+
+        return;
+    }
+
+    if (file && file.size > 20 * 1024 * 1024) {
+        localError.value = 'Ukuran bahan teknis maksimal 20 MB.';
+        input.value = '';
+        technicalDocument.value = null;
+
+        return;
+    }
+
+    technicalDocument.value = file;
+    localError.value = '';
 }
 </script>
 
@@ -137,6 +177,20 @@ function confirmCompletion(): void {
                     >
                         {{ noteLength.toLocaleString('id-ID') }}/2.000
                     </p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-dashed p-4">
+                <div class="flex items-start gap-3">
+                    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-500/10 text-indigo-600"><FileUp class="size-5" /></span>
+                    <div><p class="font-semibold">Bahan teknis (opsional)</p><p class="mt-1 text-sm leading-6 text-muted-foreground">Lampirkan PDF hasil telaah untuk dossier balasan. Maksimal 20 MB dan disimpan sebagai dokumen privat immutable.</p></div>
+                </div>
+                <input class="mt-4 block w-full rounded-xl border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium" type="file" accept="application/pdf,.pdf" :disabled="processing" @change="chooseTechnicalDocument" />
+                <InputError class="mt-2" :message="errors?.technical_document" />
+                <div v-if="technicalDocument" class="mt-4">
+                    <label for="technical-document-note" class="text-sm font-semibold">Catatan bahan teknis <span class="text-destructive">*</span></label>
+                    <textarea id="technical-document-note" v-model="technicalDocumentNote" rows="3" minlength="10" maxlength="2000" class="mt-2 w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50" placeholder="Jelaskan isi bahan teknis ini..." :disabled="processing" @input="localError = ''" />
+                    <InputError class="mt-2" :message="errors?.technical_document_note" />
                 </div>
             </div>
 
