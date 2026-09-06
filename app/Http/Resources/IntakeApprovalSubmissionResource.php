@@ -41,6 +41,7 @@ class IntakeApprovalSubmissionResource extends JsonResource
             'external_letter_date' => $this->external_letter_date?->toDateString(),
             'subject' => $this->subject,
             'summary' => $this->summary,
+            'received_at' => $this->received_at?->toISOString(),
             'submitted_at' => $this->submitted_at?->toISOString(),
             'document' => $document instanceof SubmissionDocument
                 ? $this->documentData($document)
@@ -123,7 +124,7 @@ class IntakeApprovalSubmissionResource extends JsonResource
             'agenda_number' => $incomingLetter->agenda_number,
             'agenda_year' => $incomingLetter->agenda_year,
             'sender_organization_name' => $incomingLetter->senderOrganization->name,
-            'registered_at' => $incomingLetter->received_at->toISOString(),
+            'registered_at' => $incomingLetter->created_at->toISOString(),
             'official_document' => $officialDocument instanceof LetterDocument
                 ? $this->officialDocumentData($officialDocument)
                 : null,
