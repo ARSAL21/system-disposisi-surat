@@ -2,11 +2,13 @@
 
 namespace App\Exceptions;
 
-use Illuminate\Http\JsonResponse;
+use App\Exceptions\Concerns\RendersInertiaConflict;
 use RuntimeException;
 
 class LetterResponseStateConflict extends RuntimeException
 {
+    use RendersInertiaConflict;
+
     public static function staleDossier(): self
     {
         return new self('Status dossier balasan telah berubah. Muat ulang halaman sebelum melanjutkan.');
@@ -40,10 +42,5 @@ class LetterResponseStateConflict extends RuntimeException
     public static function documentAlreadyUsed(): self
     {
         return new self('Versi dokumen sudah dipakai oleh dokumen tingkat berikutnya dan tidak dapat dikembalikan atau direvisi.');
-    }
-
-    public function render(): JsonResponse
-    {
-        return response()->json(['message' => $this->getMessage()], JsonResponse::HTTP_CONFLICT);
     }
 }
