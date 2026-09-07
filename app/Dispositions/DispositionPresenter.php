@@ -459,6 +459,7 @@ final class DispositionPresenter
             && $holder->account_type === AccountType::InternalAccount
             && $holder->is_active
             && $holder->hasVerifiedEmail();
+        $assignedByName = $position->getAttribute('assigned_by_name');
 
         return [
             'id' => (int) $position->getKey(),
@@ -468,6 +469,7 @@ final class DispositionPresenter
             'unit_name' => $position->organizationalUnit?->name,
             'holder_name' => $isAvailable ? $holder->name : null,
             'is_available' => $isAvailable,
+            'assigned_by_name' => is_string($assignedByName) ? $assignedByName : null,
         ];
     }
 }

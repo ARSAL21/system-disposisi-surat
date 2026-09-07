@@ -83,7 +83,10 @@ class DispositionInboxController extends Controller
         return Inertia::render('back-office/dispositions/inbox/Show', [
             'disposition' => $presenter->inboxRecipient($dispositionRecipient),
             'sectionHeadPositions' => $canForward
-                ? $presenter->sectionHeadPositions($sectionHeadTargetResolver->options((int) $user->getKey()))
+                ? $presenter->sectionHeadPositions($sectionHeadTargetResolver->options(
+                    (int) $user->getKey(),
+                    (int) $dispositionRecipient->disposition->incoming_letter_id,
+                ))
                 : [],
             'instructionLabels' => $canForward
                 ? $presenter->instructionOptions(

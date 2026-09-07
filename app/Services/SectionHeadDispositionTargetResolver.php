@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\AccountType;
+use App\Models\DispositionRecipient;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\User;
@@ -14,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 class SectionHeadDispositionTargetResolver
 {
     /** @return Collection<int, Position> */
-    public function options(int $actorUserId): Collection
+    public function options(int $actorUserId, int $incomingLetterId): Collection
     {
         return $this->eligiblePositionsQuery()
             ->whereDoesntHave('assignments', fn (Builder $assignments): Builder => $assignments
@@ -45,18 +46,35 @@ class SectionHeadDispositionTargetResolver
                 'positionLevel:id,code',
                 'organizationalUnit:id,name',
                 'activeAssignment.user:id,name,account_type,is_active,email_verified_at',
+                'receivedDispositionRecipients' => fn ($recipients) => $recipients
+                    ->whereHas('disposition', fn (Builder $disposition): Builder => $disposition
+                        ->where('incoming_letter_id', $incomingLetterId))
+                    ->with('disposition.parentRecipient.recipientPosition:id,name'),
             ])
             ->orderBy('name')
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->each(function (Position $position): void {
+                $assignedBy = $position->receivedDispositionRecipients
+                    ->map(fn (DispositionRecipient $recipient): ?string => $recipient->disposition->parentRecipient?->recipientPosition?->name)
+                    ->filter()
+                    ->first();
+
+                if (is_string($assignedBy)) {
+                    $position->setAttribute('assigned_by_name', $assignedBy);
+                }
+            });
     }
 
     /**
      * @param  list<int>  $positionIds
      * @return Collection<int, array{Position, PositionAssignment}>
      */
-    public function lockAvailablePositions(array $positionIds, int $actorUserId): Collection
-    {
+    public function lockAvailablePositions(
+        array $positionIds,
+        int $actorUserId,
+        int $incomingLetterId,
+    ): Collection {
         $ids = array_values(array_unique($positionIds));
 
         sort($ids, SORT_NUMERIC);
@@ -65,7 +83,10 @@ class SectionHeadDispositionTargetResolver
             $this->throwUnavailable();
         }
 
-        $positions = $this->eligiblePositionsQuery()
+        $positions = $this->excludePositionsAlreadyAssignedToLetter(
+            $this->eligiblePositionsQuery(),
+            $incomingLetterId,
+        )
             ->whereIn('positions.id', $ids)
             ->orderBy('positions.id')
             ->lockForUpdate()
@@ -128,10 +149,26 @@ class SectionHeadDispositionTargetResolver
                 ->where('is_active', true));
     }
 
+    /**
+     * @param  Builder<Position>  $query
+     * @return Builder<Position>
+     */
+    private function excludePositionsAlreadyAssignedToLetter(
+        Builder $query,
+        int $incomingLetterId,
+    ): Builder {
+        return $query->whereDoesntHave(
+            'receivedDispositionRecipients',
+            fn (Builder $recipients): Builder => $recipients
+                ->whereHas('disposition', fn (Builder $disposition): Builder => $disposition
+                    ->where('incoming_letter_id', $incomingLetterId)),
+        );
+    }
+
     private function throwUnavailable(): never
     {
         throw ValidationException::withMessages([
-            'recipient_position_ids' => 'Satu atau lebih Kepala Bagian tujuan tidak tersedia, tidak memiliki pejabat aktif, atau bukan bawahan yang sah.',
+            'recipient_position_ids' => 'Satu atau lebih Kepala Bagian sudah ditugaskan pada cabang Asisten lain atau tidak lagi tersedia.',
         ]);
     }
 }
