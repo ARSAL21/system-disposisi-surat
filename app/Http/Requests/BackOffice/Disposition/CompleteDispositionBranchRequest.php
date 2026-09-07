@@ -23,6 +23,15 @@ class CompleteDispositionBranchRequest extends FormRequest
         return true;
     }
 
+    protected function getRedirectUrl(): string
+    {
+        $recipient = $this->route('dispositionRecipient');
+
+        return $recipient instanceof DispositionRecipient
+            ? route('back-office.dispositions.inbox.show', $recipient)
+            : parent::getRedirectUrl();
+    }
+
     protected function prepareForValidation(): void
     {
         $this->merge([
