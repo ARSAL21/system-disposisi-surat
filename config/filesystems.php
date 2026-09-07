@@ -62,6 +62,14 @@ return [
             'report' => true,
         ],
 
+        'outgoing-letter-documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/outgoing-letters'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
