@@ -32,4 +32,8 @@ enum PermissionName: string
     case ContributeLetterResponses = 'letter-responses.contribute';
     case ReviewLetterResponses = 'letter-responses.review';
     case AuthorizeLetterResponses = 'letter-responses.authorize';
+    case ViewOutgoingRegister = 'outgoing-register.view';
+    case NumberOutgoingLetters = 'outgoing-letters.number';
+    case VerifyOutgoingLetters = 'outgoing-letters.verify';
+    case DeliverOutgoingLetters = 'outgoing-letters.deliver';
 }

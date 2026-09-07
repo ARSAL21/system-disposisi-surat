@@ -184,6 +184,30 @@ final class AuthorizationCatalog
                     'description' => 'Membuat mandat surat balasan dan memfinalisasi rencana balasan sebagai eksekutif penerima.',
                     'group' => 'Balasan Surat',
                 ],
+                PermissionName::ViewOutgoingRegister => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat register surat keluar',
+                    'description' => 'Melihat mandat dan tahap penerbitan surat keluar sesuai kewenangan Position.',
+                    'group' => 'Surat Keluar',
+                ],
+                PermissionName::NumberOutgoingLetters => [
+                    'name' => $permission->value,
+                    'label' => 'Berikan nomor surat keluar',
+                    'description' => 'Mencatat nomor resmi dan tanggal surat setelah rencana balasan difinalisasi.',
+                    'group' => 'Surat Keluar',
+                ],
+                PermissionName::VerifyOutgoingLetters => [
+                    'name' => $permission->value,
+                    'label' => 'Verifikasi surat keluar',
+                    'description' => 'Memverifikasi PDF final bernomor dan bertanda tangan secara administratif.',
+                    'group' => 'Surat Keluar',
+                ],
+                PermissionName::DeliverOutgoingLetters => [
+                    'name' => $permission->value,
+                    'label' => 'Kirim surat keluar',
+                    'description' => 'Mempublikasikan balasan online atau mencatat penyerahan surat manual.',
+                    'group' => 'Surat Keluar',
+                ],
             },
             PermissionName::cases(),
         ));
@@ -250,6 +274,10 @@ final class AuthorizationCatalog
                 PermissionName::ContributeLetterResponses->value,
                 PermissionName::ReviewLetterResponses->value,
                 PermissionName::AuthorizeLetterResponses->value,
+                PermissionName::ViewOutgoingRegister->value,
+                PermissionName::NumberOutgoingLetters->value,
+                PermissionName::VerifyOutgoingLetters->value,
+                PermissionName::DeliverOutgoingLetters->value,
             ],
             RoleName::LetterOfficer => [
                 PermissionName::ViewIntake->value,
@@ -259,6 +287,9 @@ final class AuthorizationCatalog
                 PermissionName::ViewLetterRouting->value,
                 PermissionName::CreateManualIntake->value,
                 PermissionName::ViewIncomingRegister->value,
+                PermissionName::ViewOutgoingRegister->value,
+                PermissionName::NumberOutgoingLetters->value,
+                PermissionName::DeliverOutgoingLetters->value,
             ],
             RoleName::GeneralAffairsHead => [
                 PermissionName::ViewIntake->value,
@@ -276,6 +307,8 @@ final class AuthorizationCatalog
                 PermissionName::ViewLetterResponses->value,
                 PermissionName::ContributeLetterResponses->value,
                 PermissionName::ViewIncomingRegister->value,
+                PermissionName::ViewOutgoingRegister->value,
+                PermissionName::VerifyOutgoingLetters->value,
             ],
             RoleName::ExecutiveLeader => [
                 PermissionName::ViewExecutiveInbox->value,
@@ -289,6 +322,7 @@ final class AuthorizationCatalog
                 PermissionName::ContributeLetterResponses->value,
                 PermissionName::ReviewLetterResponses->value,
                 PermissionName::AuthorizeLetterResponses->value,
+                PermissionName::ViewOutgoingRegister->value,
             ],
             RoleName::Assistant => [
                 PermissionName::ViewDispositions->value,
@@ -299,6 +333,7 @@ final class AuthorizationCatalog
                 PermissionName::ViewLetterResponses->value,
                 PermissionName::ContributeLetterResponses->value,
                 PermissionName::ReviewLetterResponses->value,
+                PermissionName::ViewOutgoingRegister->value,
             ],
             RoleName::SectionHead => [
                 PermissionName::ViewDispositions->value,
@@ -308,6 +343,7 @@ final class AuthorizationCatalog
                 PermissionName::ViewDispositionInstructions->value,
                 PermissionName::ViewLetterResponses->value,
                 PermissionName::ContributeLetterResponses->value,
+                PermissionName::ViewOutgoingRegister->value,
             ],
         };
     }
