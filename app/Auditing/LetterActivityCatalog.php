@@ -60,6 +60,13 @@ final class LetterActivityCatalog
             AuditAction::LetterResponseDocumentReturned->value => 'Bahan balasan dikembalikan',
             AuditAction::LetterResponseMandateAuthorized->value => 'Mandat balasan dibuat',
             AuditAction::LetterResponseDossierFinalized->value => 'Rencana balasan difinalisasi',
+            AuditAction::OutgoingLetterNumberAssigned->value => 'Nomor surat keluar diberikan',
+            AuditAction::OutgoingLetterDocumentVersionCreated->value => 'Versi dokumen surat keluar dibuat',
+            AuditAction::OutgoingLetterDocumentReturned->value => 'Dokumen surat keluar dikembalikan',
+            AuditAction::OutgoingLetterAdminVerified->value => 'Dokumen surat keluar diverifikasi',
+            AuditAction::OutgoingLetterDelivered->value => 'Surat keluar dikirim',
+            AuditAction::OutgoingLetterMandateWithdrawn->value => 'Mandat surat keluar ditarik',
+            AuditAction::LetterResponseDossierFulfilled->value => 'Kewajiban balasan terpenuhi',
         ];
     }
 

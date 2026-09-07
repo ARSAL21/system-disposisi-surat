@@ -30,6 +30,13 @@ enum AuditAction: string
     case LetterResponseDocumentReturned = 'LETTER_RESPONSE_DOCUMENT_RETURNED';
     case LetterResponseMandateAuthorized = 'LETTER_RESPONSE_MANDATE_AUTHORIZED';
     case LetterResponseDossierFinalized = 'LETTER_RESPONSE_DOSSIER_FINALIZED';
+    case OutgoingLetterNumberAssigned = 'OUTGOING_LETTER_NUMBER_ASSIGNED';
+    case OutgoingLetterDocumentVersionCreated = 'OUTGOING_LETTER_DOCUMENT_VERSION_CREATED';
+    case OutgoingLetterDocumentReturned = 'OUTGOING_LETTER_DOCUMENT_RETURNED';
+    case OutgoingLetterAdminVerified = 'OUTGOING_LETTER_ADMIN_VERIFIED';
+    case OutgoingLetterDelivered = 'OUTGOING_LETTER_DELIVERED';
+    case OutgoingLetterMandateWithdrawn = 'OUTGOING_LETTER_MANDATE_WITHDRAWN';
+    case LetterResponseDossierFulfilled = 'LETTER_RESPONSE_DOSSIER_FULFILLED';
     case InstructionLabelCreated = 'INSTRUCTION_LABEL_CREATED';
     case InstructionLabelUpdated = 'INSTRUCTION_LABEL_UPDATED';
     case InstructionLabelStatusChanged = 'INSTRUCTION_LABEL_STATUS_CHANGED';

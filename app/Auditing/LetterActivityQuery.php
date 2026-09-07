@@ -150,6 +150,13 @@ final class LetterActivityQuery
                             AuditAction::LetterResponseDocumentReturned->value,
                             AuditAction::LetterResponseMandateAuthorized->value,
                             AuditAction::LetterResponseDossierFinalized->value,
+                            AuditAction::OutgoingLetterNumberAssigned->value,
+                            AuditAction::OutgoingLetterDocumentVersionCreated->value,
+                            AuditAction::OutgoingLetterDocumentReturned->value,
+                            AuditAction::OutgoingLetterAdminVerified->value,
+                            AuditAction::OutgoingLetterDelivered->value,
+                            AuditAction::OutgoingLetterMandateWithdrawn->value,
+                            AuditAction::LetterResponseDossierFulfilled->value,
                         ]);
                 });
         });
