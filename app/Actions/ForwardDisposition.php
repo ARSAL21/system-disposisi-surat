@@ -100,7 +100,11 @@ class ForwardDisposition
             $actorAssignment = $this->positionAssignmentResolver
                 ->lockAssistantAssignmentForPosition($lockedActor, $lockedParentRecipient->recipient_position_id);
             $recipientTargets = $this->targetResolver
-                ->lockAvailablePositions($recipientPositionIds, (int) $lockedActor->getKey());
+                ->lockAvailablePositions(
+                    $recipientPositionIds,
+                    (int) $lockedActor->getKey(),
+                    (int) $lockedLetter->getKey(),
+                );
             $instructionLabels = $this->lockActiveInstructionLabels($instructionLabelIds);
             $now = Date::now();
 

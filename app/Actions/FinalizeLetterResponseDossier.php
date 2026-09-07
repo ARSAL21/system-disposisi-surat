@@ -39,16 +39,24 @@ final class FinalizeLetterResponseDossier
                 throw LetterResponseStateConflict::staleDossier();
             }
 
-            if ($mandates->isEmpty()) {
+            $activeMandates = $mandates->filter(
+                fn (OutgoingLetter $mandate): bool => $mandate->status !== OutgoingLetterStatus::Withdrawn,
+            );
+
+            if ($activeMandates->isEmpty()) {
                 throw LetterResponseStateConflict::missingMandate();
             }
 
             if ($mandates->contains(function (OutgoingLetter $mandate) use ($letter, $lockedDossier): bool {
                 $version = $mandate->sourceDocumentVersion;
+                $validStatus = $mandate->status === OutgoingLetterStatus::Authorized
+                    || ($mandate->status === OutgoingLetterStatus::Withdrawn
+                        && $mandate->outgoing_number === null
+                        && $mandate->withdrawn_at !== null);
 
                 return (int) $mandate->incoming_letter_id !== (int) $letter->getKey()
                     || (int) $mandate->letter_response_dossier_id !== (int) $lockedDossier->getKey()
-                    || (string) $mandate->getRawOriginal('status') !== OutgoingLetterStatus::Authorized->value
+                    || ! $validStatus
                     || (int) $version->document->letter_response_dossier_id !== (int) $lockedDossier->getKey()
                     || LetterResponseReview::query()->where('document_version_id', $version->getKey())->exists();
             })) {

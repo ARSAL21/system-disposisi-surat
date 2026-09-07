@@ -51,7 +51,12 @@ final class CreateLetterResponseContribution
                 }
 
                 $assignment = $this->assignmentResolver->lockAssignmentForPosition($lockedActor, $branch->recipient_position_id);
-                $this->ensureSeriesDoesNotExist($lockedDossier, LetterResponseDocumentKind::TechnicalMaterial, $branch->recipient_position_id);
+                $this->ensureSeriesDoesNotExist(
+                    $lockedDossier,
+                    LetterResponseDocumentKind::TechnicalMaterial,
+                    $branch->recipient_position_id,
+                    $branch->getKey(),
+                );
 
                 return $this->writer->write(
                     $lockedDossier,
@@ -80,7 +85,12 @@ final class CreateLetterResponseContribution
                 $assistant = $this->lockRecipient($assistantRecipient, $lockedDossier, OrganizationCatalog::ASSISTANT_LEVEL);
                 $childRecipientIds = $this->assertAssistantSubtreeComplete($assistant, $lockedDossier->incoming_letter_id);
                 $assignment = $this->assignmentResolver->lockAssignmentForPosition($lockedActor, $assistant->recipient_position_id);
-                $this->ensureSeriesDoesNotExist($lockedDossier, LetterResponseDocumentKind::AssistantProposal, $assistant->recipient_position_id);
+                $this->ensureSeriesDoesNotExist(
+                    $lockedDossier,
+                    LetterResponseDocumentKind::AssistantProposal,
+                    $assistant->recipient_position_id,
+                    $assistant->getKey(),
+                );
                 $sourceIds = $this->resolveTechnicalMaterialSources($lockedDossier, $childRecipientIds);
 
                 return $this->writer->write(
@@ -313,12 +323,17 @@ final class CreateLetterResponseContribution
         LetterResponseDossier $dossier,
         LetterResponseDocumentKind $kind,
         int $ownerPositionId,
+        ?int $sourceRecipientId = null,
     ): void {
-        if (LetterResponseDocument::query()
+        $query = LetterResponseDocument::query()
             ->where('letter_response_dossier_id', $dossier->getKey())
             ->where('kind', $kind->value)
-            ->where('owner_position_id', $ownerPositionId)
-            ->exists()) {
+            ->where('owner_position_id', $ownerPositionId);
+        $sourceRecipientId === null
+            ? $query->whereNull('source_recipient_id')
+            : $query->where('source_recipient_id', $sourceRecipientId);
+
+        if ($query->exists()) {
             throw LetterResponseStateConflict::staleDossier();
         }
     }

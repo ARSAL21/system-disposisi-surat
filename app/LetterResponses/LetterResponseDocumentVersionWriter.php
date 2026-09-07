@@ -30,12 +30,14 @@ final class LetterResponseDocumentVersionWriter
         ?string $revisionNote = null,
         array $sourceVersionIds = [],
     ): LetterResponseDocumentVersion {
-        $document = LetterResponseDocument::query()
+        $documentQuery = LetterResponseDocument::query()
             ->where('letter_response_dossier_id', $dossier->getKey())
             ->where('kind', $kind->value)
-            ->where('owner_position_id', $ownerPositionId)
-            ->lockForUpdate()
-            ->first();
+            ->where('owner_position_id', $ownerPositionId);
+        $sourceRecipientId === null
+            ? $documentQuery->whereNull('source_recipient_id')
+            : $documentQuery->where('source_recipient_id', $sourceRecipientId);
+        $document = $documentQuery->lockForUpdate()->first();
 
         if (! $document instanceof LetterResponseDocument) {
             $document = new LetterResponseDocument;
