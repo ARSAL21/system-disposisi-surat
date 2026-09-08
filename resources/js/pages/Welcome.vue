@@ -12,14 +12,20 @@ import LandingWorkflowSimulator from '@/components/landing/LandingWorkflowSimula
     <Head title="Sistem Disposisi & Tata Naskah Dinas Terintegrasi">
         <!-- Google Fonts: Syne (Display), Plus Jakarta Sans (Body), JetBrains Mono (Cryptographic Hashes) -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+        <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossorigin="anonymous"
+        />
         <link
             href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Syne:wght@600;700;800&display=swap"
             rel="stylesheet"
         />
     </Head>
 
-    <div class="min-h-screen bg-[#fafbfc] text-[#0f172a] antialiased selection:bg-indigo-600 selection:text-white dark:bg-[#080b14] dark:text-[#f8fafc]">
+    <div
+        class="min-h-screen bg-[#fafbfc] text-[#0f172a] antialiased selection:bg-indigo-600 selection:text-white dark:bg-[#080b14] dark:text-[#f8fafc]"
+    >
         <!-- Ambient Radial Background Gradients -->
         <div
             aria-hidden="true"
@@ -63,7 +69,10 @@ import LandingWorkflowSimulator from '@/components/landing/LandingWorkflowSimula
 
 <style scoped>
 /* Syne display font smoothing */
-:deep(h1), :deep(h2), :deep(h3), :deep(h4) {
+:deep(h1),
+:deep(h2),
+:deep(h3),
+:deep(h4) {
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 </style>

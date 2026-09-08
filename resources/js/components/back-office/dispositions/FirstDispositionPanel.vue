@@ -4,7 +4,6 @@ import {
     Info,
     Send,
     ShieldCheck,
-    UserRoundCheck,
     UsersRound,
 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
@@ -12,16 +11,8 @@ import FirstDispositionConfirmationDialog from '@/components/back-office/disposi
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import type {
     CreateFirstDispositionPayload,
     DispositionInstructionLabelOption,
@@ -40,7 +31,8 @@ const emit = defineEmits<{
     confirm: [payload: CreateFirstDispositionPayload];
 }>();
 
-const selectedPositionId = ref<number | null>(null);
+const maximumRecipients = 3;
+const selectedPositionIds = ref<number[]>([]);
 const selectedInstructionIds = ref<number[]>([]);
 const instructionNote = ref('');
 const confirmationOpen = ref(false);
@@ -54,11 +46,10 @@ const availableAssistantPositions = computed(() =>
         (position) => position.is_available && position.holder_name,
     ),
 );
-const selectedPosition = computed(
-    () =>
-        availableAssistantPositions.value.find(
-            (position) => position.id === selectedPositionId.value,
-        ) ?? null,
+const selectedPositions = computed(() =>
+    availableAssistantPositions.value.filter((position) =>
+        selectedPositionIds.value.includes(position.id),
+    ),
 );
 const selectedInstructions = computed(() =>
     props.instructionLabels.filter((label) =>
@@ -74,21 +65,33 @@ const mergedErrors = computed(() => ({
 watch(
     () => props.positions,
     () => {
-        if (
-            selectedPositionId.value !== null &&
-            !availableAssistantPositions.value.some(
-                (position) => position.id === selectedPositionId.value,
-            )
-        ) {
-            selectedPositionId.value = null;
-        }
+        selectedPositionIds.value = selectedPositionIds.value.filter(
+            (positionId) =>
+                availableAssistantPositions.value.some(
+                    (position) => position.id === positionId,
+                ),
+        );
     },
 );
 
-function updateTarget(value: unknown): void {
-    const targetId = Number(value);
-    selectedPositionId.value = Number.isInteger(targetId) ? targetId : null;
-    delete localErrors.value.recipient_position_id;
+function toggleRecipient(positionId: number, selected: boolean): void {
+    if (selected) {
+        if (
+            !selectedPositionIds.value.includes(positionId) &&
+            selectedPositionIds.value.length < maximumRecipients
+        ) {
+            selectedPositionIds.value = [
+                ...selectedPositionIds.value,
+                positionId,
+            ];
+        }
+    } else {
+        selectedPositionIds.value = selectedPositionIds.value.filter(
+            (id) => id !== positionId,
+        );
+    }
+
+    delete localErrors.value.recipient_position_ids;
 }
 
 function toggleInstruction(labelId: number, selected: boolean): void {
@@ -111,9 +114,12 @@ function toggleInstruction(labelId: number, selected: boolean): void {
 function validateForm(): boolean {
     const nextErrors: Record<string, string> = {};
 
-    if (!selectedPosition.value) {
-        nextErrors.recipient_position_id =
-            'Pilih satu jabatan Asisten yang memiliki pejabat aktif.';
+    if (selectedPositions.value.length === 0) {
+        nextErrors.recipient_position_ids =
+            'Pilih sedikitnya satu jabatan Asisten yang memiliki pejabat aktif.';
+    } else if (selectedPositions.value.length > maximumRecipients) {
+        nextErrors.recipient_position_ids =
+            'Maksimal tiga jabatan Asisten dapat dipilih.';
     }
 
     if (selectedInstructionIds.value.length === 0) {
@@ -142,12 +148,16 @@ function openConfirmation(): void {
 }
 
 function confirmDisposition(): void {
-    if (!selectedPosition.value || props.processing || !validateForm()) {
+    if (
+        selectedPositions.value.length === 0 ||
+        props.processing ||
+        !validateForm()
+    ) {
         return;
     }
 
     emit('confirm', {
-        recipient_position_id: selectedPosition.value.id,
+        recipient_position_ids: [...selectedPositionIds.value],
         instruction_label_ids: [...selectedInstructionIds.value],
         instruction_note: instructionNote.value.trim(),
     });
@@ -155,106 +165,133 @@ function confirmDisposition(): void {
 </script>
 
 <template>
-    <Card class="border-blue-200/80 py-0 shadow-sm dark:border-blue-950">
-        <CardHeader class="border-b p-5 sm:p-6">
-            <div class="flex items-start gap-3">
-                <span
-                    class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                >
-                    <ClipboardList class="size-5" aria-hidden="true" />
-                </span>
-                <div>
-                    <CardTitle>Buat disposisi pertama</CardTitle>
-                    <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                        Tunjuk tepat satu Asisten dan berikan instruksi resmi.
-                    </p>
-                </div>
+    <div
+        class="rounded-3xl border border-indigo-500/30 bg-card p-6 shadow-lg shadow-indigo-500/5 dark:border-indigo-500/20 dark:bg-slate-900/90"
+    >
+        <!-- Header -->
+        <div
+            class="flex items-start gap-3.5 border-b border-border/70 pb-5 dark:border-border/50"
+        >
+            <div
+                class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-600/10 text-indigo-600 shadow-xs dark:bg-indigo-400/10 dark:text-indigo-400"
+            >
+                <ClipboardList class="size-5" />
             </div>
-        </CardHeader>
+            <div>
+                <h3
+                    class="font-['Syne',sans-serif] text-base font-bold text-foreground sm:text-lg"
+                >
+                    Form Lembar Disposisi Pimpinan
+                </h3>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                    Tunjuk 1-3 Asisten penerima dan tetapkan instruksi kebijakan
+                    terarah.
+                </p>
+            </div>
+        </div>
 
-        <CardContent class="grid gap-6 p-5 sm:p-6">
-            <Alert v-if="!canCreate">
-                <Info class="size-4" aria-hidden="true" />
-                <AlertTitle>Akses baca-saja</AlertTitle>
-                <AlertDescription>
-                    Surat dapat diperiksa, tetapi jabatan aktif Anda tidak dapat
-                    membuat disposisi pertama untuk route ini.
+        <div class="mt-6 grid gap-6">
+            <Alert v-if="!canCreate" class="rounded-2xl">
+                <Info class="size-4" />
+                <AlertTitle>Akses Baca-Saja</AlertTitle>
+                <AlertDescription class="text-xs">
+                    Surat dapat diperiksa, tetapi jabatan aktif Anda tidak
+                    memiliki kewenangan membuat disposisi pertama untuk route
+                    ini.
                 </AlertDescription>
             </Alert>
 
             <Alert
                 v-else-if="availableAssistantPositions.length === 0"
                 variant="destructive"
+                class="rounded-2xl"
             >
-                <UsersRound class="size-4" aria-hidden="true" />
-                <AlertTitle>Asisten penerima belum tersedia</AlertTitle>
-                <AlertDescription>
+                <UsersRound class="size-4" />
+                <AlertTitle>Asisten Penerima Belum Tersedia</AlertTitle>
+                <AlertDescription class="text-xs">
                     Belum ada jabatan Asisten dengan satu pemegang aktif yang
-                    dapat diverifikasi. Disposisi belum dapat dikirim.
+                    dapat diverifikasi di sistem.
                 </AlertDescription>
             </Alert>
 
-            <div class="space-y-2">
-                <Label for="disposition-recipient">
-                    Asisten penerima <span aria-hidden="true">*</span>
-                </Label>
-                <Select
-                    :model-value="
-                        selectedPositionId === null
-                            ? undefined
-                            : String(selectedPositionId)
-                    "
-                    :disabled="!canCreate || processing"
-                    @update:model-value="updateTarget"
-                >
-                    <SelectTrigger
-                        id="disposition-recipient"
-                        class="min-h-11 w-full"
-                        :aria-invalid="
-                            Boolean(mergedErrors.recipient_position_id)
-                        "
-                        aria-describedby="disposition-recipient-help disposition-recipient-error"
-                    >
-                        <SelectValue placeholder="Pilih satu jabatan Asisten" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem
-                            v-for="position in assistantPositions"
-                            :key="position.id"
-                            :value="String(position.id)"
-                            :disabled="
-                                !position.is_available || !position.holder_name
-                            "
-                        >
-                            {{ position.name }}
-                            <template v-if="position.holder_name">
-                                · {{ position.holder_name }}
-                            </template>
-                            <template v-else> · Jabatan kosong</template>
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-                <p
-                    id="disposition-recipient-help"
-                    class="text-xs leading-5 text-muted-foreground"
-                >
-                    Hanya Position level Asisten yang ditampilkan. Jabatan Wali
-                    Kota atau Sekda milik pengirim tidak menjadi pilihan.
-                </p>
-                <InputError
-                    id="disposition-recipient-error"
-                    :message="mergedErrors.recipient_position_id"
-                />
-            </div>
-
+            <!-- Recipient Assistant Selection -->
             <fieldset class="space-y-3">
-                <legend class="text-sm font-medium">
-                    Instruksi disposisi <span aria-hidden="true">*</span>
+                <div class="flex items-center justify-between gap-3">
+                    <legend
+                        class="font-mono text-xs font-bold tracking-wider text-foreground uppercase"
+                    >
+                        Asisten Penerima <span class="text-destructive">*</span>
+                    </legend>
+                    <span
+                        class="rounded-full bg-indigo-500/10 px-2.5 py-0.5 font-mono text-[11px] font-bold text-indigo-700 dark:text-indigo-300"
+                    >
+                        {{ selectedPositions.length }}/{{ maximumRecipients }}
+                        Dipilih
+                    </span>
+                </div>
+
+                <div
+                    class="grid gap-2"
+                    :aria-invalid="Boolean(mergedErrors.recipient_position_ids)"
+                >
+                    <label
+                        v-for="position in assistantPositions"
+                        :key="position.id"
+                        :for="`assistant-recipient-${position.id}`"
+                        class="flex items-start gap-3 rounded-2xl border p-3.5 transition-all duration-200"
+                        :class="[
+                            selectedPositionIds.includes(position.id)
+                                ? 'border-indigo-500 bg-indigo-500/10 shadow-xs dark:border-indigo-500/80 dark:bg-indigo-950/40'
+                                : 'border-border/80 bg-background/60 hover:border-indigo-300 dark:bg-slate-950/40',
+                            position.is_available && position.holder_name
+                                ? 'cursor-pointer'
+                                : 'cursor-not-allowed opacity-50',
+                        ]"
+                    >
+                        <Checkbox
+                            :id="`assistant-recipient-${position.id}`"
+                            :model-value="
+                                selectedPositionIds.includes(position.id)
+                            "
+                            :disabled="
+                                !canCreate ||
+                                processing ||
+                                !position.is_available ||
+                                !position.holder_name
+                            "
+                            class="mt-0.5"
+                            @update:model-value="
+                                toggleRecipient(position.id, $event === true)
+                            "
+                        />
+                        <span class="min-w-0">
+                            <span
+                                class="block text-xs font-bold text-foreground"
+                            >
+                                {{ position.name }}
+                            </span>
+                            <span
+                                class="mt-0.5 block text-[11px] text-muted-foreground"
+                            >
+                                Pejabat:
+                                {{
+                                    position.holder_name ??
+                                    'Jabatan belum terisi'
+                                }}
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <InputError :message="mergedErrors.recipient_position_ids" />
+            </fieldset>
+
+            <!-- Instructions -->
+            <fieldset class="space-y-3">
+                <legend
+                    class="font-mono text-xs font-bold tracking-wider text-foreground uppercase"
+                >
+                    Instruksi Disposisi <span class="text-destructive">*</span>
                 </legend>
-                <p class="text-xs leading-5 text-muted-foreground">
-                    Pilih satu atau beberapa label. Instruksi aktif berasal dari
-                    katalog workflow yang dikelola administrator.
-                </p>
 
                 <div
                     class="grid gap-2"
@@ -264,12 +301,12 @@ function confirmDisposition(): void {
                         v-for="label in instructionLabels"
                         :key="label.id"
                         :for="`instruction-label-${label.id}`"
-                        class="group flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors duration-200 hover:border-blue-300 hover:bg-blue-50/55 motion-reduce:transition-none dark:hover:border-blue-800 dark:hover:bg-blue-950/20"
-                        :class="
+                        class="flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-all duration-200"
+                        :class="[
                             selectedInstructionIds.includes(label.id)
-                                ? 'border-blue-400 bg-blue-50/75 dark:border-blue-700 dark:bg-blue-950/30'
-                                : 'border-border'
-                        "
+                                ? 'border-indigo-500 bg-indigo-500/10 shadow-xs dark:border-indigo-500/80 dark:bg-indigo-950/40'
+                                : 'border-border/80 bg-background/60 hover:border-indigo-300 dark:bg-slate-950/40',
+                        ]"
                     >
                         <Checkbox
                             :id="`instruction-label-${label.id}`"
@@ -283,12 +320,14 @@ function confirmDisposition(): void {
                             "
                         />
                         <span class="min-w-0">
-                            <span class="block text-sm font-semibold">
+                            <span
+                                class="block text-xs font-bold text-foreground"
+                            >
                                 {{ label.name }}
                             </span>
                             <span
                                 v-if="label.description"
-                                class="mt-1 block text-xs leading-5 text-muted-foreground"
+                                class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground"
                             >
                                 {{ label.description }}
                             </span>
@@ -298,14 +337,20 @@ function confirmDisposition(): void {
                 <InputError :message="mergedErrors.instruction_label_ids" />
             </fieldset>
 
+            <!-- Additional Notes -->
             <div class="space-y-2">
                 <div class="flex items-center justify-between gap-3">
-                    <Label for="disposition-note">Catatan tambahan</Label>
+                    <Label
+                        for="disposition-note"
+                        class="font-mono text-xs font-bold tracking-wider uppercase"
+                    >
+                        Catatan Tambahan Pimpinan
+                    </Label>
                     <span
-                        class="text-xs tabular-nums"
+                        class="font-mono text-[10px] tabular-nums"
                         :class="
                             noteLength > 2000
-                                ? 'font-semibold text-destructive'
+                                ? 'font-bold text-destructive'
                                 : 'text-muted-foreground'
                         "
                     >
@@ -315,67 +360,34 @@ function confirmDisposition(): void {
                 <textarea
                     id="disposition-note"
                     v-model="instructionNote"
-                    rows="5"
+                    rows="4"
                     maxlength="2000"
                     :disabled="!canCreate || processing"
-                    :aria-invalid="Boolean(mergedErrors.instruction_note)"
-                    aria-describedby="disposition-note-help disposition-note-error"
-                    class="min-h-28 w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm leading-6 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholder="Tambahkan konteks khusus jika diperlukan..."
+                    class="min-h-24 w-full resize-y rounded-2xl border border-border/80 bg-background/80 px-3.5 py-2.5 text-xs text-foreground shadow-xs transition-all focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 focus:outline-none disabled:opacity-50"
+                    placeholder="Instruksi spesifik atau batas waktu khusus dari pimpinan..."
                     @input="delete localErrors.instruction_note"
                 />
-                <p
-                    id="disposition-note-help"
-                    class="text-xs leading-5 text-muted-foreground"
-                >
-                    Opsional. Jangan menuliskan kredensial atau data
-                    autentikasi.
-                </p>
-                <InputError
-                    id="disposition-note-error"
-                    :message="mergedErrors.instruction_note"
-                />
+                <InputError :message="mergedErrors.instruction_note" />
             </div>
 
+            <!-- Invariant Assurance Notice -->
             <div
-                v-if="selectedPosition"
-                class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/65 p-4 dark:border-emerald-900 dark:bg-emerald-950/25"
-                aria-live="polite"
-            >
-                <UserRoundCheck
-                    class="mt-0.5 size-5 shrink-0 text-emerald-700 dark:text-emerald-300"
-                    aria-hidden="true"
-                />
-                <div>
-                    <p class="text-xs text-muted-foreground">
-                        Penerima yang ditunjuk
-                    </p>
-                    <p class="mt-1 font-semibold">
-                        {{ selectedPosition.name }}
-                    </p>
-                    <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                        {{ selectedPosition.holder_name }}
-                    </p>
-                </div>
-            </div>
-
-            <div
-                class="flex items-start gap-3 rounded-2xl bg-muted/55 p-4 text-sm"
+                class="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/40 p-3.5 text-xs"
             >
                 <ShieldCheck
-                    class="mt-0.5 size-5 shrink-0 text-blue-700 dark:text-blue-300"
-                    aria-hidden="true"
+                    class="mt-0.5 size-4 shrink-0 text-indigo-600 dark:text-indigo-400"
                 />
-                <p class="leading-6 text-muted-foreground">
-                    Disposisi dicatat atas jabatan aktif, bukan Role. Setelah
-                    dikirim, route eksekutif selesai dan tidak dapat dikirim
-                    ulang pada tahap ini.
+                <p class="text-[11px] leading-relaxed text-muted-foreground">
+                    Disposisi tercatat atas jabatan eksekutif aktif. Setelah
+                    dikirim, alur berpindah ke meja Asisten dan dicatat permanen
+                    dalam audit log.
                 </p>
             </div>
 
+            <!-- Submit Button -->
             <Button
                 type="button"
-                class="min-h-11 w-full bg-blue-700 hover:bg-blue-800"
+                class="h-12 w-full rounded-2xl bg-indigo-600 text-xs font-bold text-white shadow-md shadow-indigo-600/25 transition-all hover:bg-indigo-700 sm:text-sm"
                 :disabled="
                     !canCreate ||
                     processing ||
@@ -383,15 +395,15 @@ function confirmDisposition(): void {
                 "
                 @click="openConfirmation"
             >
-                <Send class="size-4" aria-hidden="true" />
-                Tinjau dan kirim disposisi
+                <Send class="mr-2 size-4" />
+                <span>Tinjau & Kirim Disposisi</span>
             </Button>
-        </CardContent>
-    </Card>
+        </div>
+    </div>
 
     <FirstDispositionConfirmationDialog
         v-model:open="confirmationOpen"
-        :recipient="selectedPosition"
+        :recipients="selectedPositions"
         :instructions="selectedInstructions"
         :note="instructionNote"
         :processing="processing"

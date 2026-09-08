@@ -18,7 +18,7 @@ import type {
 
 defineProps<{
     open: boolean;
-    recipient: DispositionPositionOption | null;
+    recipients: DispositionPositionOption[];
     instructions: DispositionInstructionLabelOption[];
     note: string;
     processing?: boolean;
@@ -36,22 +36,32 @@ const emit = defineEmits<{
     >
         <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
             <DialogHeader>
-                <DialogTitle>Kirim disposisi kepada Asisten?</DialogTitle>
+                <DialogTitle
+                    >Kirim disposisi kepada Asisten terpilih?</DialogTitle
+                >
                 <DialogDescription class="leading-6">
                     Pastikan penerima dan instruksi sudah sesuai. Keputusan ini
                     akan menjadi bagian dari histori surat.
                 </DialogDescription>
             </DialogHeader>
 
-            <div v-if="recipient" class="grid gap-4">
+            <div v-if="recipients.length > 0" class="grid gap-4">
                 <div class="rounded-2xl border bg-muted/35 p-4">
                     <p class="text-xs font-medium text-muted-foreground">
-                        Asisten penerima
+                        {{ recipients.length }} Asisten penerima
                     </p>
-                    <p class="mt-1 font-semibold">{{ recipient.name }}</p>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        {{ recipient.holder_name }}
-                    </p>
+                    <ul class="mt-3 grid gap-2">
+                        <li
+                            v-for="recipient in recipients"
+                            :key="recipient.id"
+                            class="rounded-xl border bg-background px-3 py-2"
+                        >
+                            <p class="font-semibold">{{ recipient.name }}</p>
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                {{ recipient.holder_name }}
+                            </p>
+                        </li>
+                    </ul>
                 </div>
 
                 <div class="rounded-2xl border p-4">
@@ -100,7 +110,7 @@ const emit = defineEmits<{
                 <Button
                     type="button"
                     class="min-h-11 bg-blue-700 hover:bg-blue-800"
-                    :disabled="processing || !recipient"
+                    :disabled="processing || recipients.length === 0"
                     @click="emit('confirm')"
                 >
                     <Spinner v-if="processing" />

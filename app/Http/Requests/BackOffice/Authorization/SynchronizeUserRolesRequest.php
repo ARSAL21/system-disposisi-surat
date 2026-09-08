@@ -3,6 +3,7 @@
 namespace App\Http\Requests\BackOffice\Authorization;
 
 use App\Authorization\AuthorizationCatalog;
+use App\Enums\RoleName;
 use App\Models\User;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -29,7 +30,7 @@ class SynchronizeUserRolesRequest extends FormRequest
                 Rule::exists(config('permission.table_names.roles'), 'id')
                     ->where(fn (Builder $query): Builder => $query
                         ->where('guard_name', AuthorizationCatalog::GUARD_NAME)
-                        ->whereNotIn('name', AuthorizationCatalog::roleNames())),
+                        ->where('name', '!=', RoleName::SuperAdmin->value)),
             ],
         ];
     }

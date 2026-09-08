@@ -124,19 +124,28 @@ const protectedRolesCount = computed(
         <!-- ======================================================== -->
         <!-- 1. TOOLBAR, SEARCH & FILTER CONTROL PANEL                -->
         <!-- ======================================================== -->
-        <Card class="overflow-hidden border-border/80 bg-card p-5 shadow-sm sm:p-6 dark:bg-slate-900/90">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <Card
+            class="overflow-hidden border-border/80 bg-card p-5 shadow-sm sm:p-6 dark:bg-slate-900/90"
+        >
+            <div
+                class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+            >
                 <!-- Title & Context -->
                 <div>
-                    <div class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                    <div
+                        class="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-indigo-600 uppercase dark:text-indigo-400"
+                    >
                         <ShieldCheck class="size-4" />
                         <span>Manajemen Hak Akses & Matriks Permission</span>
                     </div>
-                    <h3 class="mt-1 text-lg font-bold tracking-tight text-foreground sm:text-xl">
+                    <h3
+                        class="mt-1 text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                    >
                         Daftar Role & Konfigurasi Hak Akses Langsung
                     </h3>
                     <p class="text-xs text-muted-foreground">
-                        Atur capability dan permission untuk setiap role langsung melalui checkbox interaktif di bawah.
+                        Atur capability dan permission untuk setiap role
+                        langsung melalui checkbox interaktif di bawah.
                     </p>
                 </div>
 
@@ -155,10 +164,14 @@ const protectedRolesCount = computed(
             </div>
 
             <!-- Filters & Search Bar Row -->
-            <div class="mt-5 flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div
+                class="mt-5 flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <!-- Search Box -->
                 <div class="relative w-full sm:max-w-xs">
-                    <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Search
+                        class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                    />
                     <Input
                         v-model="search"
                         type="text"
@@ -169,7 +182,9 @@ const protectedRolesCount = computed(
 
                 <!-- Filter Tabs & Expand/Collapse Toggle -->
                 <div class="flex flex-wrap items-center gap-2">
-                    <div class="flex rounded-xl border border-border/70 bg-muted/40 p-0.5 text-xs">
+                    <div
+                        class="flex rounded-xl border border-border/70 bg-muted/40 p-0.5 text-xs"
+                    >
                         <button
                             type="button"
                             class="rounded-lg px-3 py-1 font-semibold transition-colors"
@@ -212,12 +227,23 @@ const protectedRolesCount = computed(
                     <Button
                         size="sm"
                         variant="outline"
-                        class="h-9 rounded-xl text-xs gap-1.5"
-                        @click="expandedRoleIds.size > 0 ? collapseAll() : expandAll()"
+                        class="h-9 gap-1.5 rounded-xl text-xs"
+                        @click="
+                            expandedRoleIds.size > 0
+                                ? collapseAll()
+                                : expandAll()
+                        "
                     >
-                        <Minimize2 v-if="expandedRoleIds.size > 0" class="size-3.5" />
+                        <Minimize2
+                            v-if="expandedRoleIds.size > 0"
+                            class="size-3.5"
+                        />
                         <Maximize2 v-else class="size-3.5" />
-                        <span>{{ expandedRoleIds.size > 0 ? 'Tutup Semua' : 'Buka Semua' }}</span>
+                        <span>{{
+                            expandedRoleIds.size > 0
+                                ? 'Tutup Semua'
+                                : 'Buka Semua'
+                        }}</span>
                     </Button>
                 </div>
             </div>
@@ -239,10 +265,12 @@ const protectedRolesCount = computed(
             >
                 <!-- Role Card Header -->
                 <div
-                    class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 bg-gradient-to-r from-slate-50/50 to-transparent dark:from-slate-950/40"
+                    class="flex flex-col gap-3 border-b border-border/50 bg-gradient-to-r from-slate-50/50 to-transparent p-5 sm:flex-row sm:items-center sm:justify-between dark:from-slate-950/40"
                 >
                     <!-- Role Identity & Badges -->
-                    <div class="flex items-start sm:items-center gap-3.5 min-w-0">
+                    <div
+                        class="flex min-w-0 items-start gap-3.5 sm:items-center"
+                    >
                         <div
                             class="flex size-11 shrink-0 items-center justify-center rounded-2xl shadow-xs"
                             :class="[
@@ -253,21 +281,29 @@ const protectedRolesCount = computed(
                                       : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300',
                             ]"
                         >
-                            <LockKeyhole v-if="role.is_protected" class="size-5" />
-                            <UserCheck v-else-if="role.is_assigned_to_actor" class="size-5" />
+                            <LockKeyhole
+                                v-if="role.is_protected"
+                                class="size-5"
+                            />
+                            <UserCheck
+                                v-else-if="role.is_assigned_to_actor"
+                                class="size-5"
+                            />
                             <Shield v-else class="size-5" />
                         </div>
 
                         <div class="min-w-0 space-y-1">
                             <div class="flex flex-wrap items-center gap-2">
-                                <h4 class="text-base font-bold text-foreground truncate">
+                                <h4
+                                    class="truncate text-base font-bold text-foreground"
+                                >
                                     {{ role.name }}
                                 </h4>
 
                                 <Badge
                                     v-if="role.is_protected"
                                     variant="outline"
-                                    class="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300 text-[10px] font-bold"
+                                    class="border-violet-500/30 bg-violet-500/10 text-[10px] font-bold text-violet-700 dark:text-violet-300"
                                 >
                                     Protected (Sistem)
                                 </Badge>
@@ -282,13 +318,15 @@ const protectedRolesCount = computed(
                                 <Badge
                                     v-if="role.is_assigned_to_actor"
                                     variant="outline"
-                                    class="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px] font-bold"
+                                    class="border-amber-500/30 bg-amber-500/10 text-[10px] font-bold text-amber-700 dark:text-amber-300"
                                 >
                                     Akun Anda
                                 </Badge>
                             </div>
 
-                            <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <div
+                                class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground"
+                            >
                                 <span class="inline-flex items-center gap-1">
                                     <UsersRound class="size-3.5" />
                                     <span>{{ role.user_count }} pengguna</span>
@@ -296,23 +334,34 @@ const protectedRolesCount = computed(
                                 <span>·</span>
                                 <span class="inline-flex items-center gap-1">
                                     <KeyRound class="size-3.5" />
-                                    <span class="font-semibold text-foreground">{{ role.permissions.length }}</span>
-                                    <span>/ {{ permissions.length }} permission aktif</span>
+                                    <span
+                                        class="font-semibold text-foreground"
+                                        >{{ role.permissions.length }}</span
+                                    >
+                                    <span
+                                        >/ {{ permissions.length }} permission
+                                        aktif</span
+                                    >
                                 </span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Role Card Actions -->
-                    <div class="flex items-center gap-2 self-end sm:self-center">
+                    <div
+                        class="flex items-center gap-2 self-end sm:self-center"
+                    >
                         <!-- Custom Role Rename/Delete Actions -->
                         <template v-if="!role.is_protected">
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                class="h-8.5 rounded-xl text-xs gap-1.5"
-                                :disabled="!security.can_mutate || !role.capabilities.rename"
+                                class="h-8.5 gap-1.5 rounded-xl text-xs"
+                                :disabled="
+                                    !security.can_mutate ||
+                                    !role.capabilities.rename
+                                "
                                 @click="openRename(role)"
                             >
                                 <Pencil class="size-3.5" />
@@ -323,9 +372,17 @@ const protectedRolesCount = computed(
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                class="h-8.5 rounded-xl text-xs gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                :disabled="!security.can_mutate || !role.capabilities.delete || role.user_count > 0"
-                                :title="role.user_count > 0 ? 'Cabut semua assignment pengguna sebelum menghapus role' : undefined"
+                                class="h-8.5 gap-1.5 rounded-xl text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                :disabled="
+                                    !security.can_mutate ||
+                                    !role.capabilities.delete ||
+                                    role.user_count > 0
+                                "
+                                :title="
+                                    role.user_count > 0
+                                        ? 'Cabut semua assignment pengguna sebelum menghapus role'
+                                        : undefined
+                                "
                                 @click="openDelete(role)"
                             >
                                 <Trash2 class="size-3.5" />
@@ -338,20 +395,29 @@ const protectedRolesCount = computed(
                             type="button"
                             variant="ghost"
                             size="sm"
-                            class="h-8.5 rounded-xl text-xs gap-1.5 font-semibold"
+                            class="h-8.5 gap-1.5 rounded-xl text-xs font-semibold"
                             @click="toggleExpand(role.id)"
                         >
-                            <span>{{ expandedRoleIds.has(role.id) ? 'Tutup Matriks' : 'Lihat & Atur Permission' }}</span>
+                            <span>{{
+                                expandedRoleIds.has(role.id)
+                                    ? 'Tutup Matriks'
+                                    : 'Lihat & Atur Permission'
+                            }}</span>
                             <ChevronDown
                                 class="size-3.5 transition-transform duration-200"
-                                :class="{ 'rotate-180': expandedRoleIds.has(role.id) }"
+                                :class="{
+                                    'rotate-180': expandedRoleIds.has(role.id),
+                                }"
                             />
                         </Button>
                     </div>
                 </div>
 
                 <!-- Role Card Body: Direct Interactive Permission Matrix -->
-                <CardContent v-if="expandedRoleIds.has(role.id)" class="p-5 sm:p-6">
+                <CardContent
+                    v-if="expandedRoleIds.has(role.id)"
+                    class="p-5 sm:p-6"
+                >
                     <RolePermissionMatrix
                         :role="role"
                         :permissions="permissions"
@@ -362,21 +428,33 @@ const protectedRolesCount = computed(
         </div>
 
         <!-- Empty Search State -->
-        <Card v-else class="flex flex-col items-center justify-center p-12 text-center border-dashed">
-            <div class="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+        <Card
+            v-else
+            class="flex flex-col items-center justify-center border-dashed p-12 text-center"
+        >
+            <div
+                class="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground"
+            >
                 <Search class="size-6" />
             </div>
             <h4 class="mt-4 text-base font-bold text-foreground">
                 Tidak Ada Role Ditemukan
             </h4>
-            <p class="mt-1 text-xs text-muted-foreground max-w-sm">
-                Tidak ada role yang cocok dengan pencarian atau filter yang dipilih. Silakan ubah filter atau kata kunci Anda.
+            <p class="mt-1 max-w-sm text-xs text-muted-foreground">
+                Tidak ada role yang cocok dengan pencarian atau filter yang
+                dipilih. Silakan ubah filter atau kata kunci Anda.
             </p>
         </Card>
 
         <!-- Dialogs -->
         <CreateRoleDialog v-model:open="createOpen" :store-url="routes.store" />
-        <RenameRoleDialog v-model:open="renameOpen" :role="selectedRoleForAction" />
-        <DeleteRoleDialog v-model:open="deleteOpen" :role="selectedRoleForAction" />
+        <RenameRoleDialog
+            v-model:open="renameOpen"
+            :role="selectedRoleForAction"
+        />
+        <DeleteRoleDialog
+            v-model:open="deleteOpen"
+            :role="selectedRoleForAction"
+        />
     </section>
 </template>

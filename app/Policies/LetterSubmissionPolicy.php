@@ -76,6 +76,48 @@ class LetterSubmissionPolicy
             && $this->intakePositionAssignmentResolver->hasActiveAssignment($user);
     }
 
+    public function createManual(User $user): Response
+    {
+        if (! $this->isEligibleInternalUser($user)) {
+            return Response::denyAsNotFound();
+        }
+
+        if (! $user->can(PermissionName::CreateManualIntake->value)) {
+            return Response::deny('You do not have permission to create manual intake submissions.');
+        }
+
+        return $this->intakePositionAssignmentResolver->hasActiveAssignment($user)
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+
+    public function viewManualRevision(User $user, LetterSubmission $submission): Response
+    {
+        $authorization = $this->createManual($user);
+
+        if ($authorization->denied()) {
+            return $authorization;
+        }
+
+        return $submission->source === SubmissionSource::Manual
+            && $submission->status === SubmissionStatus::InternalRevisionRequired
+                ? Response::allow()
+                : Response::denyAsNotFound();
+    }
+
+    public function resubmitManual(User $user, LetterSubmission $submission): Response
+    {
+        $authorization = $this->createManual($user);
+
+        if ($authorization->denied()) {
+            return $authorization;
+        }
+
+        return $submission->source === SubmissionSource::Manual
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+
     public function viewIntake(User $user, LetterSubmission $submission): Response
     {
         return $this->authorizeIntakeDocumentAccess($user, $submission);

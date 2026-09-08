@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\SynchronizeAuthorizationCatalog;
 use App\Authorization\AuthorizationCatalog;
 use App\Enums\AuditAction;
 use App\Enums\PermissionName;
@@ -221,6 +222,31 @@ test('protected role and roles held by the actor are read only through web', fun
             ])
             ->assertForbidden();
     }
+});
+
+test('protected operational roles remain assignable while super admin remains console only', function (): void {
+    $manager = User::factory()->internal()->withTwoFactor()->create();
+    createAuthorizationManager($manager);
+    $target = User::factory()->internal()->create();
+    app(SynchronizeAuthorizationCatalog::class)->execute();
+    $operationalRole = Role::findByName(RoleName::Assistant->value, AuthorizationCatalog::GUARD_NAME);
+    $superAdminRole = Role::findByName(RoleName::SuperAdmin->value, AuthorizationCatalog::GUARD_NAME);
+
+    $this->actingAs($manager)
+        ->withSession(confirmedPasswordSession())
+        ->put(route('back-office.authorization.users.roles.update', $target), [
+            'role_ids' => [$operationalRole->getKey()],
+        ])
+        ->assertRedirect();
+
+    expect($target->fresh()->hasRole(RoleName::Assistant->value))->toBeTrue();
+
+    $this->actingAs($manager)
+        ->withSession(confirmedPasswordSession())
+        ->put(route('back-office.authorization.users.roles.update', $target), [
+            'role_ids' => [$superAdminRole->getKey()],
+        ])
+        ->assertInvalid('role_ids.0');
 });
 
 test('role assignments exact sync custom roles while preserving protected roles', function (): void {

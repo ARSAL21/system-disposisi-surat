@@ -6,6 +6,7 @@ use App\Enums\DispositionRecipientStatus;
 use App\Policies\DispositionRecipientPolicy;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,6 +27,8 @@ use LogicException;
  * @property-read Position $recipientPosition
  * @property-read User|null $completedBy
  * @property-read PositionAssignment|null $completedByPositionAssignment
+ * @property-read Collection<int, DispositionFollowUp> $followUps
+ * @property-read Collection<int, LetterResponseDocument> $responseDocuments
  */
 #[UsePolicy(DispositionRecipientPolicy::class)]
 class DispositionRecipient extends Model
@@ -134,5 +137,19 @@ class DispositionRecipient extends Model
     public function childDispositions(): HasMany
     {
         return $this->hasMany(Disposition::class, 'parent_recipient_id');
+    }
+
+    /** @return HasMany<DispositionFollowUp, $this> */
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(DispositionFollowUp::class)
+            ->orderBy('created_at')
+            ->orderBy('id');
+    }
+
+    /** @return HasMany<LetterResponseDocument, $this> */
+    public function responseDocuments(): HasMany
+    {
+        return $this->hasMany(LetterResponseDocument::class, 'source_recipient_id');
     }
 }

@@ -20,6 +20,7 @@ import type { OrganizationalUnit, OrganizationalUnitOption } from '@/types';
 const props = defineProps<{
     open: boolean;
     unit: OrganizationalUnit | null;
+    presetParentId?: number | null;
     options: OrganizationalUnitOption[];
     storeUrl: string;
 }>();
@@ -31,7 +32,7 @@ const form = useForm<{ code: string; name: string; parent_id: number | null }>({
 });
 
 watch(
-    () => [props.open, props.unit] as const,
+    () => [props.open, props.unit, props.presetParentId] as const,
     () => {
         if (!props.open) {
             return;
@@ -40,7 +41,7 @@ watch(
         form.clearErrors();
         form.code = props.unit?.code ?? '';
         form.name = props.unit?.name ?? '';
-        form.parent_id = props.unit?.parent_id ?? null;
+        form.parent_id = props.unit?.parent_id ?? props.presetParentId ?? null;
     },
     { immediate: true },
 );

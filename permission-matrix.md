@@ -17,6 +17,25 @@ bertahap bersama milestone yang benar-benar membutuhkan capability baru.
 * Akses terhadap surat tetap harus melewati Policy, Position Assignment aktif,
   visibility scope, dan aturan workflow yang relevan.
 
+## Role Operasional Baku
+
+Role operasional berikut dikelola sebagai katalog immutable. Permission-nya
+disinkronkan secara exact melalui `authorization:sync`, tetapi selain
+`super-admin` role tetap dapat ditetapkan kepada akun internal melalui UI RBAC.
+
+| Role | Permission |
+| --- | --- |
+| `petugas-surat` | `intake.view`, `intake.screen`, `intake.create-manual`, `incoming-register.view`, `letter-activities.view`, `document-versions.view`, `letter-routing.view`, `outgoing-register.view`, `outgoing-letters.number`, `outgoing-letters.deliver` |
+| `kabag-umum` | `intake.view`, `intake.decide`, `incoming-register.view`, `letter-activities.view`, `document-versions.view`, `document-versions.create`, `letter-routing.view`, `letter-routing.create`, `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `outgoing-register.view`, `outgoing-letters.verify` |
+| `pimpinan-eksekutif` | `executive-inbox.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `letter-responses.review`, `letter-responses.authorize`, `outgoing-register.view` |
+| `asisten` | `dispositions.view`, `dispositions.create`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `letter-responses.review`, `outgoing-register.view` |
+| `kepala-bagian` | `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `outgoing-register.view` |
+
+Role adalah capability bundle, bukan identitas jabatan. Wali Kota dan Sekda
+berbagi role `pimpinan-eksekutif`, tetapi resource yang dapat diakses tetap
+dibatasi oleh Position dan Position Assignment masing-masing. Prinsip yang sama
+berlaku untuk tiga Asisten dan seluruh Kepala Bagian.
+
 ## Katalog M2.1
 
 | Role | Permission | Tujuan |
@@ -92,6 +111,24 @@ pada level `SECTION_HEAD` di Organizational Unit berkode `BAGIAN_UMUM`.
 `intake.screen` tidak memberikan hak menolak atau meregistrasikan surat.
 `super-admin` yang tidak menduduki Position tersebut tetap tidak dapat membaca
 atau memutuskan submission pada meja Kepala Bagian Umum.
+
+## Penambahan M8.1 Intake Manual dan Buku Agenda Masuk
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin`, `petugas-surat` | `intake.create-manual` | Mencatat surat fisik lengkap dengan scan privat dan screening, serta memperbaikinya setelah dikembalikan Kabag Umum. |
+| `super-admin`, `petugas-surat`, `kabag-umum` | `incoming-register.view` | Membaca Buku Agenda Surat Masuk resmi yang menggabungkan sumber online dan manual. |
+
+`intake.create-manual` tetap membutuhkan account internal aktif dan terverifikasi
+serta Position Assignment aktif level `GENERAL_AFFAIRS` pada unit
+`BAGIAN_UMUM`. `incoming-register.view` membutuhkan Position aktif pada unit
+yang sama dengan level `GENERAL_AFFAIRS` atau `SECTION_HEAD`. Permission tidak
+menjadi bypass: super-admin tanpa Position bisnis atau pejabat unit lain tetap
+menerima `404`.
+
+Capability Inertia `can_create_manual_intake` dan
+`can_view_incoming_register` hanya mengendalikan presentasi menu. Policy dan
+authorized query tetap menjadi boundary server-side.
 
 ## Penambahan M3.5 Aktivitas Surat
 
@@ -182,32 +219,78 @@ permission yang sesuai kepada custom role operasional melalui UI RBAC.
 
 | Protected Role | Permission | Tujuan |
 | --- | --- | --- |
-| `super-admin` | `dispositions.view` | Katalog capability untuk membaca branch disposisi milik Position Asisten aktif pengguna. |
-| `super-admin` | `dispositions.create` | Katalog capability untuk membuat disposisi pertama dari Wali Kota/Sekda kepada tepat satu Asisten. |
+| `super-admin` | `dispositions.view` | Katalog capability untuk membaca recipient disposisi milik Position Asisten atau Kepala Bagian aktif pengguna. |
+| `super-admin` | `dispositions.create` | Katalog capability untuk membuat disposisi sesuai hierarchy eksekutif ke satu/lebih Asisten atau Asisten ke satu/lebih Kepala Bagian. |
+| `super-admin` | `dispositions.process` | Katalog capability untuk memulai, mencatat tindak lanjut, dan menyelesaikan cabang Kepala Bagian milik Position aktif pengguna. |
 | `super-admin` | `disposition-instructions.view` | Melihat katalog label instruksi disposisi. |
 | `super-admin` | `disposition-instructions.manage` | Membuat, memperbarui, mengaktifkan, dan menonaktifkan label instruksi dengan MFA serta konfirmasi password terbaru. |
 
-`dispositions.create` hanya berlaku bagi pemegang Position `EXECUTIVE_ENTRY`
-yang sama dengan penerima `letter_routes`. Tujuan wajib Position aktif level
-`ASSISTANT`, bukan Position actor atau Position lain yang dipegang user actor,
-dan mempunyai tepat satu pejabat internal aktif serta terverifikasi.
-`dispositions.view` hanya membuka recipient yang
-`recipient_position_id`-nya sama dengan Position Assignment Asisten aktif
-pengguna. Permission tidak menjadi bypass resource; eksekutif lain, petugas,
-Kepala Bagian, dan super-admin tanpa Position bisnis menerima `404`.
+`dispositions.create` selalu mengikuti hierarchy: pemegang Position
+`EXECUTIVE_ENTRY` yang menjadi penerima route hanya dapat memilih satu sampai
+tiga Asisten,
+sedangkan Asisten hanya dapat memilih satu atau lebih Position
+`SECTION_HEAD` yang eligible. Position actor atau Position lain yang dipegang
+user actor tidak boleh menjadi tujuan.
+
+`dispositions.view` hanya membuka recipient yang `recipient_position_id`-nya
+sama dengan Position Assignment Asisten atau Kepala Bagian aktif pengguna.
+`dispositions.process` juga membutuhkan `dispositions.view` dan hanya efektif
+bagi pemegang Position `SECTION_HEAD` yang sama dengan recipient. Asisten,
+Wali Kota, Sekda, Kepala Bagian lain, dan super-admin tanpa Position bisnis
+tidak dapat memproses cabang meskipun mengetahui ID resource. Permission tidak
+menjadi bypass Position: permission kurang menghasilkan `403`, sedangkan
+Position/resource yang tidak sesuai menghasilkan `404`.
+
+Acceptance M7.1 mempertahankan kontrak tersebut tanpa permission baru.
+Penyelesaian dari `PENDING` maupun `IN_PROGRESS` menggunakan pemeriksaan Policy
+yang sama. Assignment lama yang sudah berakhir tidak memberi akses, sementara
+pemegang baru pada Position recipient yang sama dapat menyelesaikan dan dicatat
+sebagai actor historis.
 
 Capability Inertia baru:
 
 ```text
 can_view_dispositions
 can_create_dispositions
+can_process_dispositions
 can_view_disposition_instructions
 can_manage_disposition_instructions
 ```
 
-Setelah deployment M6.1, jalankan migration dan
+Setelah deployment M6.3, jalankan migration dan
 `php artisan authorization:sync`, lalu berikan pasangan permission yang sesuai
-kepada custom role eksekutif, Asisten, dan pengelola workflow melalui UI RBAC.
+kepada custom role eksekutif, Asisten, Kepala Bagian, dan pengelola workflow
+melalui UI RBAC. Role Kepala Bagian yang menangani recipient membutuhkan
+`dispositions.view` dan `dispositions.process`; role eksekutif dan Asisten tidak
+memerlukan `dispositions.process`.
+
+## Penambahan M7.3 Laporan Periodik
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin` | `reports.view` | Katalog capability untuk membuka agregat dan drilldown laporan sesuai Position bisnis aktif. |
+| `super-admin` | `reports.export` | Katalog capability untuk mengekspor ringkasan dan daftar surat terotorisasi dalam CSV. |
+
+Kedua permission disinkronkan secara exact kepada `super-admin`, `kabag-umum`,
+`pimpinan-eksekutif`, `asisten`, dan `kepala-bagian`. `petugas-surat` tidak
+menerimanya. Permission tidak menjadi global bypass; tanpa Position pada level
+`EXECUTIVE_ENTRY`, `ASSISTANT`, atau `SECTION_HEAD` yang sah, resource laporan
+ditolak sebagai `404`.
+
+| Position aktif | Aggregate | Daftar/detail |
+| --- | --- | --- |
+| Wali Kota/Sekda | Seluruh kota | Seluruh proses dan seluruh cabang |
+| Kepala Bagian Umum | Operasional global | Cabang Bagian Umum miliknya |
+| Asisten | Subtree Asisten | Recipient Asisten dan seluruh child branch langsung |
+| Kepala Bagian lain | Cabang sendiri | Cabang Position sendiri |
+
+Assignment aktif ganda menghasilkan union scope. Capability Inertia
+`can_view_reports` dan `can_export_reports` hanya bernilai benar jika permission
+dan scope Position sama-sama valid. Ekspor tetap memakai authorized query yang
+sama seperti UI dan dilindungi limiter.
+
+Setelah deployment M7.3, jalankan `php artisan authorization:sync`, kemudian
+berikan permission baru kepada custom role struktural yang memang memerlukannya.
 
 ## Provisioning dan Sinkronisasi M2.4–M2.5
 
@@ -242,7 +325,70 @@ Seluruh perubahan account, Role, dan Permission melalui alur ini dicatat pada
 audit append-only. UI administrasi privilege belum termasuk tahap ini dan kelak
 wajib menggunakan Action teraudit yang sama.
 
+Bootstrap lokal setelah database fresh menggunakan urutan:
+
+```text
+php artisan migrate:fresh
+php artisan authorization:sync
+php artisan internal:user
+php artisan authorization:super-admin {email}
+php artisan db:seed
+```
+
+`db:seed` membuat struktur Setda inti, role operasional, 14 akun internal
+generik, dan Position Assignment aktif. Tujuh label instruksi baku sudah dibuat
+oleh migration disposisi. Seeder tidak membuat akun
+super-admin, public user, submission, surat, dokumen, routing, atau disposisi.
+Seluruh akun operasional seed menggunakan password lokal `password`; seeder
+menolak berjalan pada environment production.
+
 Command mutasi bawaan package seperti `permission:create-role`,
 `permission:create-permission`, dan `permission:assign-role` bukan administrative
 flow yang didukung aplikasi karena tidak membawa audit context. Akses shell dan
 database tetap harus dibatasi sebagai infrastructure security boundary.
+
+## Penambahan M8.2 Dossier Balasan
+
+| Role resmi | view | contribute | review | authorize |
+| --- | --- | --- | --- | --- |
+| `petugas-surat` | - | - | - | - |
+| `kabag-umum` | Ya | Ya | - | - |
+| `kepala-bagian` | Ya | Ya | - | - |
+| `asisten` | Ya | Ya | Ya | - |
+| `pimpinan-eksekutif` | Ya | Ya | Ya | Ya |
+| `super-admin` | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync |
+
+Permission resmi adalah `letter-responses.view`,
+`letter-responses.contribute`, `letter-responses.review`, dan
+`letter-responses.authorize`. Semuanya tetap membutuhkan account internal aktif,
+email terverifikasi, serta Position Assignment yang sesuai resource. Super-admin
+tanpa Position bisnis menerima `404`.
+
+Kepala Bagian dibatasi pada bahan Position-nya, Asisten pada subtree langsung,
+dan eksekutif pada surat yang routing awalnya ditujukan kepada Position-nya.
+Capability Inertia mengikuti pasangan permission dan Position:
+`can_view_letter_responses`, `can_contribute_letter_responses`,
+`can_review_letter_responses`, dan `can_authorize_letter_responses`.
+
+## Penambahan M8.3 Register dan Penerbitan Surat Keluar
+
+| Role resmi | Lihat register | Beri nomor | Verifikasi | Kirim |
+| --- | --- | --- | --- | --- |
+| `petugas-surat` | Ya, global administratif | Ya | - | Ya |
+| `kabag-umum` | Ya, global administratif | - | Ya | - |
+| `kepala-bagian` | Ya, hanya mandat dari kontribusinya | - | - | - |
+| `asisten` | Ya, hanya mandat dari subtree/proposalnya | - | - | - |
+| `pimpinan-eksekutif` | Ya, seluruh mandat surat yang diterimanya | - | - | - |
+| `super-admin` | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync |
+
+Permission resminya adalah `outgoing-register.view`,
+`outgoing-letters.number`, `outgoing-letters.verify`, dan
+`outgoing-letters.deliver`. Permission tidak menggantikan Position: Petugas dan
+Kabag Umum harus berada pada unit `BAGIAN_UMUM`, sedangkan pejabat struktural
+dibatasi oleh graph kontribusi dan routing surat. Super-admin tanpa Position
+bisnis tetap menerima `404`.
+
+Capability Inertia `can_view_outgoing_register`,
+`can_number_outgoing_letters`, `can_verify_outgoing_letters`, dan
+`can_deliver_outgoing_letters` hanya mengendalikan presentasi antarmuka.
+Policy dan authorized query tetap menjadi batas akses produksi.

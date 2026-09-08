@@ -50,6 +50,7 @@ function makeSubmission(
         subject: 'Permohonan audiensi mengenai layanan kependudukan',
         summary:
             'Permohonan jadwal audiensi untuk menyampaikan masukan warga mengenai peningkatan layanan administrasi kependudukan.',
+        received_at: null,
         submitted_at: '2026-08-28T01:35:00.000Z',
         document: {
             original_filename: 'permohonan-audiensi-fkwk.pdf',

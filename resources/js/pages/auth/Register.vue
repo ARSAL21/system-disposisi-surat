@@ -7,8 +7,5 @@ defineProps<{
 </script>
 
 <template>
-    <PublicAuthCard
-        initial-mode="register"
-        :password-rules="passwordRules"
-    />
+    <PublicAuthCard initial-mode="register" :password-rules="passwordRules" />
 </template>

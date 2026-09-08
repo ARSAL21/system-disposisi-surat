@@ -2,11 +2,13 @@
 
 namespace App\Exceptions;
 
-use Illuminate\Http\JsonResponse;
+use App\Exceptions\Concerns\RendersInertiaConflict;
 use RuntimeException;
 
 class DispositionStateConflict extends RuntimeException
 {
+    use RendersInertiaConflict;
+
     public static function staleSource(): self
     {
         return new self('Surat atau routing sumber telah berubah dan disposisi tidak dapat dibuat.');
@@ -17,10 +19,13 @@ class DispositionStateConflict extends RuntimeException
         return new self('Routing ini sudah memiliki disposisi pertama.');
     }
 
-    public function render(): JsonResponse
+    public static function staleBranch(): self
     {
-        return response()->json([
-            'message' => $this->getMessage(),
-        ], JsonResponse::HTTP_CONFLICT);
+        return new self('Status surat atau cabang disposisi telah berubah. Muat ulang halaman sebelum melanjutkan.');
+    }
+
+    public static function inconsistentGraph(): self
+    {
+        return new self('Graph disposisi tidak konsisten sehingga penanganan cabang dihentikan.');
     }
 }

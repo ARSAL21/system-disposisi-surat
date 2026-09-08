@@ -93,10 +93,7 @@ function toggleAppearance(): void {
                 aria-labelledby="auth-card-title"
             >
                 <!-- Optional Header for generic sub-pages (e.g. ForgotPassword) -->
-                <div
-                    v-if="title"
-                    class="mb-6 text-center"
-                >
+                <div v-if="title" class="mb-6 text-center">
                     <div
                         class="mx-auto mb-3 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 text-white shadow-lg ring-1 shadow-emerald-500/25 ring-white/20"
                     >

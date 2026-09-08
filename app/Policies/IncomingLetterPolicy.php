@@ -6,7 +6,10 @@ use App\Enums\IncomingLetterStatus;
 use App\Enums\PermissionName;
 use App\Models\IncomingLetter;
 use App\Models\User;
+use App\Reporting\ReportLetterQuery;
+use App\Reporting\ReportScopeResolver;
 use App\Services\DocumentVersionPositionAssignmentResolver;
+use App\Services\IncomingRegisterPositionAssignmentResolver;
 use App\Services\LetterRoutingPositionAssignmentResolver;
 use Illuminate\Auth\Access\Response;
 
@@ -15,7 +18,25 @@ class IncomingLetterPolicy
     public function __construct(
         private readonly DocumentVersionPositionAssignmentResolver $positionAssignmentResolver,
         private readonly LetterRoutingPositionAssignmentResolver $routingPositionAssignmentResolver,
+        private readonly ReportScopeResolver $reportScopeResolver,
+        private readonly ReportLetterQuery $reportLetterQuery,
+        private readonly IncomingRegisterPositionAssignmentResolver $incomingRegisterPositionAssignmentResolver,
     ) {}
+
+    public function viewAnyRegister(User $user): Response
+    {
+        if (! $this->isEligibleInternalUser($user)) {
+            return Response::denyAsNotFound();
+        }
+
+        if (! $user->can(PermissionName::ViewIncomingRegister->value)) {
+            return Response::deny('You do not have permission to view the incoming letter register.');
+        }
+
+        return $this->incomingRegisterPositionAssignmentResolver->hasActiveAssignment($user)
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
 
     public function viewAny(User $user): Response
     {
@@ -88,6 +109,29 @@ class IncomingLetterPolicy
                 : Response::denyAsNotFound();
     }
 
+    public function viewAnyReports(User $user): Response
+    {
+        return $this->authorizeReporting($user, PermissionName::ViewReports);
+    }
+
+    public function viewReport(User $user, IncomingLetter $incomingLetter): Response
+    {
+        $authorization = $this->authorizeReporting($user, PermissionName::ViewReports);
+
+        if ($authorization->denied()) {
+            return $authorization;
+        }
+
+        return $this->reportLetterQuery->isDetailVisible($user, $incomingLetter)
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+
+    public function exportReports(User $user): Response
+    {
+        return $this->authorizeReporting($user, PermissionName::ExportReports);
+    }
+
     private function authorizeViewing(User $user): Response
     {
         if (! $this->isEligibleInternalUser($user)) {
@@ -116,6 +160,21 @@ class IncomingLetterPolicy
         return $this->routingPositionAssignmentResolver->hasRoutingViewingAssignment($user)
             ? Response::allow()
             : Response::denyAsNotFound();
+    }
+
+    private function authorizeReporting(User $user, PermissionName $permission): Response
+    {
+        if (! $this->isEligibleInternalUser($user)) {
+            return Response::denyAsNotFound();
+        }
+
+        if (! $user->can($permission->value)) {
+            return Response::deny('You do not have permission to access reports.');
+        }
+
+        return $this->reportScopeResolver->resolve($user) === null
+            ? Response::denyAsNotFound()
+            : Response::allow();
     }
 
     private function isEligibleInternalUser(User $user): bool

@@ -2,6 +2,8 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { CircleCheck, FileWarning } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref } from 'vue';
+import AssistantBranchMonitor from '@/components/back-office/dispositions/AssistantBranchMonitor.vue';
+import DispositionBranchWorkspace from '@/components/back-office/dispositions/DispositionBranchWorkspace.vue';
 import DispositionInstructionCard from '@/components/back-office/dispositions/DispositionInstructionCard.vue';
 import ForwardDispositionPanel from '@/components/back-office/dispositions/ForwardDispositionPanel.vue';
 import ForwardedDispositionReceiptCard from '@/components/back-office/dispositions/ForwardedDispositionReceiptCard.vue';
@@ -9,16 +11,23 @@ import RoutingDetailHeader from '@/components/back-office/routing/RoutingDetailH
 import RoutingLetterOverviewCard from '@/components/back-office/routing/RoutingLetterOverviewCard.vue';
 import RoutingOfficialDocumentCard from '@/components/back-office/routing/RoutingOfficialDocumentCard.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useDispositionBranchActions } from '@/composables/useDispositionBranchActions';
 import {
+    previewAssistantBranchMonitor,
+    previewDispositionBranches,
     previewDispositionInboxItems,
+    previewForwardedDispositionReceipt,
     previewSectionHeadPositions,
 } from '@/lib/dispositionPreview';
 import type {
+    AssistantBranchMonitor as AssistantBranchMonitorData,
+    DispositionBranchCapabilities,
+    DispositionBranchLifecycle,
+    DispositionInboxDetailCapabilities,
     DispositionInboxDetailRoutes,
     DispositionInboxItem,
     DispositionInstructionLabelOption,
     DispositionPositionOption,
-    ForwardDispositionCapabilities,
     ForwardDispositionPayload,
     ForwardDispositionReceipt,
 } from '@/types';
@@ -28,7 +37,9 @@ const props = defineProps<{
     sectionHeadPositions?: DispositionPositionOption[];
     instructionLabels?: DispositionInstructionLabelOption[];
     forwardedDisposition?: ForwardDispositionReceipt | null;
-    capabilities?: ForwardDispositionCapabilities;
+    branch?: DispositionBranchLifecycle | null;
+    branchMonitor?: AssistantBranchMonitorData | null;
+    capabilities?: DispositionInboxDetailCapabilities;
     routes?: DispositionInboxDetailRoutes;
     preview?: boolean;
 }>();
@@ -62,6 +73,15 @@ const activeDisposition = computed(() =>
                   disposition.recipient_id === previewRecipientId.value,
           ) ?? previewDispositionInboxItems[0])
         : (props.disposition ?? null),
+);
+const isAssistantRecipient = computed(
+    () =>
+        activeDisposition.value?.recipient_position.level_code === 'ASSISTANT',
+);
+const isSectionHeadRecipient = computed(
+    () =>
+        activeDisposition.value?.recipient_position.level_code ===
+        'SECTION_HEAD',
 );
 const sectionHeadPositions = computed(() =>
     previewMode.value
@@ -109,11 +129,60 @@ const successNotice = ref('');
 const processing = ref(false);
 const errors = ref<Record<string, string>>({});
 const simulatedForwarding = ref<ForwardDispositionReceipt | null>(null);
-const activeForwarding = computed(
-    () => simulatedForwarding.value ?? props.forwardedDisposition ?? null,
-);
+const activeForwarding = computed(() => {
+    if (simulatedForwarding.value) {
+        return simulatedForwarding.value;
+    }
+
+    if (previewMode.value && previewRecipientId.value === 702) {
+        return previewForwardedDispositionReceipt;
+    }
+
+    return props.forwardedDisposition ?? null;
+});
+const baseBranch = computed(() => {
+    if (previewMode.value && previewRecipientId.value) {
+        return previewDispositionBranches[previewRecipientId.value] ?? null;
+    }
+
+    return props.branch ?? null;
+});
+const detailRoutes = computed(() => props.routes);
+const {
+    activeBranch,
+    processingAction: processingBranchAction,
+    startBranch,
+    addFollowUp,
+    completeBranch,
+} = useDispositionBranchActions({
+    previewMode,
+    baseBranch,
+    disposition: activeDisposition,
+    routes: detailRoutes,
+    errors,
+    successNotice,
+});
+const activeBranchMonitor = computed(() => {
+    if (previewMode.value && previewRecipientId.value === 702) {
+        return previewAssistantBranchMonitor;
+    }
+
+    return props.branchMonitor ?? null;
+});
+const branchCapabilities = computed<DispositionBranchCapabilities>(() => ({
+    can_start_branch: previewMode.value
+        ? activeBranch.value?.status === 'PENDING'
+        : props.capabilities?.can_start_branch === true,
+    can_add_follow_up: previewMode.value
+        ? activeBranch.value?.status === 'IN_PROGRESS'
+        : props.capabilities?.can_add_follow_up === true,
+    can_complete_branch: previewMode.value
+        ? activeBranch.value?.status !== 'COMPLETED'
+        : props.capabilities?.can_complete_branch === true,
+}));
 const canForward = computed(
     () =>
+        isAssistantRecipient.value &&
         !activeForwarding.value &&
         (previewMode.value ||
             props.capabilities?.can_forward_disposition === true),
@@ -248,10 +317,14 @@ onBeforeUnmount(() => {
                     class="size-4 text-emerald-700 dark:text-emerald-300"
                     aria-hidden="true"
                 />
-                <AlertTitle
-                    >Penerusan ditampilkan pada mode simulasi</AlertTitle
-                >
+                <AlertTitle>Simulasi UI diperbarui</AlertTitle>
                 <AlertDescription>{{ successNotice }}</AlertDescription>
+            </Alert>
+
+            <Alert v-if="errors.workflow" variant="destructive">
+                <FileWarning class="size-4" aria-hidden="true" />
+                <AlertTitle>Tindakan belum dapat diproses</AlertTitle>
+                <AlertDescription>{{ errors.workflow }}</AlertDescription>
             </Alert>
 
             <div
@@ -276,8 +349,22 @@ onBeforeUnmount(() => {
                 </aside>
             </div>
 
+            <DispositionBranchWorkspace
+                v-if="isSectionHeadRecipient && activeBranch"
+                class="mt-1"
+                :branch="activeBranch"
+                :position-name="activeDisposition.recipient_position.name"
+                :holder-name="activeDisposition.recipient_position.holder_name"
+                :capabilities="branchCapabilities"
+                :processing-action="processingBranchAction"
+                :errors="errors"
+                @start="startBranch"
+                @add-follow-up="addFollowUp"
+                @complete="completeBranch"
+            />
+
             <section
-                v-if="activeForwarding || canForward"
+                v-else-if="activeForwarding || canForward"
                 class="mt-1"
                 aria-label="Penerusan disposisi"
             >
@@ -295,6 +382,12 @@ onBeforeUnmount(() => {
                     @confirm="forwardDisposition"
                 />
             </section>
+
+            <AssistantBranchMonitor
+                v-if="isAssistantRecipient && activeBranchMonitor"
+                class="mt-1"
+                :monitor="activeBranchMonitor"
+            />
         </template>
 
         <Alert v-else variant="destructive">

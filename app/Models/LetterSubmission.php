@@ -21,12 +21,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int|null $recorded_by_user_id
  * @property string $sender_organization_name
  * @property string $contact_name
- * @property string $contact_email
+ * @property string|null $contact_email
  * @property string|null $contact_phone
  * @property string|null $external_letter_number
  * @property CarbonInterface|null $external_letter_date
  * @property string $subject
  * @property string|null $summary
+ * @property CarbonInterface|null $received_at
  * @property CarbonInterface|null $submitted_at
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
@@ -50,6 +51,7 @@ class LetterSubmission extends Model
             'source' => SubmissionSource::class,
             'status' => SubmissionStatus::class,
             'external_letter_date' => 'date',
+            'received_at' => 'datetime',
             'submitted_at' => 'datetime',
         ];
     }

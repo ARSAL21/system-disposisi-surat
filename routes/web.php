@@ -11,25 +11,51 @@ use App\Http\Controllers\BackOffice\Authorization\RolePermissionController;
 use App\Http\Controllers\BackOffice\Authorization\UserRoleController;
 use App\Http\Controllers\BackOffice\BackOfficeDashboardController;
 use App\Http\Controllers\BackOffice\BackOfficeEntryController;
+use App\Http\Controllers\BackOffice\Disposition\CompleteDispositionBranchController;
 use App\Http\Controllers\BackOffice\Disposition\DispositionInboxController;
 use App\Http\Controllers\BackOffice\Disposition\DispositionInboxDocumentController;
+use App\Http\Controllers\BackOffice\Disposition\StartDispositionBranchController;
+use App\Http\Controllers\BackOffice\Disposition\StoreDispositionFollowUpController;
 use App\Http\Controllers\BackOffice\Disposition\StoreForwardDispositionController;
 use App\Http\Controllers\BackOffice\Disposition\StoreInitialDispositionController;
 use App\Http\Controllers\BackOffice\Documents\DocumentArchiveController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentFileController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentHistoryController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentVersionController;
+use App\Http\Controllers\BackOffice\IncomingRegister\IncomingRegisterController;
 use App\Http\Controllers\BackOffice\Intake\IntakeApprovalController;
 use App\Http\Controllers\BackOffice\Intake\IntakeApprovalDocumentController;
 use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionController;
 use App\Http\Controllers\BackOffice\Intake\IntakeSubmissionDocumentController;
+use App\Http\Controllers\BackOffice\Intake\ManualIntakeController;
+use App\Http\Controllers\BackOffice\Intake\ResubmitManualIntakeController;
 use App\Http\Controllers\BackOffice\Intake\ScreenSubmissionController;
+use App\Http\Controllers\BackOffice\Intake\StoreManualIntakeController;
 use App\Http\Controllers\BackOffice\Intake\SubmissionDecisionController;
+use App\Http\Controllers\BackOffice\LetterResponse\AuthorizeLetterResponseMandateController;
+use App\Http\Controllers\BackOffice\LetterResponse\FinalizeLetterResponseDossierController;
+use App\Http\Controllers\BackOffice\LetterResponse\LetterResponseController;
+use App\Http\Controllers\BackOffice\LetterResponse\LetterResponseDocumentFileController;
+use App\Http\Controllers\BackOffice\LetterResponse\ReturnLetterResponseDocumentController;
+use App\Http\Controllers\BackOffice\LetterResponse\StoreAssistantResponseProposalController;
+use App\Http\Controllers\BackOffice\LetterResponse\StoreExecutiveResponseConsolidationController;
+use App\Http\Controllers\BackOffice\LetterResponse\StoreLetterResponseRevisionController;
+use App\Http\Controllers\BackOffice\LetterResponse\StoreTechnicalResponseMaterialController;
 use App\Http\Controllers\BackOffice\Organization\ActivateOrganizationMutationController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationalUnitController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationStructureController;
 use App\Http\Controllers\BackOffice\Organization\PositionAssignmentController;
 use App\Http\Controllers\BackOffice\Organization\PositionController;
+use App\Http\Controllers\BackOffice\OutgoingLetter\AssignOutgoingLetterNumberController;
+use App\Http\Controllers\BackOffice\OutgoingLetter\DeliverOutgoingLetterController;
+use App\Http\Controllers\BackOffice\OutgoingLetter\OutgoingLetterController;
+use App\Http\Controllers\BackOffice\OutgoingLetter\OutgoingLetterDocumentFileController;
+use App\Http\Controllers\BackOffice\OutgoingLetter\ReturnOutgoingLetterDocumentController as ReturnOutgoingFinalDocumentController;
+use App\Http\Controllers\BackOffice\OutgoingLetter\StoreSignedOutgoingLetterDocumentController;
+use App\Http\Controllers\BackOffice\OutgoingLetter\VerifyOutgoingLetterController;
+use App\Http\Controllers\BackOffice\OutgoingLetter\WithdrawOutgoingLetterController;
+use App\Http\Controllers\BackOffice\Reporting\PeriodicReportController;
+use App\Http\Controllers\BackOffice\Reporting\PeriodicReportExportController;
 use App\Http\Controllers\BackOffice\Routing\ExecutiveInboxController;
 use App\Http\Controllers\BackOffice\Routing\ExecutiveInboxDocumentController;
 use App\Http\Controllers\BackOffice\Routing\LetterRoutingController;
@@ -39,9 +65,11 @@ use App\Http\Controllers\BackOffice\Workflow\ActivateWorkflowMutationController;
 use App\Http\Controllers\BackOffice\Workflow\InstructionLabelController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicSubmission\LetterSubmissionController;
+use App\Http\Controllers\PublicSubmission\OfficialResponseDocumentController;
 use App\Http\Controllers\PublicSubmission\PublicDashboardController;
 use App\Http\Controllers\PublicSubmission\SubmissionDocumentController;
 use App\Http\Controllers\PublicSubmission\SubmitLetterSubmissionController;
+use App\Models\DispositionRecipient;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -92,6 +120,12 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
         ->middleware('account:'.AccountType::PublicAccount->value)
         ->name('public.dashboard');
 
+    if (app()->environment('local', 'testing')) {
+        Route::inertia('public/previews/response-tracker', 'public/submissions/Show', ['preview' => true])
+            ->middleware('account:'.AccountType::PublicAccount->value)
+            ->name('public.previews.response-tracker');
+    }
+
     Route::prefix('public/submissions')
         ->name('public.submissions.')
         ->middleware('account:'.AccountType::PublicAccount->value)
@@ -126,6 +160,12 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
             Route::post('/{submission}/submit', SubmitLetterSubmissionController::class)
                 ->middleware('throttle:public-submission-submit')
                 ->name('submit');
+            Route::get('/{submission}/responses/{outgoingLetter}/preview', [OfficialResponseDocumentController::class, 'preview'])
+                ->middleware('throttle:private-document-access')
+                ->name('responses.preview');
+            Route::get('/{submission}/responses/{outgoingLetter}/download', [OfficialResponseDocumentController::class, 'download'])
+                ->middleware('throttle:private-document-access')
+                ->name('responses.download');
         });
 
     Route::prefix('back-office')
@@ -170,7 +210,43 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.dispositions.inbox.show');
                     Route::inertia('previews/workflow/instruction-labels', 'back-office/workflow/instruction-labels/Index', ['preview' => true])
                         ->name('previews.workflow.instruction-labels.index');
+                    Route::inertia('previews/reports', 'back-office/reports/Index', ['preview' => true])
+                        ->name('previews.reports.index');
+                    Route::inertia('previews/reports/letters/{incomingLetter}', 'back-office/reports/Show', ['preview' => true])
+                        ->name('previews.reports.show');
+                    Route::inertia('previews/intake/manual/create', 'back-office/intake/manual/Create', ['preview' => true])
+                        ->name('previews.intake.manual.create');
+                    Route::inertia('previews/incoming-letters', 'back-office/incoming-letters/Index', ['preview' => true])
+                        ->name('previews.incoming-letters.index');
+                    Route::inertia('previews/letter-responses', 'back-office/letter-responses/Index', ['preview' => true])
+                        ->name('previews.letter-responses.index');
+                    Route::inertia('previews/letter-responses/{incomingLetter}', 'back-office/letter-responses/Show', ['preview' => true])
+                        ->name('previews.letter-responses.show');
+                    Route::inertia('previews/outgoing-letters', 'back-office/outgoing-letters/Index', ['preview' => true])
+                        ->name('previews.outgoing-letters.index');
+                    Route::inertia('previews/outgoing-letters/{outgoingLetter}', 'back-office/outgoing-letters/Show', ['preview' => true])
+                        ->name('previews.outgoing-letters.show');
                 }
+
+                Route::get('incoming-letters', IncomingRegisterController::class)
+                    ->middleware('can:'.PermissionName::ViewIncomingRegister->value)
+                    ->name('incoming-letters.index');
+
+                Route::prefix('intake/manual')
+                    ->name('intake.manual.')
+                    ->middleware('can:'.PermissionName::CreateManualIntake->value)
+                    ->group(function (): void {
+                        Route::get('create', [ManualIntakeController::class, 'create'])
+                            ->name('create');
+                        Route::post('/', StoreManualIntakeController::class)
+                            ->middleware('throttle:manual-intake-upload')
+                            ->name('store');
+                        Route::get('{submission}/edit', [ManualIntakeController::class, 'edit'])
+                            ->name('edit');
+                        Route::post('{submission}/resubmit', ResubmitManualIntakeController::class)
+                            ->middleware('throttle:manual-intake-upload')
+                            ->name('resubmit');
+                    });
 
                 Route::get('documents', DocumentArchiveController::class)
                     ->middleware('can:'.PermissionName::ViewDocumentVersions->value)
@@ -260,17 +336,185 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         Route::get('recipients/{dispositionRecipient}/document/download', [DispositionInboxDocumentController::class, 'download'])
                             ->middleware('throttle:private-document-access')
                             ->name('document.download');
+                        Route::get('recipients/{dispositionRecipient}/forward', static fn (DispositionRecipient $dispositionRecipient) => to_route('back-office.dispositions.inbox.show', $dispositionRecipient));
                         Route::post('recipients/{dispositionRecipient}/forward', StoreForwardDispositionController::class)
                             ->middleware([
                                 'can:'.PermissionName::CreateDispositions->value,
                                 'throttle:disposition-create',
                             ])
                             ->name('forward.store');
+                        Route::get('recipients/{dispositionRecipient}/start', static fn (DispositionRecipient $dispositionRecipient) => to_route('back-office.dispositions.inbox.show', $dispositionRecipient));
+                        Route::post('recipients/{dispositionRecipient}/start', StartDispositionBranchController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ProcessDispositions->value,
+                                'throttle:disposition-branch-mutation',
+                            ])
+                            ->name('branch.start');
+                        Route::get('recipients/{dispositionRecipient}/follow-ups', static fn (DispositionRecipient $dispositionRecipient) => to_route('back-office.dispositions.inbox.show', $dispositionRecipient));
+                        Route::post('recipients/{dispositionRecipient}/follow-ups', StoreDispositionFollowUpController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ProcessDispositions->value,
+                                'throttle:disposition-branch-mutation',
+                            ])
+                            ->name('branch.follow-ups.store');
+                        Route::get('recipients/{dispositionRecipient}/complete', static fn (DispositionRecipient $dispositionRecipient) => to_route('back-office.dispositions.inbox.show', $dispositionRecipient));
+                        Route::post('recipients/{dispositionRecipient}/complete', CompleteDispositionBranchController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ProcessDispositions->value,
+                                'throttle:disposition-branch-mutation',
+                            ])
+                            ->name('branch.complete');
+                    });
+
+                Route::prefix('letter-responses')
+                    ->name('letter-responses.')
+                    ->group(function (): void {
+                        Route::get('/', [LetterResponseController::class, 'index'])
+                            ->middleware('can:'.PermissionName::ViewLetterResponses->value)
+                            ->name('index');
+                        Route::get('{letterResponseDossier}', [LetterResponseController::class, 'show'])
+                            ->middleware('can:'.PermissionName::ViewLetterResponses->value)
+                            ->name('show');
+                        Route::post('{letterResponseDossier}/branches/{dispositionRecipient}/materials', StoreTechnicalResponseMaterialController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ContributeLetterResponses->value,
+                                'throttle:letter-response-upload',
+                            ])
+                            ->name('materials.store');
+                        Route::post('{letterResponseDossier}/assistants/{dispositionRecipient}/proposals', StoreAssistantResponseProposalController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ContributeLetterResponses->value,
+                                'throttle:letter-response-upload',
+                            ])
+                            ->name('proposals.store');
+                        Route::post('{letterResponseDossier}/consolidations', StoreExecutiveResponseConsolidationController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ContributeLetterResponses->value,
+                                'throttle:letter-response-upload',
+                            ])
+                            ->name('consolidations.store');
+                        Route::post('{letterResponseDossier}/documents/{letterResponseDocument}/versions', StoreLetterResponseRevisionController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ContributeLetterResponses->value,
+                                'throttle:letter-response-upload',
+                            ])
+                            ->name('documents.versions.store');
+                        Route::post('{letterResponseDossier}/documents/{letterResponseDocument}/return', ReturnLetterResponseDocumentController::class)
+                            ->middleware([
+                                'can:'.PermissionName::ReviewLetterResponses->value,
+                                'throttle:letter-response-mutation',
+                            ])
+                            ->name('documents.return');
+                        Route::post('{letterResponseDossier}/mandates', AuthorizeLetterResponseMandateController::class)
+                            ->middleware([
+                                'can:'.PermissionName::AuthorizeLetterResponses->value,
+                                'throttle:letter-response-mutation',
+                            ])
+                            ->name('mandates.store');
+                        Route::post('{letterResponseDossier}/finalize', FinalizeLetterResponseDossierController::class)
+                            ->middleware([
+                                'can:'.PermissionName::AuthorizeLetterResponses->value,
+                                'throttle:letter-response-mutation',
+                            ])
+                            ->name('finalize');
+                        Route::get('{letterResponseDossier}/documents/versions/{letterResponseDocumentVersion}/preview', [LetterResponseDocumentFileController::class, 'preview'])
+                            ->middleware([
+                                'can:'.PermissionName::ViewLetterResponses->value,
+                                'throttle:private-document-access',
+                            ])
+                            ->name('documents.preview');
+                        Route::get('{letterResponseDossier}/documents/versions/{letterResponseDocumentVersion}/download', [LetterResponseDocumentFileController::class, 'download'])
+                            ->middleware([
+                                'can:'.PermissionName::ViewLetterResponses->value,
+                                'throttle:private-document-access',
+                            ])
+                            ->name('documents.download');
+                    });
+
+                Route::prefix('outgoing-letters')
+                    ->name('outgoing-letters.')
+                    ->group(function (): void {
+                        Route::get('/', [OutgoingLetterController::class, 'index'])
+                            ->middleware('can:'.PermissionName::ViewOutgoingRegister->value)
+                            ->name('index');
+                        Route::get('{outgoingLetter}', [OutgoingLetterController::class, 'show'])
+                            ->middleware('can:'.PermissionName::ViewOutgoingRegister->value)
+                            ->name('show');
+                        Route::post('{outgoingLetter}/number', AssignOutgoingLetterNumberController::class)
+                            ->middleware([
+                                'can:'.PermissionName::NumberOutgoingLetters->value,
+                                'throttle:outgoing-letter-mutation',
+                            ])
+                            ->name('assign-number');
+                        Route::post('{outgoingLetter}/documents', StoreSignedOutgoingLetterDocumentController::class)
+                            ->middleware('throttle:outgoing-letter-upload')
+                            ->name('documents.store');
+                        Route::post('{outgoingLetter}/verify', VerifyOutgoingLetterController::class)
+                            ->middleware([
+                                'can:'.PermissionName::VerifyOutgoingLetters->value,
+                                'throttle:outgoing-letter-mutation',
+                            ])
+                            ->name('verify');
+                        Route::post('{outgoingLetter}/return-document', ReturnOutgoingFinalDocumentController::class)
+                            ->middleware([
+                                'can:'.PermissionName::VerifyOutgoingLetters->value,
+                                'throttle:outgoing-letter-mutation',
+                            ])
+                            ->name('return-document');
+                        Route::post('{outgoingLetter}/deliver', DeliverOutgoingLetterController::class)
+                            ->middleware([
+                                'can:'.PermissionName::DeliverOutgoingLetters->value,
+                                'throttle:outgoing-letter-mutation',
+                            ])
+                            ->name('deliver');
+                        Route::post('{outgoingLetter}/withdraw', WithdrawOutgoingLetterController::class)
+                            ->middleware([
+                                'can:'.PermissionName::AuthorizeLetterResponses->value,
+                                'throttle:outgoing-letter-mutation',
+                            ])
+                            ->name('withdraw');
+
+                        Route::scopeBindings()->group(function (): void {
+                            Route::get('{outgoingLetter}/documents/{outgoingLetterDocumentVersion}/preview', [OutgoingLetterDocumentFileController::class, 'preview'])
+                                ->middleware([
+                                    'can:'.PermissionName::ViewOutgoingRegister->value,
+                                    'throttle:private-document-access',
+                                ])
+                                ->name('documents.preview');
+                            Route::get('{outgoingLetter}/documents/{outgoingLetterDocumentVersion}/download', [OutgoingLetterDocumentFileController::class, 'download'])
+                                ->middleware([
+                                    'can:'.PermissionName::ViewOutgoingRegister->value,
+                                    'throttle:private-document-access',
+                                ])
+                                ->name('documents.download');
+                        });
                     });
 
                 Route::get('workflow/instruction-labels', [InstructionLabelController::class, 'index'])
                     ->middleware('can:'.PermissionName::ViewDispositionInstructions->value)
                     ->name('workflow.instruction-labels.index');
+
+                Route::prefix('reports')
+                    ->name('reports.')
+                    ->middleware('can:'.PermissionName::ViewReports->value)
+                    ->group(function (): void {
+                        Route::get('/', [PeriodicReportController::class, 'index'])
+                            ->name('index');
+                        Route::get('letters/{incomingLetter}', [PeriodicReportController::class, 'show'])
+                            ->name('show');
+                        Route::get('exports/summary', [PeriodicReportExportController::class, 'summary'])
+                            ->middleware([
+                                'can:'.PermissionName::ExportReports->value,
+                                'throttle:report-export',
+                            ])
+                            ->name('exports.summary');
+                        Route::get('exports/letters', [PeriodicReportExportController::class, 'letters'])
+                            ->middleware([
+                                'can:'.PermissionName::ExportReports->value,
+                                'throttle:report-export',
+                            ])
+                            ->name('exports.letters');
+                    });
 
                 Route::prefix('intake')
                     ->name('intake.')
@@ -428,3 +672,9 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+
+if (app()->environment('local', 'development')) {
+    Route::get('/preview-error/{code}', function (int $code) {
+        abort($code);
+    })->where('code', '401|402|403|404|419|429|500|503');
+}

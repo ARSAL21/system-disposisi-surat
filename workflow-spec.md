@@ -33,7 +33,7 @@ Aturan:
 
 * seluruh surat masuk dimulai dari Bagian Umum;
 * initial routing hanya ke **satu** Wali Kota atau Sekda;
-* Wali Kota/Sekda memilih **satu Asisten**;
+* Wali Kota/Sekda memilih **satu sampai tiga Asisten**;
 * Asisten memilih **satu atau lebih Kepala Bagian**;
 * Kepala Bagian merupakan terminal formal workflow MVP;
 * Staff belum termasuk workflow MVP;
@@ -71,6 +71,11 @@ Staf administrasi menemukan kekurangan yang harus diperbaiki pengirim. Pemilik P
 
 Submission telah lolos screening teknis staf dan menunggu keputusan administratif Kepala Bagian Umum. Public User dan staf tidak dapat mengubah metadata atau dokumen pada state ini.
 
+Submission manual dibuat langsung pada state ini karena input surat fisik,
+validasi PDF, dan screening lengkap dilakukan oleh Staf Bagian Umum dalam satu
+aksi atomik. Hal tersebut bukan registrasi resmi dan tidak melewati keputusan
+Kepala Bagian Umum.
+
 ### `INTERNAL_REVISION_REQUIRED`
 
 Kepala Bagian Umum mengembalikan hasil screening kepada staf untuk diperbaiki secara internal. State ini tidak membuka akses perubahan kepada Public User. Staf dapat mengajukan ulang ke `READY_FOR_APPROVAL` setelah catatan internal dipenuhi.
@@ -105,8 +110,14 @@ Aturan:
 * transition hanya dilakukan server-side;
 * submission wajib memiliki metadata valid dan tepat satu dokumen PDF sebelum submit;
 * staf administrasi Bagian Umum hanya dapat menjalankan `SUBMITTED → REVISION_REQUIRED` atau `SUBMITTED → READY_FOR_APPROVAL`;
+* pencatatan source `MANUAL` membuat submission `READY_FOR_APPROVAL`, dokumen,
+  screening review, dan audit dalam satu transaksi; email pengirim boleh kosong
+  dan tidak membuat akun publik;
 * Kepala Bagian Umum menjalankan transition dari `READY_FOR_APPROVAL` ke `INTERNAL_REVISION_REQUIRED`, `REGISTERED`, atau `REJECTED`;
 * `INTERNAL_REVISION_REQUIRED → READY_FOR_APPROVAL` merupakan tanggung jawab staf administrasi;
+* hanya submission manual pada `INTERNAL_REVISION_REQUIRED` yang dapat diperbaiki
+  oleh Staf; submission online tetap dikoreksi oleh Public User pada
+  `REVISION_REQUIRED`;
 * staf tidak dapat meregistrasi atau menolak submission dan Kepala Bagian Umum tidak melakukan screening teknis awal;
 * withdrawal dan reopening state final tidak diperbolehkan pada MVP;
 * pelanggaran state menghasilkan conflict dan tidak boleh diatasi dengan menimpa state dari frontend.
@@ -232,7 +243,7 @@ Surat sudah diarahkan tetapi Wali Kota/Sekda belum membuat disposisi pertama.
 
 ### `COMPLETED`
 
-Wali Kota/Sekda telah membuat disposisi yang valid kepada satu Asisten.
+Wali Kota/Sekda telah membuat disposisi yang valid kepada satu sampai tiga Asisten.
 
 Transition:
 
@@ -353,7 +364,7 @@ Wali Kota/Sekda hanya dapat menyelesaikan initial route dengan membuat disposisi
 ```text
 Wali Kota / Sekda
         ↓
-satu Asisten
+satu sampai tiga Asisten
 ```
 
 Tidak boleh:
@@ -368,7 +379,7 @@ Ketika disposisi pertama berhasil dibuat secara transactional:
 ```text
 Initial Route → COMPLETED
 Incoming Letter → IN_PROGRESS
-Assistant Recipient → PENDING
+Setiap Assistant Recipient → PENDING
 ```
 
 ---
@@ -384,9 +395,9 @@ sedang dipegang oleh user actor, Position sederajat, dan `SECTION_HEAD` tidak
 pernah menjadi tujuan sah.
 
 Satu transaksi mengunci akun actor, route, surat, dokumen resmi terkini,
-assignment actor, Position tujuan, assignment tujuan, akun pemegang tujuan,
+assignment actor, seluruh Position tujuan, assignment tujuan, akun pemegang tujuan,
 serta seluruh label instruksi aktif. Transaksi kemudian membuat satu
-`dispositions`, satu recipient `PENDING`, relasi label,
+`dispositions`, satu sampai tiga recipient `PENDING`, relasi label,
 mengubah route menjadi `COMPLETED`, mengubah surat menjadi `IN_PROGRESS`, dan
 menulis audit `DISPOSITION_CREATED`. Kegagalan pada salah satu langkah
 membatalkan seluruh perubahan. Unique `source_route_id` mencegah dua disposisi
@@ -402,7 +413,7 @@ metadata menghasilkan `409`; rate limit menghasilkan `429`.
 
 # 10. Asisten
 
-Asisten menerima satu branch dari Wali Kota/Sekda.
+Setiap Asisten terpilih menerima branch independen dari Wali Kota/Sekda.
 
 Asisten dapat meneruskan surat kepada:
 
@@ -586,6 +597,132 @@ Pergantian pejabat **tidak mengubah state workflow secara otomatis**.
 
 ---
 
+## 14.1 Implementasi Independent Branch Lifecycle M6.3
+
+Setiap recipient level `SECTION_HEAD` adalah cabang terminal independen.
+Pemegang Position Kepala Bagian yang sama, dengan `dispositions.view` dan
+`dispositions.process`, dapat menjalankan transition berikut:
+
+```text
+PENDING -> IN_PROGRESS -> COMPLETED
+PENDING ----------------> COMPLETED
+```
+
+`started_at` hanya diisi pada transition pertama. Penyelesaian langsung dari
+`PENDING` mempertahankan `started_at = null`. Follow-up hanya dapat ditambahkan
+saat cabang `IN_PROGRESS`; cabang `COMPLETED` bersifat final dan tidak dapat
+ditambah catatan, dibuka kembali, atau diselesaikan ulang.
+
+Endpoint produksi:
+
+```text
+POST /back-office/dispositions/inbox/recipients/{dispositionRecipient}/start
+POST /back-office/dispositions/inbox/recipients/{dispositionRecipient}/follow-ups
+POST /back-office/dispositions/inbox/recipients/{dispositionRecipient}/complete
+```
+
+Catatan follow-up dan hasil penyelesaian wajib di-trim dan berukuran 10–2.000
+karakter. Actor, status, timestamp, dan Position Assignment selalu ditentukan
+server. Ketiga endpoint berbagi limiter 60 request/menit per user dan 120
+request/menit per IP.
+
+Setiap Action mengunci surat, seluruh recipient terminal berdasarkan ID, actor,
+kemudian Position Assignment aktif dengan urutan yang sama. State surat wajib
+`IN_PROGRESS`; graph tanpa cabang terminal atau hierarchy yang tidak konsisten
+ditolak dengan `409`. Satu cabang selesai tidak mengubah cabang lain. Surat baru
+berubah menjadi `COMPLETED` setelah seluruh cabang `SECTION_HEAD` selesai.
+Karena surat dikunci lebih dahulu, penyelesaian dua cabang terakhir yang
+bersaing hanya dapat menghasilkan satu transition surat dan satu audit
+`LETTER_COMPLETED`.
+
+Audit `DISPOSITION_STARTED`, `FOLLOW_UP_ADDED`, `DISPOSITION_COMPLETED`, dan
+`LETTER_COMPLETED` ditulis atomik. Isi jurnal dan hasil akhir tidak dimasukkan
+ke metadata Activity Console umum; detail tersebut hanya tersedia melalui
+presenter recipient yang terotorisasi.
+
+## 14.2 Acceptance Branch Completion M7.1
+
+M7.1 tidak menambah transition baru. Endpoint `complete` dari M6.3 menjadi
+satu-satunya jalur penyelesaian cabang terminal. Kontrak finalnya adalah:
+
+* hanya pemegang aktif Position `SECTION_HEAD` recipient dengan
+  `dispositions.view` dan `dispositions.process` yang dapat menyelesaikan;
+* hasil penyelesaian wajib di-trim dan sepanjang 10–2.000 karakter;
+* penyelesaian dari `PENDING` mempertahankan `started_at = null`;
+* penyelesaian dari `IN_PROGRESS` mempertahankan timestamp mulai semula;
+* `COMPLETED` tidak dapat diedit, dihapus, dibuka kembali, atau diselesaikan
+  ulang;
+* user dan Position Assignment historis wajib konsisten dengan Position
+  recipient;
+* kegagalan audit cabang maupun audit aggregate menggagalkan seluruh transaction.
+
+Pergantian pemegang jabatan tidak mengubah `recipient_position_id`. Pemegang
+lama ditolak setelah assignment berakhir dan pemegang baru melanjutkan branch
+dengan assignment aktifnya. Frontend hanya mengirim hasil penyelesaian serta
+tidak pernah mengirim actor, status, timestamp, atau aggregate letter state.
+
+Release gate M7.1 mencakup smoke test pada database MySQL terisolasi. Dua
+request yang menyelesaikan dua cabang terakhir secara bersamaan harus membuat
+kedua cabang `COMPLETED`, satu surat `COMPLETED`, dan tepat satu audit
+`LETTER_COMPLETED`. Dua request bersamaan pada cabang yang sama menghasilkan
+satu keberhasilan dan satu respons stale-state `409`. Suite SQLite tetap
+menguji invariant transaksi, tetapi bukan pengganti verifikasi row lock MySQL.
+Test ini dijalankan melalui grup `mysql-concurrency` dengan
+`RUN_MYSQL_CONCURRENCY_TESTS=true`; test gagal tertutup jika nama database tidak
+mengikuti pola khusus `disposisi_surat_concurrency_test_*`.
+
+---
+
+## 14.3 Aggregate Letter State M7.2
+
+M7.2 menetapkan agregasi dari M6.3 sebagai satu-satunya sumber perubahan status
+surat setelah disposisi dimulai. Selama sedikitnya satu recipient terminal
+`SECTION_HEAD` belum selesai, surat tetap `IN_PROGRESS`. Setelah seluruh
+recipient terminal selesai, service aggregate mengubah surat menjadi
+`COMPLETED` di dalam transaction dan lock surat yang sama dengan penyelesaian
+cabang terakhir.
+
+Graph tanpa cabang terminal atau graph dengan hierarchy/status yang tidak
+konsisten ditolak dengan `409`. Hanya transaksi yang benar-benar melakukan
+transition surat yang menulis audit `LETTER_COMPLETED`; frontend tidak dapat
+menentukan atau mengubah aggregate letter state.
+
+---
+
+## 14.4 Laporan Periodik M7.3
+
+Reporting bersifat read-only dan tidak memperkenalkan transition, status, atau
+jalur penyelesaian baru. Sumber waktu laporan mengikuti kejadian domain:
+
+* submission online/manual dihitung pada `submitted_at`;
+* surat diterima dihitung pada `incoming_letters.received_at`;
+* mulai diproses dihitung pada disposition pertama yang bersumber dari initial
+  route;
+* surat selesai hanya dihitung ketika terdapat recipient terminal dan seluruh
+  recipient `SECTION_HEAD` selesai, memakai timestamp penyelesaian terakhir;
+* durasi cabang dimulai dari `received_at` recipient dan berakhir di
+  `completed_at` recipient tersebut.
+
+Filter tanggal inklusif memakai zona waktu kantor dan dibatasi maksimum 366
+hari. Pemilihan basis kejadian hanya mengubah collection surat yang ditampilkan;
+masing-masing KPI dan seri tren tetap dihitung dari timestamp domainnya pada
+periode yang sama. Pagination tidak boleh memengaruhi aggregate.
+
+Visibility drilldown mengikuti graph yang sudah tersimpan: eksekutif global,
+Asisten hanya subtree recipient miliknya, dan Kepala Bagian hanya terminal
+branch Position miliknya. Kepala Bagian Umum mempunyai aggregate global tetapi
+tidak boleh memakai aggregate tersebut untuk membaca detail atau catatan cabang
+lain. Semua batas diterapkan di query database. Beberapa Position Assignment
+aktif milik user yang sama digabung sebagai union scope.
+
+Ekspor tidak mengubah state dan tidak memuat instruksi, follow-up, atau hasil
+akhir. Detail UI boleh memuat ketiganya hanya setelah Policy surat dan scope
+cabang lolos. Permission kurang menghasilkan `403`, Position/resource di luar
+scope menghasilkan `404`, filter invalid menghasilkan `422`, dan limiter ekspor
+menghasilkan `429`.
+
+---
+
 # 15. Invalid Transition
 
 Backend wajib menolak transition yang:
@@ -652,6 +789,7 @@ LETTER_ROUTED
 
 DISPOSITION_CREATED
 DISPOSITION_STARTED
+FOLLOW_UP_ADDED
 DISPOSITION_COMPLETED
 
 LETTER_COMPLETED
@@ -710,18 +848,19 @@ Invariant MVP:
 5. Surat selalu dimulai dari Bagian Umum.
 6. Surat hanya memiliki satu initial route aktif.
 7. Initial route hanya menuju Wali Kota atau Sekda.
-8. Wali Kota/Sekda hanya meneruskan ke satu Asisten.
+8. Wali Kota/Sekda meneruskan ke satu sampai tiga Asisten dalam satu tindakan disposisi atomik.
 9. Asisten meneruskan ke satu atau lebih Kepala Bagian.
-10. Kepala Bagian adalah terminal formal MVP.
-11. Hierarchy tidak dapat dilompati.
-12. Setiap recipient mempunyai lifecycle sendiri.
-13. Branch `COMPLETED` tidak dapat dimodifikasi menjadi aktif kembali.
-14. Surat `COMPLETED` tidak dapat kembali ke state sebelumnya pada MVP.
-15. Surat selesai hanya ketika semua terminal branch aktif selesai.
-16. State transition dilakukan server-side.
-17. State aggregate tidak dikendalikan frontend.
-18. Tindakan baru wajib menggunakan Position Assignment aktif.
-19. Historical actor tetap menggunakan assignment yang berlaku saat tindakan dilakukan.
+10. Satu Position Kepala Bagian hanya boleh menjadi recipient terminal satu Asisten dalam surat yang sama.
+11. Kepala Bagian adalah terminal formal MVP.
+12. Hierarchy tidak dapat dilompati.
+13. Setiap recipient mempunyai lifecycle sendiri.
+14. Branch `COMPLETED` tidak dapat dimodifikasi menjadi aktif kembali.
+15. Surat `COMPLETED` tidak dapat kembali ke state sebelumnya pada MVP.
+16. Surat selesai hanya ketika semua terminal branch aktif selesai.
+17. State transition dilakukan server-side.
+18. State aggregate tidak dikendalikan frontend.
+19. Tindakan baru wajib menggunakan Position Assignment aktif.
+20. Historical actor tetap menggunakan assignment yang berlaku saat tindakan dilakukan.
 
 ---
 
@@ -777,3 +916,110 @@ COMPLETED
 ```
 
 Struktur ini adalah workflow resmi MVP. Penambahan state atau transition baru harus dilakukan berdasarkan requirement bisnis nyata dan memperbarui dokumen ini terlebih dahulu.
+
+---
+
+# 21. Workflow Dossier Balasan M8.2
+
+```text
+RESPONSE DOSSIER
+
+OPEN -> FINALIZED
+```
+
+Dossier dibuka atomik ketika cabang terminal pertama diselesaikan. Membuka
+dossier tidak mengubah status surat. Dossier hanya dapat difinalisasi oleh
+eksekutif penerima routing awal setelah `IncomingLetter::COMPLETED` dan minimal
+satu mandat `AUTHORIZED` tersedia.
+
+Dokumen tidak mempunyai transition yang menimpa versi:
+
+```text
+version N READY
+    -> RETURNED (review append-only)
+    -> version N+1 READY
+```
+
+Kepala Bagian dapat mengunggah bahan hanya untuk recipient Position-nya yang
+sudah `COMPLETED`. Asisten dapat membuat proposal hanya setelah seluruh cabang
+Kepala Bagian di bawah recipient Asisten tersebut selesai. Pengembalian bahan
+tidak membuka kembali cabang disposisi. Versi yang sudah menjadi sumber
+proposal, konsolidasi, atau mandat dikunci dari pengembalian dan revisi. Dokumen
+tingkat berikutnya menyimpan hubungan sumber secara eksplisit dan versi
+revisinya mewarisi hubungan tersebut.
+
+Eksekutif penerima awal dapat mengunggah konsolidasi, memilih versi proposal
+terkini yang tidak dikembalikan, membuat beberapa mandat, dan memilih dirinya
+atau Asisten yang benar-benar terlibat sebagai penandatangan substantif. Asisten
+tidak memperoleh permission permanen dari mandat. Setelah dossier `FINALIZED`,
+kontribusi, review, revisi, dan mandat baru ditolak sebagai stale state `409`.
+
+Status mandat M8.2 hanya:
+
+```text
+AUTHORIZED
+```
+
+Transition penomoran hingga pengiriman baru ditambahkan pada M8.3.
+
+---
+
+# 22. Workflow Penerbitan Surat Keluar M8.3
+
+```text
+AUTHORIZED
+    -> NUMBER_ASSIGNED
+    -> SIGNED_DOCUMENT_UPLOADED
+    -> ADMIN_VERIFIED
+    -> DELIVERED
+
+AUTHORIZED -> WITHDRAWN
+```
+
+Aturan transition:
+
+* penomoran hanya boleh dilakukan ketika dossier `FINALIZED` dan menetapkan
+  nomor, tahun agenda, tanggal surat, Petugas, Position Assignment, serta waktu
+  server secara atomik;
+* kombinasi nomor dan tahun agenda harus unik;
+* hanya Position penyusun dokumen sumber atau Petugas Bagian Umum yang dapat
+  mengunggah PDF final;
+* upload pertama hanya dari `NUMBER_ASSIGNED`; upload revisi hanya diizinkan
+  setelah versi terkini memperoleh review `RETURNED`;
+* review `VERIFIED` dan `RETURNED` append-only, tepat satu keputusan per versi;
+* verifikasi hanya dapat dilakukan Kepala Bagian Umum terhadap versi terkini;
+* pengiriman hanya dapat dilakukan Petugas setelah versi terkini terverifikasi;
+* pengajuan online selalu dipublikasikan melalui portal dan mendapat notifikasi
+  tautan login tanpa lampiran;
+* surat manual wajib mencatat metode non-portal, penerima, dan waktu penyerahan;
+* `DELIVERED`, `WITHDRAWN`, versi dokumen, review, dan bukti pengiriman tidak
+  dapat diedit atau dihapus;
+* mandat yang sudah diberi nomor tidak dapat ditarik dan mandat aktif terakhir
+  pada dossier final tidak boleh ditarik;
+* konflik state atau graph menghasilkan `409`, sedangkan input tidak valid dan
+  duplikasi PDF/nomor menghasilkan `422`.
+
+Lifecycle dossier diperluas menjadi:
+
+```text
+OPEN -> FINALIZED -> FULFILLED
+```
+
+`FULFILLED` hanya terjadi setelah seluruh mandat non-`WITHDRAWN` berstatus
+`DELIVERED`. Transition dihitung di dalam transaction pengiriman dengan lock
+surat masuk, dossier, seluruh mandat terurut, Position Assignment aktor, dan
+audit. Penyelesaian disposisi internal tetap memakai
+`IncomingLetter::COMPLETED` dan tidak menunggu publikasi balasan.
+
+Status yang ditampilkan kepada pemohon diturunkan tanpa menambah state surat
+masuk:
+
+```text
+IN_PROCESS          disposisi internal belum selesai
+PREPARING_RESPONSE  disposisi selesai, belum ada balasan terkirim
+RESPONSE_AVAILABLE  minimal satu balasan resmi sudah terkirim
+```
+
+Koreksi setelah `DELIVERED` tidak mengubah surat lama. Koreksi harus menjadi
+surat keluar baru dengan nomor baru dan referensi
+`corrects_outgoing_letter_id` ke surat sebelumnya.

@@ -28,11 +28,24 @@ export type AuthCapabilities = {
     can_view_executive_inbox: boolean;
     can_view_dispositions: boolean;
     can_create_dispositions: boolean;
+    can_process_dispositions: boolean;
     can_view_disposition_instructions: boolean;
     can_manage_disposition_instructions: boolean;
+    can_view_reports: boolean;
+    can_export_reports: boolean;
     can_view_intake: boolean;
     can_screen_intake: boolean;
     can_decide_intake: boolean;
+    can_create_manual_intake: boolean;
+    can_view_incoming_register: boolean;
+    can_view_letter_responses: boolean;
+    can_contribute_letter_responses: boolean;
+    can_review_letter_responses: boolean;
+    can_authorize_letter_responses: boolean;
+    can_view_outgoing_register?: boolean;
+    can_number_outgoing_letters?: boolean;
+    can_verify_outgoing_letters?: boolean;
+    can_deliver_outgoing_letters?: boolean;
 };
 
 export type Auth = {

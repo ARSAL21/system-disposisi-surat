@@ -2,10 +2,11 @@
 import { Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
-    Inbox,
+    Crown,
     Landmark,
     Route as RouteIcon,
     ShieldCheck,
+    Sparkles,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
@@ -19,24 +20,28 @@ const props = defineProps<{
 const content = computed(() =>
     props.mode === 'routing'
         ? {
-              eyebrow: 'Meja Kepala Bagian Umum',
-              title: 'Routing surat ke pimpinan',
+              eyebrow: 'Meja Kepala Bagian Umum · Level 10',
+              title: 'Routing Surat Masuk ke Pimpinan',
               description:
-                  'Tinjau surat yang telah teregistrasi, lalu arahkan tepat kepada Wali Kota atau Sekretaris Daerah.',
+                  'Tinjau berkas surat yang telah teregistrasi dan terverifikasi keasliannya, lalu tetapkan routing awal terarah kepada Wali Kota atau Sekretaris Daerah.',
               assurance:
-                  'Satu surat hanya dapat diarahkan kepada satu pimpinan dan keputusan routing tidak dapat diubah pada MVP.',
+                  'Satu surat hanya dapat diarahkan kepada satu pimpinan eksekutif. Integritas naskah diverifikasi otomatis melalui sidik jari SHA-256.',
               icon: RouteIcon,
+              accentColor: 'from-blue-600 via-indigo-600 to-violet-700',
+              badgeText: 'M5 · Routing Awal Kedinasan',
               switchLabel: 'Lihat preview inbox pimpinan',
               switchHref: '/back-office/previews/executive-inbox',
           }
         : {
-              eyebrow: 'Ruang kerja Wali Kota / Sekretaris Daerah',
-              title: 'Inbox pimpinan',
+              eyebrow: 'Ruang Kerja Eksekutif Pimpinan · Level 20',
+              title: 'Inbox & Lembar Disposisi Pimpinan',
               description:
-                  'Periksa surat resmi yang diarahkan Bagian Umum, lalu buat disposisi pertama kepada tepat satu Asisten.',
+                  'Periksa surat dinas masuk yang telah diarahkan oleh Bagian Umum, tetapkan instruksi kebijakan, dan buat disposisi primer kepada Asisten Koordinator.',
               assurance:
-                  'Penerima hanya berasal dari Position level Asisten dengan pejabat aktif. Pimpinan pengirim tidak dapat menunjuk dirinya sendiri.',
-              icon: Inbox,
+                  'Penerima disposisi primer berasal dari pejabat aktif level Asisten. Alur penugasan dijamin strictly downward tanpa risiko bypass.',
+              icon: Crown,
+              accentColor: 'from-amber-600 via-indigo-600 to-purple-700',
+              badgeText: 'M6 · Disposisi Eksekutif Primer',
               switchLabel: 'Lihat preview meja routing',
               switchHref: '/back-office/previews/letter-routing',
           },
@@ -45,90 +50,107 @@ const content = computed(() =>
 
 <template>
     <header
-        class="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/75 to-violet-50/80 p-5 shadow-sm sm:p-7 dark:border-blue-950 dark:from-slate-950 dark:via-blue-950/35 dark:to-violet-950/30"
+        class="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card/90 to-muted/40 p-6 shadow-lg shadow-black/5 backdrop-blur-2xl sm:p-8 dark:border-border/60 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950/80"
         :aria-labelledby="`${mode}-workspace-title`"
     >
+        <!-- Ambient Decorative Glow -->
         <div
-            class="pointer-events-none absolute -top-20 -right-16 size-56 rounded-full bg-violet-400/15 blur-3xl dark:bg-violet-600/10"
+            class="pointer-events-none absolute -top-20 -right-16 size-72 rounded-full bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-transparent blur-3xl dark:from-indigo-600/20"
             aria-hidden="true"
         />
         <div
-            class="pointer-events-none absolute -bottom-24 left-1/4 size-52 rounded-full bg-blue-400/10 blur-3xl"
+            class="pointer-events-none absolute -bottom-24 left-1/3 size-64 rounded-full bg-amber-500/10 blur-3xl dark:bg-amber-600/10"
             aria-hidden="true"
         />
 
         <div
-            class="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"
+            class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
         >
-            <div class="max-w-3xl">
+            <div class="max-w-3xl space-y-3">
+                <!-- Top Badges Row -->
                 <div class="flex flex-wrap items-center gap-2">
-                    <span
-                        class="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-violet-700 text-white shadow-sm shadow-blue-700/20"
+                    <div
+                        class="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr text-white shadow-md shadow-indigo-500/20"
+                        :class="content.accentColor"
                     >
-                        <component
-                            :is="content.icon"
-                            class="size-5"
-                            aria-hidden="true"
-                        />
-                    </span>
+                        <component :is="content.icon" class="size-5.5" />
+                    </div>
+
                     <Badge
                         variant="outline"
-                        class="border-blue-200 bg-white/80 text-blue-800 dark:border-blue-800 dark:bg-blue-950/55 dark:text-blue-200"
+                        class="border-indigo-500/30 bg-indigo-500/10 px-3 py-1 font-mono text-xs font-bold text-indigo-700 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-300"
                     >
-                        {{
-                            mode === 'routing'
-                                ? 'M5 · Routing awal'
-                                : 'M6 · Disposisi berbasis jabatan'
-                        }}
+                        {{ content.badgeText }}
                     </Badge>
-                    <Badge v-if="preview" variant="secondary">
-                        Pratinjau lokal
+
+                    <Badge
+                        v-if="preview"
+                        variant="secondary"
+                        class="px-2.5 py-0.5 text-xs font-medium"
+                    >
+                        <Sparkles class="mr-1 size-3 text-amber-500" />
+                        <span>Pratinjau Lokal</span>
                     </Badge>
                 </div>
 
+                <!-- Eyebrow & Title -->
+                <div>
+                    <p
+                        class="font-mono text-xs font-bold tracking-widest text-indigo-600 uppercase dark:text-indigo-400"
+                    >
+                        {{ content.eyebrow }}
+                    </p>
+                    <h1
+                        :id="`${mode}-workspace-title`"
+                        class="mt-1 font-['Syne',sans-serif] text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl lg:text-4xl"
+                    >
+                        {{ content.title }}
+                    </h1>
+                </div>
+
                 <p
-                    class="mt-5 text-xs font-semibold tracking-[0.17em] text-blue-700 uppercase dark:text-blue-300"
-                >
-                    {{ content.eyebrow }}
-                </p>
-                <h1
-                    :id="`${mode}-workspace-title`"
-                    class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
-                >
-                    {{ content.title }}
-                </h1>
-                <p
-                    class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base"
+                    class="max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm sm:leading-relaxed"
                 >
                     {{ content.description }}
                 </p>
             </div>
 
-            <div class="grid max-w-md gap-3">
+            <!-- Right Invariant Assurance & Switcher -->
+            <div class="flex flex-col gap-3 lg:max-w-md">
                 <div
-                    class="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/75 p-4 text-sm shadow-xs backdrop-blur dark:border-slate-800 dark:bg-slate-950/55"
+                    class="flex items-start gap-3.5 rounded-2xl border border-border/80 bg-background/80 p-4 text-xs shadow-xs backdrop-blur-md dark:bg-slate-950/60"
                 >
-                    <ShieldCheck
-                        class="mt-0.5 size-5 shrink-0 text-emerald-700 dark:text-emerald-300"
-                        aria-hidden="true"
-                    />
-                    <p class="leading-6 text-muted-foreground">
-                        {{ content.assurance }}
-                    </p>
+                    <div
+                        class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    >
+                        <ShieldCheck class="size-4.5" />
+                    </div>
+                    <div class="space-y-0.5">
+                        <span
+                            class="font-mono text-[10px] font-bold tracking-wider text-emerald-700 uppercase dark:text-emerald-300"
+                        >
+                            Sistem Penegakan Invarian
+                        </span>
+                        <p
+                            class="text-xs leading-relaxed text-muted-foreground"
+                        >
+                            {{ content.assurance }}
+                        </p>
+                    </div>
                 </div>
 
                 <Button
                     v-if="preview"
                     as-child
                     variant="outline"
-                    class="min-h-11 justify-between bg-background/75"
+                    class="h-10 justify-between rounded-xl bg-background/80 text-xs font-semibold"
                 >
                     <Link :href="content.switchHref">
                         <span class="inline-flex items-center gap-2">
-                            <Landmark class="size-4" aria-hidden="true" />
-                            {{ content.switchLabel }}
+                            <Landmark class="size-4" />
+                            <span>{{ content.switchLabel }}</span>
                         </span>
-                        <ArrowRight class="size-4" aria-hidden="true" />
+                        <ArrowRight class="size-4" />
                     </Link>
                 </Button>
             </div>

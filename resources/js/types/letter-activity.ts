@@ -8,6 +8,10 @@ export type LetterActivityAction =
     | 'LETTER_REGISTERED'
     | 'LETTER_ROUTED'
     | 'DISPOSITION_CREATED'
+    | 'DISPOSITION_STARTED'
+    | 'FOLLOW_UP_ADDED'
+    | 'DISPOSITION_COMPLETED'
+    | 'LETTER_COMPLETED'
     | 'DOCUMENT_VERSION_CREATED';
 
 export type LetterActivityVisibility = 'details' | 'summary';

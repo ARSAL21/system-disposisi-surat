@@ -22,6 +22,9 @@ class IntakeSubmissionResource extends JsonResource
     public function toArray(Request $request): array
     {
         $document = $this->relationLoaded('document') ? $this->document : null;
+        $canReviseManual = $this->source === SubmissionSource::Manual
+            && $this->status === SubmissionStatus::InternalRevisionRequired
+            && Gate::allows('viewManualRevision', $this->resource);
         $latestReview = $this->latestLoadedReview();
 
         return [
@@ -36,6 +39,7 @@ class IntakeSubmissionResource extends JsonResource
             'external_letter_date' => $this->external_letter_date?->toDateString(),
             'subject' => $this->subject,
             'summary' => $this->summary,
+            'received_at' => $this->received_at?->toISOString(),
             'submitted_at' => $this->submitted_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
             'document' => $document instanceof SubmissionDocument
@@ -53,6 +57,7 @@ class IntakeSubmissionResource extends JsonResource
                     && Gate::allows('screenIntake', $this->resource),
                 'can_download_document' => $document instanceof SubmissionDocument
                     && Gate::allows('downloadIntakeDocument', $this->resource),
+                'can_revise_manual' => $canReviseManual,
             ],
             'links' => [
                 'show' => route('back-office.intake.submissions.show', $this->resource),
@@ -62,6 +67,9 @@ class IntakeSubmissionResource extends JsonResource
                     : null,
                 'document_download' => $document instanceof SubmissionDocument
                     ? route('back-office.intake.submissions.document.download', $this->resource)
+                    : null,
+                'manual_revision' => $canReviseManual
+                    ? route('back-office.intake.manual.edit', $this->resource)
                     : null,
             ],
         ];

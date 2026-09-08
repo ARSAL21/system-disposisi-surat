@@ -230,10 +230,18 @@ Input metadata
       ↓
 Upload hasil scan PDF
       ↓
-Create Manual Submission
+Pemeriksaan lengkap oleh Staf
+      ↓
+Manual Submission READY_FOR_APPROVAL
+      ↓
+Pengesahan administratif Kabag Umum
 ```
 
-Karena Bagian Umum sudah melakukan pemeriksaan langsung, manual submission dapat dilanjutkan ke registrasi pada sesi kerja yang sama.
+Pencatatan manual membuat submission dan hasil screening dalam satu transaksi,
+tetapi tidak membuat `IncomingLetter`. Kepala Bagian Umum tetap menjadi
+satu-satunya pejabat yang boleh mengesahkan registrasi. Jika hasil persiapan
+dikembalikan, Staf dapat memperbaiki metadata atau mengganti scan dan
+mengajukannya kembali.
 
 Namun secara domain:
 
@@ -369,6 +377,16 @@ Position Assignment
 
 Mengatur capability aplikasi.
 
+Katalog operasional baku menyediakan role `petugas-surat`, `kabag-umum`,
+`pimpinan-eksekutif`, `asisten`, dan `kepala-bagian`. Role tersebut immutable
+dan permission-nya disinkronkan secara exact, tetapi dapat ditetapkan kepada
+akun internal melalui UI RBAC. Hanya assignment role `super-admin` yang wajib
+melalui console terkontrol.
+
+Role operasional tidak menggantikan Position. Wali Kota dan Sekda menggunakan
+capability eksekutif yang sama, sedangkan kepemilikan inbox dan kewenangan
+terhadap surat tetap ditentukan oleh Position Assignment aktif.
+
 ---
 
 ## Position
@@ -395,6 +413,23 @@ Kepala Bagian Aset
 Menghubungkan Internal User dengan Position dalam periode tertentu.
 
 Public User tidak mempunyai Position Assignment.
+
+## Bootstrap Data Operasional Lokal
+
+Seeder non-production menyediakan struktur Setda inti yang deterministik:
+
+```text
+Wali Kota / Sekda
+Asisten I / II / III
+8 Kepala Bagian
+1 Petugas Surat Bagian Umum
+```
+
+Setiap Position memperoleh satu account internal aktif dan terverifikasi serta
+satu Position Assignment aktif. Seeder tidak membuat super-admin, public user,
+surat, dokumen, routing, maupun disposisi. Akun generik tersebut hanya untuk
+pengembangan lokal dan menggunakan password `password`; production guard wajib
+menolak eksekusi seeder operasional.
 
 ## Administrasi Struktur Organisasi
 
@@ -631,10 +666,18 @@ Create Manual Submission
     ↓
 Upload scan PDF
     ↓
-Register
+Screening Staf tercatat
+    ↓
+READY_FOR_APPROVAL
+    ↓
+Keputusan Kabag Umum
 ```
 
-Manual intake boleh lebih cepat secara operasional, tetapi tetap melewati domain submission.
+Manual intake boleh lebih cepat secara operasional karena input dan screening
+terjadi pada satu aksi, tetapi tetap melewati domain submission dan meja
+keputusan Kepala Bagian Umum. `received_at` berasal dari waktu penerimaan fisik,
+bukan waktu registrasi. Buku Agenda Surat Masuk hanya membaca `IncomingLetter`
+yang sudah sah dan menggabungkan sumber `ONLINE` serta `MANUAL`.
 
 ---
 
@@ -1069,8 +1112,9 @@ keamanan PDF privat yang sama dengan M4.3.
 
 ## 24.5 Disposisi Pertama Berbasis Position (M6.1)
 
-M6.1 mengaktifkan tindakan substantif pertama dari Wali Kota/Sekda kepada tepat
-satu Asisten. UI tidak merangkai target dari user atau role: backend hanya
+M6.1 mengaktifkan tindakan substantif pertama dari Wali Kota/Sekda kepada satu
+atau lebih Asisten, dengan batas operasional maksimal tiga Position Asisten per
+disposisi awal. UI tidak merangkai target dari user atau role: backend hanya
 mengirim Position level `ASSISTANT` yang benar-benar eligible (tepat satu
 pemegang internal, aktif, dan terverifikasi), menghapus Position actor maupun
 Position Asisten yang dipegang user actor dari pilihan, dan memvalidasi ulang
@@ -1092,7 +1136,7 @@ PATCH /back-office/workflow/instruction-labels/{instructionLabel}
 PATCH /back-office/workflow/instruction-labels/{instructionLabel}/status
 ```
 
-Account actor dan pemegang tujuan, route, surat, Position/assignment, dokumen,
+Account actor dan seluruh pemegang tujuan, route, surat, Position/assignment, dokumen,
 serta label aktif dikunci dan diperiksa ulang. Disposisi, recipient, label,
 transisi `letter_routes PENDING -> COMPLETED`, transisi
 `incoming_letters ROUTED -> IN_PROGRESS`, dan audit `DISPOSITION_CREATED`
@@ -1106,6 +1150,121 @@ label yang telah digunakan tidak dapat dihapus atau dilepas dari disposisi,
 hanya dinonaktifkan. Mutasi
 katalog memerlukan `disposition-instructions.manage`, MFA, recent password
 confirmation, transaction, dan audit.
+
+---
+
+## 24.6 Multiple Recipients dan Independent Branches (M6.2–M6.3)
+
+Asisten dapat meneruskan satu tindakan disposisi kepada satu atau lebih
+Position level `SECTION_HEAD`. Setiap recipient menjadi cabang terminal
+independen: memulai atau menyelesaikan satu cabang tidak memutasi cabang lain.
+Dalam satu surat, satu Position Kepala Bagian hanya boleh berada pada satu
+subtree Asisten. Setelah dipilih Asisten pertama, Position tersebut tidak lagi
+ditampilkan kepada Asisten lain dan crafted/concurrent request divalidasi ulang
+setelah surat dikunci. Aturan ini mencegah kepemilikan arahan, monitoring, serta
+bahan teknis menjadi ambigu.
+Cabang tetap dimiliki Position, sehingga pergantian pejabat tidak mengubah
+target historis dan pejabat aktif baru dapat melanjutkan pekerjaan melalui
+Position Assignment yang sah.
+
+Kepala Bagian hanya menerima detail cabangnya sendiri beserta jurnal follow-up.
+Asisten menerima monitoring read-only untuk seluruh cabang yang merupakan anak
+langsung recipient Asisten miliknya. Wali Kota/Sekda hanya menerima fase dan
+angka aggregate tanpa identitas recipient, isi jurnal, hasil penyelesaian,
+email, assignment ID, atau metadata audit mentah.
+
+Lifecycle resmi:
+
+```text
+PENDING -> IN_PROGRESS -> COMPLETED
+PENDING ----------------> COMPLETED
+```
+
+Jurnal `disposition_follow_ups` append-only dan hanya dapat dibuat saat cabang
+`IN_PROGRESS`. Penyelesaian menyimpan hasil akhir, user, Position Assignment,
+dan timestamp historis pada `disposition_recipients`. Tidak ada endpoint edit,
+delete, reopen, atau perubahan aggregate dari frontend.
+
+Mutasi lifecycle memakai transaction dengan retry deadlock dan lock order
+deterministik: surat, seluruh cabang terminal terurut ID, actor, lalu Position
+Assignment. Service aggregate mengubah `incoming_letters` menjadi `COMPLETED`
+hanya ketika seluruh cabang `SECTION_HEAD` selesai. Audit lifecycle ditulis
+dalam transaction yang sama; kegagalan audit menggagalkan mutasi business
+state.
+
+Setiap Asisten penerima memperoleh branch independen dan dapat meneruskannya
+kepada satu atau lebih Kepala Bagian. Inbox eksekutif mencakup route `PENDING` tanpa disposition dan route
+`COMPLETED` yang memiliki disposition. Filter fase dan summary dihitung pada
+authorized query database. Route/graph yang tidak konsisten gagal tertutup dan
+tidak dipulihkan melalui filtering collection di Vue.
+
+## 24.7 Finalisasi Branch Completion (M7.1)
+
+M7.1 menerima lifecycle cabang M6.3 sebagai kontrak produksi resmi dan tidak
+membuat state, permission, endpoint, atau tabel penyelesaian kedua. Penyelesaian
+tetap dilakukan hanya oleh pemegang aktif Position `SECTION_HEAD` penerima,
+baik dari `PENDING` maupun `IN_PROGRESS`, dengan hasil akhir 10–2.000 karakter.
+
+Cabang yang selesai bersifat final. Presenter wajib memverifikasi bahwa user
+historis dan Position Assignment penyelesaian saling sesuai serta assignment
+tersebut berasal dari Position recipient. Metadata yang tidak konsisten gagal
+tertutup dengan `409`; email, ID assignment, isi hasil akhir, dan metadata audit
+mentah tidak boleh bocor ke Activity Console umum.
+
+Pergantian pejabat tidak mengubah target branch. Pemegang lama kehilangan akses
+ketika assignment berakhir, sedangkan pemegang baru dapat menyelesaikan branch
+yang sama dan dicatat menggunakan identitas serta assignment barunya. UI
+mengunci aksi secara sinkron saat request dimulai dan menampilkan cabang final
+sebagai histori read-only.
+
+## 24.8 Aggregate Letter State (M7.2)
+
+M7.2 meresmikan service aggregate M6.3 sebagai jalur tunggal perubahan
+`incoming_letters.status` dari `IN_PROGRESS` menjadi `COMPLETED`. Service
+tersebut bekerja dalam transaction penyelesaian cabang, setelah surat dan
+seluruh recipient terminal dikunci secara deterministik.
+
+Surat tetap `IN_PROGRESS` selama ada cabang terminal yang belum selesai.
+Transition menjadi `COMPLETED` terjadi tepat sekali setelah semua recipient
+level `SECTION_HEAD` selesai dan menghasilkan tepat satu audit
+`LETTER_COMPLETED`. Graph kosong atau tidak konsisten gagal tertutup dengan
+respons konflik dan tidak diperbaiki oleh frontend.
+
+## 24.9 Laporan Periodik dan Drilldown Proses (M7.3)
+
+Laporan periodik adalah read model terotorisasi di atas data intake, surat
+resmi, routing, disposisi, recipient, dan jurnal tindak lanjut yang sudah ada.
+Fitur ini tidak menambah workflow state maupun tabel reporting. Endpoint
+produksi terdiri dari halaman agregat, drilldown satu surat, serta ekspor CSV
+ringkasan dan daftar surat.
+
+Authorization selalu menggabungkan permission dan Position Assignment aktif:
+
+* Wali Kota/Sekda memperoleh agregat kota dan detail lengkap seluruh pohon;
+* Kepala Bagian Umum memperoleh agregat global, tetapi daftar/detail hanya
+  untuk surat yang memiliki cabang Bagian Umum;
+* Asisten memperoleh recipient miliknya dan cabang Kepala Bagian yang langsung
+  berada di bawah recipient tersebut;
+* Kepala Bagian memperoleh cabang Position miliknya sendiri;
+* Petugas Surat dan super-admin tanpa Position bisnis tidak memperoleh akses.
+
+Beberapa assignment aktif digabung sebagai union. Scope surat dan relasi cabang
+diterapkan pada query database sebelum record dimuat. Presenter detail laporan
+berdiri sendiri agar kebutuhan drilldown tidak memperlebar payload inbox M6.
+Email, ID Position Assignment, disk/path dokumen, IP, data autentikasi, dan
+metadata audit mentah tidak pernah menjadi props laporan.
+
+KPI menggunakan waktu kejadian domain: submission memakai `submitted_at`, surat
+diterima memakai `received_at`, proses dimulai memakai waktu disposition awal,
+dan penyelesaian memakai `MAX(completed_at)` seluruh recipient terminal setelah
+semuanya selesai. Rentang tanggal bersifat inklusif, maksimum 366 hari, dan
+dikonversi dari zona waktu kantor ke UTC. Tren memilih bucket harian, mingguan,
+atau bulanan berdasarkan panjang periode.
+
+Ekspor CSV dihasilkan secara streaming dan chunked, memakai UTF-8 BOM, header
+download privat, serta sanitasi formula spreadsheet. CSV tidak memuat instruksi,
+follow-up, atau completion note. Endpoint ekspor memakai limiter bersama 10
+request/menit per user dan 30 request/menit per IP.
 
 ---
 
@@ -1136,6 +1295,7 @@ Setiap event audit didefinisikan secara deklaratif pada `AuditActionContractRegi
 | `SUBMISSION_DOCUMENT_REPLACED` | Submission | `letter_submission` | Wajib | Flexible | Forbidden |
 | `SUBMISSION_SUBMITTED` | Submission | `letter_submission` | Wajib | Update | Forbidden |
 | `SUBMISSION_RESUBMITTED` | Submission | `letter_submission` | Wajib | Update | Forbidden |
+| `MANUAL_SUBMISSION_CREATED` | Intake Review | `letter_submission` | Wajib | Create | Required |
 | `SUBMISSION_REVISION_REQUESTED` | Intake Review | `letter_submission` | Wajib | Update | Required |
 | `SUBMISSION_READY_FOR_APPROVAL` | Intake Review | `letter_submission` | Wajib | Update | Required |
 | `SUBMISSION_RETURNED_TO_STAFF` | Intake Decision | `letter_submission` | Wajib | Update | Required |
@@ -1145,6 +1305,10 @@ Setiap event audit didefinisikan secara deklaratif pada `AuditActionContractRegi
 | `DOCUMENT_VERSION_CREATED` | Document | `letter_document` | Wajib | Create | Required |
 | `LETTER_ROUTED` | Routing | `letter_route` | Wajib | Update | Required |
 | `DISPOSITION_CREATED` | Disposition | `disposition` | Wajib | Create | Required |
+| `DISPOSITION_STARTED` | Disposition | `disposition_recipient` | Wajib | Update | Required |
+| `FOLLOW_UP_ADDED` | Disposition | `disposition_follow_up` | Wajib | Create | Required |
+| `DISPOSITION_COMPLETED` | Disposition | `disposition_recipient` | Wajib | Update | Required |
+| `LETTER_COMPLETED` | Disposition | `incoming_letter` | Wajib | Update | Required |
 | `INSTRUCTION_LABEL_CREATED` | Workflow Configuration | `instruction_label` | Wajib | Create | Optional |
 | `INSTRUCTION_LABEL_UPDATED` | Workflow Configuration | `instruction_label` | Wajib | Update | Optional |
 | `INSTRUCTION_LABEL_STATUS_CHANGED` | Workflow Configuration | `instruction_label` | Wajib | Update | Optional |
@@ -1230,6 +1394,10 @@ LETTER_REGISTERED
 LETTER_ROUTED
 DOCUMENT_VERSION_CREATED
 DISPOSITION_CREATED
+DISPOSITION_STARTED
+FOLLOW_UP_ADDED
+DISPOSITION_COMPLETED
+LETTER_COMPLETED
 ```
 
 Aktivitas draft, pembaruan draft, dan penggantian dokumen sebelum submit tidak
@@ -1238,9 +1406,9 @@ Rentang hari menggunakan zona waktu kantor yang configurable, dengan nilai awal
 `Asia/Makassar`; timestamp audit tetap disimpan dalam UTC. Audit registrasi
 surat dan penciptaan versi dokumen memakai request ID yang sama karena merupakan
 satu operasi bisnis transactional. Event `LETTER_ROUTED` dan
-`DISPOSITION_CREATED` otomatis masuk console dengan target surat yang diturunkan
-dari record domain masing-masing tanpa mengekspos metadata routing atau disposisi
-mentah.
+seluruh event disposisi otomatis masuk console dengan target surat yang
+diturunkan dari record domain masing-masing tanpa mengekspos metadata routing,
+isi follow-up, hasil penyelesaian, atau metadata disposisi mentah.
 
 ---
 
@@ -1485,3 +1653,69 @@ AGENTS.md
 ```
 
 `system-design.md` tetap mendefinisikan arsitektur konseptual dan tidak menjadi tempat detail migration atau exact workflow transition.
+
+---
+
+# 35. Dossier Balasan Berjenjang M8.2
+
+Penyelesaian disposisi internal dan penerbitan surat balasan merupakan dua
+boundary berbeda. `IncomingLetter::COMPLETED` hanya menyatakan semua cabang
+terminal selesai. Setelah cabang pertama selesai, sistem membuka satu dossier
+balasan untuk surat tersebut agar hasil teknis dapat dikumpulkan tanpa membuka
+kembali lifecycle disposisi.
+
+```text
+Kepala Bagian -> bahan teknis immutable
+Asisten       -> proposal dari subtree langsung
+Eksekutif     -> pilih proposal / unggah konsolidasi
+              -> satu atau lebih mandat AUTHORIZED
+```
+
+Asisten hanya membaca bahan Kepala Bagian yang merupakan anak langsung
+recipient miliknya. Kepala Bagian hanya membaca dan merevisi seri dokumen
+Position-nya. Eksekutif hanya memperoleh kewenangan penuh bila Position-nya
+merupakan penerima routing awal surat. Permission tidak menjadi bypass Position.
+
+Pengembalian dokumen menghasilkan review append-only terhadap versi tertentu.
+Versi baru menggantikan versi yang dikembalikan tanpa menimpa atau menghapus
+file lama. Finalisasi dossier membutuhkan surat `COMPLETED` dan minimal satu
+mandat. M8.2 berhenti pada status mandat `AUTHORIZED`; penomoran, tanda tangan,
+verifikasi administratif, dan pengiriman merupakan boundary M8.3.
+
+---
+
+# 36. Register dan Penerbitan Surat Keluar M8.3
+
+Mandat yang telah difinalisasi eksekutif masuk ke pipeline administratif yang
+terpisah dari penyusunan substansi:
+
+```text
+AUTHORIZED
+    -> NUMBER_ASSIGNED             Petugas memberi nomor dan tanggal resmi
+    -> SIGNED_DOCUMENT_UPLOADED    Penyusun/Petugas mengunggah PDF bertanda tangan
+    -> ADMIN_VERIFIED              Kabag Umum memverifikasi administrasi
+    -> DELIVERED                   Petugas mempublikasikan/mencatat penyerahan
+```
+
+Tanda tangan dilakukan di luar aplikasi. Aplikasi tidak mengklaim PDF sebagai
+TTE; sistem hanya menyimpan versi final, aktor, Position Assignment, waktu
+server, keputusan verifikasi, dan audit. PDF tersimpan privat, immutable, dan
+setiap perbaikan membuat versi baru. Versi yang dikembalikan tetap dapat dibaca
+sesuai scope dan tidak pernah ditimpa.
+
+Petugas dan Kepala Bagian Umum memperoleh akses register administratif global
+sesuai Position. Pejabat teknis hanya melihat mandat yang diturunkan dari bahan
+atau proposal dalam scope-nya. Eksekutif hanya melihat surat yang routing
+awalnya ditujukan kepada Position-nya. Daftar selalu dibatasi pada query
+database; permission frontend tidak menjadi boundary keamanan.
+
+Mandat `AUTHORIZED` dapat ditarik oleh eksekutif penerima dengan alasan, tetapi
+mandat yang sudah bernomor tidak dapat ditarik. Mandat aktif terakhir pada
+dossier `FINALIZED` juga tidak dapat ditarik karena akan membuat kewajiban
+balasan mustahil dipenuhi. Dossier berubah `FINALIZED -> FULFILLED` secara
+atomik hanya ketika seluruh mandat yang tidak ditarik berstatus `DELIVERED`.
+
+Pengajuan online memperoleh kartu balasan dan tautan unduh privat setelah
+pengiriman; email hanya berisi tautan login tanpa lampiran. Surat manual tidak
+membuat akun publik. Petugas mencatat metode, penerima, waktu, nomor pelacakan,
+dan catatan penyerahan offline.

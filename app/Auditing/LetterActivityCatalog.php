@@ -20,6 +20,7 @@ final class LetterActivityCatalog
     public static function submissionActions(): array
     {
         return [
+            AuditAction::ManualSubmissionCreated->value,
             AuditAction::SubmissionSubmitted->value,
             AuditAction::SubmissionResubmitted->value,
             AuditAction::SubmissionRevisionRequested->value,
@@ -39,6 +40,7 @@ final class LetterActivityCatalog
     public static function actionLabels(): array
     {
         return [
+            AuditAction::ManualSubmissionCreated->value => 'Surat fisik dicatat',
             AuditAction::SubmissionSubmitted->value => 'Surat diajukan',
             AuditAction::SubmissionResubmitted->value => 'Surat diajukan kembali',
             AuditAction::SubmissionRevisionRequested->value => 'Perbaikan diminta',
@@ -48,7 +50,23 @@ final class LetterActivityCatalog
             AuditAction::LetterRegistered->value => 'Surat diregistrasi',
             AuditAction::LetterRouted->value => 'Surat diarahkan ke pimpinan',
             AuditAction::DispositionCreated->value => 'Disposisi dibuat',
+            AuditAction::DispositionStarted->value => 'Penanganan disposisi dimulai',
+            AuditAction::FollowUpAdded->value => 'Catatan tindak lanjut ditambahkan',
+            AuditAction::DispositionCompleted->value => 'Cabang disposisi diselesaikan',
+            AuditAction::LetterCompleted->value => 'Seluruh disposisi surat selesai',
             AuditAction::DocumentVersionCreated->value => 'Versi dokumen resmi dibuat',
+            AuditAction::LetterResponseDossierOpened->value => 'Dossier balasan dibuka',
+            AuditAction::LetterResponseDocumentVersionCreated->value => 'Versi bahan balasan dibuat',
+            AuditAction::LetterResponseDocumentReturned->value => 'Bahan balasan dikembalikan',
+            AuditAction::LetterResponseMandateAuthorized->value => 'Mandat balasan dibuat',
+            AuditAction::LetterResponseDossierFinalized->value => 'Rencana balasan difinalisasi',
+            AuditAction::OutgoingLetterNumberAssigned->value => 'Nomor surat keluar diberikan',
+            AuditAction::OutgoingLetterDocumentVersionCreated->value => 'Versi dokumen surat keluar dibuat',
+            AuditAction::OutgoingLetterDocumentReturned->value => 'Dokumen surat keluar dikembalikan',
+            AuditAction::OutgoingLetterAdminVerified->value => 'Dokumen surat keluar diverifikasi',
+            AuditAction::OutgoingLetterDelivered->value => 'Surat keluar dikirim',
+            AuditAction::OutgoingLetterMandateWithdrawn->value => 'Mandat surat keluar ditarik',
+            AuditAction::LetterResponseDossierFulfilled->value => 'Kewajiban balasan terpenuhi',
         ];
     }
 

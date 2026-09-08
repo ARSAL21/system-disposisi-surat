@@ -1,10 +1,20 @@
 import type {
+    ExecutiveBranchProgress,
     ExecutiveInboxItem,
     ExecutiveInboxSummary,
     ExecutivePositionOption,
     LetterRoutingItem,
     LetterRoutingSummary,
 } from '@/types';
+
+export const previewExecutiveBranchProgress: ExecutiveBranchProgress = {
+    phase: 'IN_PROGRESS',
+    total: 3,
+    pending: 1,
+    in_progress: 1,
+    completed: 1,
+    percent_complete: 33,
+};
 
 export const previewExecutivePositions: ExecutivePositionOption[] = [
     {
@@ -151,13 +161,33 @@ export const previewExecutiveInboxItems: ExecutiveInboxItem[] = [
         route_id: 503,
         letter: previewLetterRoutingItems[2],
         received_in_inbox_at: '2026-08-30T11:05:00+08:00',
+        branch_progress: {
+            phase: 'AWAITING_DECISION',
+            total: 0,
+            pending: 0,
+            in_progress: 0,
+            completed: 0,
+            percent_complete: 0,
+        },
         links: {
             show: '/back-office/previews/executive-inbox/routes/503',
+        },
+    },
+    {
+        route_id: 504,
+        letter: previewLetterRoutingItems[3],
+        received_in_inbox_at: '2026-08-29T10:02:00+08:00',
+        branch_progress: previewExecutiveBranchProgress,
+        links: {
+            show: '/back-office/previews/executive-inbox/routes/504',
         },
     },
 ];
 
 export const previewExecutiveInboxSummary: ExecutiveInboxSummary = {
     pending: 7,
+    awaiting_forwarding: 3,
+    in_progress: 4,
+    completed: 9,
     received_today: 3,
 };

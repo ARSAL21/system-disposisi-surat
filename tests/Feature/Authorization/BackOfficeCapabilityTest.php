@@ -44,8 +44,14 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', false)
-            ->where('auth.capabilities.can_manage_disposition_instructions', false),
+            ->where('auth.capabilities.can_manage_disposition_instructions', false)
+            ->where('auth.capabilities.can_view_outgoing_register', false)
+            ->where('auth.capabilities.can_number_outgoing_letters', false)
+            ->where('auth.capabilities.can_verify_outgoing_letters', false)
+            ->where('auth.capabilities.can_deliver_outgoing_letters', false),
         );
 
     $publicUser = User::factory()->create();
@@ -76,8 +82,14 @@ test('guest and public accounts receive no internal capabilities', function (): 
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', false)
             ->where('auth.capabilities.can_manage_disposition_instructions', false)
+            ->where('auth.capabilities.can_view_outgoing_register', false)
+            ->where('auth.capabilities.can_number_outgoing_letters', false)
+            ->where('auth.capabilities.can_verify_outgoing_letters', false)
+            ->where('auth.capabilities.can_deliver_outgoing_letters', false)
             ->missing('auth.user.roles')
             ->missing('auth.user.permissions'),
         );
@@ -103,8 +115,14 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', false)
-            ->where('auth.capabilities.can_manage_disposition_instructions', false),
+            ->where('auth.capabilities.can_manage_disposition_instructions', false)
+            ->where('auth.capabilities.can_view_outgoing_register', false)
+            ->where('auth.capabilities.can_number_outgoing_letters', false)
+            ->where('auth.capabilities.can_verify_outgoing_letters', false)
+            ->where('auth.capabilities.can_deliver_outgoing_letters', false),
         );
 
     $viewer = User::factory()->internal()->create();
@@ -130,8 +148,14 @@ test('internal capabilities are derived from explicit permissions', function ():
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', false)
             ->where('auth.capabilities.can_manage_disposition_instructions', false)
+            ->where('auth.capabilities.can_view_outgoing_register', false)
+            ->where('auth.capabilities.can_number_outgoing_letters', false)
+            ->where('auth.capabilities.can_verify_outgoing_letters', false)
+            ->where('auth.capabilities.can_deliver_outgoing_letters', false)
             ->missing('auth.user.roles')
             ->missing('auth.user.permissions'),
         );
@@ -204,8 +228,14 @@ test('critical administrator capabilities remain protected by MFA', function ():
             ->where('auth.capabilities.can_view_executive_inbox', false)
             ->where('auth.capabilities.can_view_dispositions', false)
             ->where('auth.capabilities.can_create_dispositions', false)
+            ->where('auth.capabilities.can_view_reports', false)
+            ->where('auth.capabilities.can_export_reports', false)
             ->where('auth.capabilities.can_view_disposition_instructions', true)
-            ->where('auth.capabilities.can_manage_disposition_instructions', true),
+            ->where('auth.capabilities.can_manage_disposition_instructions', true)
+            ->where('auth.capabilities.can_view_outgoing_register', false)
+            ->where('auth.capabilities.can_number_outgoing_letters', false)
+            ->where('auth.capabilities.can_verify_outgoing_letters', false)
+            ->where('auth.capabilities.can_deliver_outgoing_letters', false),
         );
 
     $this->actingAs($mfaAdministrator)

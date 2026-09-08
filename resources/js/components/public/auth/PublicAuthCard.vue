@@ -45,8 +45,8 @@ const transitionDirection = ref<'slide-left' | 'slide-right'>('slide-left');
 
 function setMode(newMode: 'login' | 'register'): void {
     if (mode.value === newMode) {
-return;
-}
+        return;
+    }
 
     transitionDirection.value =
         newMode === 'register' ? 'slide-left' : 'slide-right';
@@ -82,7 +82,7 @@ onUnmounted(() => {
         <!-- Minimalist Aesthetic Header / Brand Badge (No Laravel Logo) -->
         <div class="mb-4 flex flex-col items-center text-center">
             <div
-                class="mb-2.5 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 text-white shadow-md shadow-emerald-500/20 ring-1 ring-white/20 transition-transform duration-500 hover:scale-105"
+                class="mb-2.5 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 text-white shadow-md ring-1 shadow-emerald-500/20 ring-white/20 transition-transform duration-500 hover:scale-105"
             >
                 <FileText class="size-5.5 text-white" />
             </div>

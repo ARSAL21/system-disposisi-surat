@@ -16,6 +16,7 @@ use App\Services\InitialLetterDocumentCreator;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\SenderOrganizationResolver;
 use App\Services\SubmissionDocumentIntegrityVerifier;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -66,8 +67,16 @@ class RegisterIncomingLetter
                 $positionAssignment = $this->positionAssignmentResolver->lockActiveAssignment($actor);
                 $senderOrganization = $this->senderOrganizationResolver
                     ->resolveForRegistration($attributes['sender_organization']);
-                $receivedAt = now();
-                $agendaYear = (int) $receivedAt->year;
+                $receivedAt = $lockedSubmission->received_at ?? $lockedSubmission->submitted_at;
+
+                if ($receivedAt === null) {
+                    throw SubmissionStateConflict::missingReceivedAt();
+                }
+
+                $officeTimezone = (string) config('letter-activity.timezone', 'Asia/Makassar');
+                $agendaYear = (int) CarbonImmutable::instance($receivedAt)
+                    ->setTimezone($officeTimezone)
+                    ->year;
                 $agendaNumber = trim($attributes['agenda_number']);
 
                 if (IncomingLetter::query()

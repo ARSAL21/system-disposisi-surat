@@ -3,9 +3,13 @@
 namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
+use App\LetterResponses\LetterResponseScopeQuery;
 use App\Models\User;
+use App\OutgoingLetters\OutgoingLetterScopeQuery;
+use App\Reporting\ReportScopeResolver;
 use App\Services\DispositionPositionAssignmentResolver;
 use App\Services\DocumentVersionPositionAssignmentResolver;
+use App\Services\IncomingRegisterPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\IntakePositionAssignmentResolver;
 use App\Services\LetterRoutingPositionAssignmentResolver;
@@ -104,11 +108,24 @@ class HandleInertiaRequests extends Middleware
                 'can_view_executive_inbox' => false,
                 'can_view_dispositions' => false,
                 'can_create_dispositions' => false,
+                'can_process_dispositions' => false,
                 'can_view_disposition_instructions' => false,
                 'can_manage_disposition_instructions' => false,
+                'can_view_reports' => false,
+                'can_export_reports' => false,
                 'can_view_intake' => false,
                 'can_screen_intake' => false,
                 'can_decide_intake' => false,
+                'can_create_manual_intake' => false,
+                'can_view_incoming_register' => false,
+                'can_view_letter_responses' => false,
+                'can_contribute_letter_responses' => false,
+                'can_review_letter_responses' => false,
+                'can_authorize_letter_responses' => false,
+                'can_view_outgoing_register' => false,
+                'can_number_outgoing_letters' => false,
+                'can_verify_outgoing_letters' => false,
+                'can_deliver_outgoing_letters' => false,
             ];
         }
 
@@ -119,6 +136,12 @@ class HandleInertiaRequests extends Middleware
         $hasApprovalPermission = $user->can(PermissionName::DecideIntake->value);
         $hasApprovalPosition = $hasApprovalPermission
             && app(IntakeApprovalPositionAssignmentResolver::class)->hasActiveAssignment($user);
+        $hasManualIntakePermission = $user->can(PermissionName::CreateManualIntake->value);
+        $hasManualIntakePosition = $hasManualIntakePermission
+            && app(IntakePositionAssignmentResolver::class)->hasActiveAssignment($user);
+        $hasIncomingRegisterPermission = $user->can(PermissionName::ViewIncomingRegister->value);
+        $hasIncomingRegisterPosition = $hasIncomingRegisterPermission
+            && app(IncomingRegisterPositionAssignmentResolver::class)->hasActiveAssignment($user);
         $hasDocumentVersionPermission = $user->can(PermissionName::ViewDocumentVersions->value);
         $hasDocumentVersionPosition = $hasDocumentVersionPermission
             && app(DocumentVersionPositionAssignmentResolver::class)->hasViewingAssignment($user);
@@ -139,6 +162,13 @@ class HandleInertiaRequests extends Middleware
         $hasDispositionCreatePermission = $user->can(PermissionName::CreateDispositions->value);
         $canCreateDisposition = $hasDispositionCreatePermission
             && $dispositionResolver->hasExecutiveAssignment($user);
+        $hasDispositionProcessPermission = $user->can(PermissionName::ViewDispositions->value)
+            && $user->can(PermissionName::ProcessDispositions->value);
+        $canProcessDisposition = $hasDispositionProcessPermission
+            && $dispositionResolver->hasSectionHeadAssignment($user);
+        $hasReportPosition = app(ReportScopeResolver::class)->resolve($user) !== null;
+        $hasLetterResponsePosition = app(LetterResponseScopeQuery::class)->hasBusinessScope($user);
+        $hasOutgoingLetterPosition = app(OutgoingLetterScopeQuery::class)->hasBusinessScope($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -154,13 +184,36 @@ class HandleInertiaRequests extends Middleware
             'can_view_executive_inbox' => $hasExecutiveInboxPosition,
             'can_view_dispositions' => $hasDispositionInboxPosition,
             'can_create_dispositions' => $canCreateDisposition,
+            'can_process_dispositions' => $canProcessDisposition,
             'can_view_disposition_instructions' => $user->can(PermissionName::ViewDispositionInstructions->value),
             'can_manage_disposition_instructions' => $user->can(PermissionName::ManageDispositionInstructions->value),
+            'can_view_reports' => $hasReportPosition
+                && $user->can(PermissionName::ViewReports->value),
+            'can_export_reports' => $hasReportPosition
+                && $user->can(PermissionName::ExportReports->value),
             'can_view_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ViewIntake->value),
             'can_screen_intake' => $hasIntakePosition
                 && $user->can(PermissionName::ScreenIntake->value),
             'can_decide_intake' => $hasApprovalPosition,
+            'can_create_manual_intake' => $hasManualIntakePosition,
+            'can_view_incoming_register' => $hasIncomingRegisterPosition,
+            'can_view_letter_responses' => $hasLetterResponsePosition
+                && $user->can(PermissionName::ViewLetterResponses->value),
+            'can_contribute_letter_responses' => $hasLetterResponsePosition
+                && $user->can(PermissionName::ContributeLetterResponses->value),
+            'can_review_letter_responses' => $hasLetterResponsePosition
+                && $user->can(PermissionName::ReviewLetterResponses->value),
+            'can_authorize_letter_responses' => $hasLetterResponsePosition
+                && $user->can(PermissionName::AuthorizeLetterResponses->value),
+            'can_view_outgoing_register' => $hasOutgoingLetterPosition
+                && $user->can(PermissionName::ViewOutgoingRegister->value),
+            'can_number_outgoing_letters' => $hasOutgoingLetterPosition
+                && $user->can(PermissionName::NumberOutgoingLetters->value),
+            'can_verify_outgoing_letters' => $hasOutgoingLetterPosition
+                && $user->can(PermissionName::VerifyOutgoingLetters->value),
+            'can_deliver_outgoing_letters' => $hasOutgoingLetterPosition
+                && $user->can(PermissionName::DeliverOutgoingLetters->value),
         ];
     }
 }

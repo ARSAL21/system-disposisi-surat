@@ -1,3 +1,5 @@
+import type { ExecutiveBranchProgress } from './disposition';
+
 export type LetterRoutingStatus = 'REGISTERED' | 'ROUTED';
 
 export type InitialRouteStatus = 'PENDING' | 'COMPLETED';
@@ -9,6 +11,12 @@ export type LetterRoutingFilters = {
 
 export type ExecutiveInboxFilters = {
     search: string;
+    progress:
+        | ''
+        | 'AWAITING_DECISION'
+        | 'AWAITING_FORWARDING'
+        | 'IN_PROGRESS'
+        | 'COMPLETED';
     date_from: string;
     date_to: string;
 };
@@ -95,6 +103,7 @@ export type ExecutiveInboxItem = {
     route_id: number;
     letter: LetterRoutingItem;
     received_in_inbox_at: string;
+    branch_progress: ExecutiveBranchProgress;
     links: {
         show: string;
     };
@@ -102,6 +111,9 @@ export type ExecutiveInboxItem = {
 
 export type ExecutiveInboxSummary = {
     pending: number;
+    awaiting_forwarding: number;
+    in_progress: number;
+    completed: number;
     received_today: number;
 };
 

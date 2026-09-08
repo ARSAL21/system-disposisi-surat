@@ -26,6 +26,7 @@ class AuthorizationRoleResource extends JsonResource
             'name' => $this->name,
             'guard_name' => $this->guard_name,
             'is_protected' => $protected,
+            'is_assignable' => AuthorizationCatalog::isAssignableRole($this->name),
             'is_assigned_to_actor' => $assignedToActor,
             'user_count' => (int) ($this->users_count ?? 0),
             'permissions' => $this->permissions

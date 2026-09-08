@@ -30,7 +30,7 @@ defineProps<{ preview?: boolean }>();
                         variant="outline"
                         class="border-blue-200 bg-white/80 text-blue-800 dark:border-blue-800 dark:bg-blue-950/55 dark:text-blue-200"
                     >
-                        M6 · Position-based routing
+                        M6.3 · Independent branches
                     </Badge>
                     <Badge v-if="preview" variant="secondary">
                         Pratinjau lokal
@@ -39,7 +39,7 @@ defineProps<{ preview?: boolean }>();
                 <p
                     class="mt-5 text-xs font-semibold tracking-[0.17em] text-blue-700 uppercase dark:text-blue-300"
                 >
-                    Ruang kerja Asisten
+                    Ruang kerja disposisi
                 </p>
                 <h1
                     id="disposition-inbox-title"
@@ -50,8 +50,8 @@ defineProps<{ preview?: boolean }>();
                 <p
                     class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base"
                 >
-                    Tinjau surat dan instruksi yang dikirim secara resmi oleh
-                    Wali Kota atau Sekretaris Daerah kepada jabatan aktif Anda.
+                    Asisten memantau cabang yang diteruskan, sementara Kepala
+                    Bagian menangani jalur kerjanya secara independen.
                 </p>
             </div>
 
@@ -64,23 +64,37 @@ defineProps<{ preview?: boolean }>();
                         aria-hidden="true"
                     />
                     <p class="leading-6 text-muted-foreground">
-                        Inbox dibatasi oleh Position Assignment aktif. Disposisi
-                        jabatan Asisten lain tidak ditampilkan.
+                        Inbox dibatasi oleh Position Assignment aktif. Setiap
+                        pejabat hanya memperoleh tampilan dan tindakan yang sah
+                        untuk jabatannya.
                     </p>
                 </div>
-                <Button
-                    v-if="preview"
-                    as-child
-                    variant="outline"
-                    class="min-h-11 justify-between bg-background/75"
-                >
-                    <Link
-                        href="/back-office/previews/executive-inbox/routes/503"
+                <div v-if="preview" class="grid gap-2 sm:grid-cols-2">
+                    <Button
+                        as-child
+                        variant="outline"
+                        class="min-h-11 justify-between bg-background/75"
                     >
-                        Lihat ruang keputusan pimpinan
-                        <ArrowRight class="size-4" aria-hidden="true" />
-                    </Link>
-                </Button>
+                        <Link
+                            href="/back-office/previews/dispositions/inbox/recipients/704"
+                        >
+                            Workspace Kabag
+                            <ArrowRight class="size-4" aria-hidden="true" />
+                        </Link>
+                    </Button>
+                    <Button
+                        as-child
+                        variant="outline"
+                        class="min-h-11 justify-between bg-background/75"
+                    >
+                        <Link
+                            href="/back-office/previews/executive-inbox/routes/504"
+                        >
+                            Progres pimpinan
+                            <ArrowRight class="size-4" aria-hidden="true" />
+                        </Link>
+                    </Button>
+                </div>
             </div>
         </div>
     </header>

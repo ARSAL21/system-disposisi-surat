@@ -56,12 +56,13 @@ export type ApprovalSubmission = {
     status: IntakeSubmissionStatus;
     sender_organization_name: string;
     contact_name: string;
-    contact_email: string;
+    contact_email: string | null;
     contact_phone: string | null;
     external_letter_number: string | null;
     external_letter_date: string | null;
     subject: string;
     summary: string | null;
+    received_at: string | null;
     submitted_at: string;
     document: IntakeDocument | null;
     screening_review: StaffScreeningReview;

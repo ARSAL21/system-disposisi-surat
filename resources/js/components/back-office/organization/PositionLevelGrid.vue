@@ -182,15 +182,10 @@ const sortedLevels = computed(() => {
 });
 
 // Selected Level for Deep Dive Inspector
-const selectedCode = ref<string>(
-    props.levels[0]?.code || 'GENERAL_AFFAIRS',
-);
+const selectedCode = ref<string>(props.levels[0]?.code || 'GENERAL_AFFAIRS');
 
 const activeMeta = computed<LevelWorkflowMeta>(() => {
-    return (
-        levelMetaMap[selectedCode.value] ||
-        levelMetaMap.GENERAL_AFFAIRS
-    );
+    return levelMetaMap[selectedCode.value] || levelMetaMap.GENERAL_AFFAIRS;
 });
 
 const activeLevelData = computed(() => {
@@ -289,12 +284,12 @@ const containerRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
     if (!containerRef.value) {
-return;
-}
+        return;
+    }
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-return;
-}
+        return;
+    }
 
     const ctx = gsap.context(() => {
         gsap.from('.workflow-node-card', {
@@ -318,12 +313,12 @@ return;
 
 watch(selectedCode, () => {
     if (!containerRef.value) {
-return;
-}
+        return;
+    }
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-return;
-}
+        return;
+    }
 
     gsap.fromTo(
         '.inspector-content',
@@ -353,13 +348,17 @@ return;
 
             <div class="relative z-10">
                 <!-- Eyebrow & Headline -->
-                <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div
+                    class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"
+                >
                     <div>
                         <div
                             class="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3.5 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300"
                         >
                             <Workflow class="size-3.5" />
-                            <span>Arsitektur Siklus Surat Masuk & Disposisi</span>
+                            <span
+                                >Arsitektur Siklus Surat Masuk & Disposisi</span
+                            >
                         </div>
                         <h2
                             class="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl"
@@ -369,7 +368,10 @@ return;
                         <p
                             class="mt-1.5 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base"
                         >
-                            Alur disposisi surat diatur secara berjenjang dan terkontrol ketat dari penerimaan hingga eksekusi akhir. Klik pada tiap tahap untuk memeriksa wewenang dan batasan sistem.
+                            Alur disposisi surat diatur secara berjenjang dan
+                            terkontrol ketat dari penerimaan hingga eksekusi
+                            akhir. Klik pada tiap tahap untuk memeriksa wewenang
+                            dan batasan sistem.
                         </p>
                     </div>
 
@@ -414,16 +416,18 @@ return;
                                 :class="[
                                     selectedCode === level.code
                                         ? 'bg-gradient-to-r from-indigo-500 via-teal-500 to-emerald-500 opacity-100'
-                                        : 'bg-transparent opacity-0 group-hover:bg-muted opacity-50',
+                                        : 'bg-transparent opacity-0 opacity-50 group-hover:bg-muted',
                                 ]"
                             />
 
                             <!-- Step Number & Icon -->
                             <div>
-                                <div class="flex items-center justify-between gap-2">
+                                <div
+                                    class="flex items-center justify-between gap-2"
+                                >
                                     <div class="flex items-center gap-2.5">
                                         <div
-                                            class="flex size-9 items-center justify-center rounded-xl font-bold text-xs shadow-inner"
+                                            class="flex size-9 items-center justify-center rounded-xl text-xs font-bold shadow-inner"
                                             :class="[
                                                 selectedCode === level.code
                                                     ? 'bg-indigo-600 text-white dark:bg-indigo-500'
@@ -432,7 +436,9 @@ return;
                                         >
                                             0{{ index + 1 }}
                                         </div>
-                                        <span class="font-mono text-[11px] font-semibold text-muted-foreground">
+                                        <span
+                                            class="font-mono text-[11px] font-semibold text-muted-foreground"
+                                        >
                                             Order {{ level.hierarchy_order }}
                                         </span>
                                     </div>
@@ -440,28 +446,44 @@ return;
                                     <Badge
                                         variant="outline"
                                         class="text-[10px] font-medium"
-                                        :class="levelMetaMap[level.code]?.badgeColor"
+                                        :class="
+                                            levelMetaMap[level.code]?.badgeColor
+                                        "
                                     >
-                                        {{ level.is_protected ? 'Protected' : 'Custom' }}
+                                        {{
+                                            level.is_protected
+                                                ? 'Protected'
+                                                : 'Custom'
+                                        }}
                                     </Badge>
                                 </div>
 
                                 <!-- Code & Name -->
                                 <div class="mt-4">
-                                    <p class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                                    <p
+                                        class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400"
+                                    >
                                         {{ level.code }}
                                     </p>
-                                    <h3 class="mt-1 text-base font-bold text-foreground">
+                                    <h3
+                                        class="mt-1 text-base font-bold text-foreground"
+                                    >
                                         {{ level.name }}
                                     </h3>
-                                    <p class="mt-1.5 text-xs text-muted-foreground line-clamp-2">
-                                        {{ levelMetaMap[level.code]?.shortDesc }}
+                                    <p
+                                        class="mt-1.5 line-clamp-2 text-xs text-muted-foreground"
+                                    >
+                                        {{
+                                            levelMetaMap[level.code]?.shortDesc
+                                        }}
                                     </p>
                                 </div>
                             </div>
 
                             <!-- Bottom Meta: Position Count & Arrow Indicator -->
-                            <div class="mt-5 flex items-center justify-between border-t border-border/60 pt-3 text-xs">
+                            <div
+                                class="mt-5 flex items-center justify-between border-t border-border/60 pt-3 text-xs"
+                            >
                                 <span class="font-medium text-foreground">
                                     {{ level.position_count }} Jabatan Aktif
                                 </span>
@@ -469,7 +491,7 @@ return;
                                     class="inline-flex items-center gap-1 font-semibold transition-transform duration-200"
                                     :class="[
                                         selectedCode === level.code
-                                            ? 'text-indigo-600 dark:text-indigo-400 translate-x-0.5'
+                                            ? 'translate-x-0.5 text-indigo-600 dark:text-indigo-400'
                                             : 'text-muted-foreground group-hover:text-foreground',
                                     ]"
                                 >
@@ -482,7 +504,7 @@ return;
                         <!-- Connector Arrow between items (desktop) -->
                         <div
                             v-if="index < sortedLevels.length - 1"
-                            class="pointer-events-none absolute -right-3 top-1/2 z-20 hidden -translate-y-1/2 lg:flex size-6 items-center justify-center rounded-full border border-border/80 bg-background text-muted-foreground shadow-sm dark:bg-slate-800"
+                            class="pointer-events-none absolute top-1/2 -right-3 z-20 hidden size-6 -translate-y-1/2 items-center justify-center rounded-full border border-border/80 bg-background text-muted-foreground shadow-sm lg:flex dark:bg-slate-800"
                         >
                             <ArrowRight class="size-3" />
                         </div>
@@ -500,17 +522,25 @@ return;
         >
             <div class="inspector-content space-y-6">
                 <!-- Inspector Header -->
-                <div class="flex flex-col gap-4 border-b border-border/70 pb-6 md:flex-row md:items-center md:justify-between">
+                <div
+                    class="flex flex-col gap-4 border-b border-border/70 pb-6 md:flex-row md:items-center md:justify-between"
+                >
                     <div class="flex items-center gap-4">
                         <div
                             class="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 text-white shadow-lg shadow-indigo-500/20"
                         >
-                            <component :is="activeMeta.icon" class="size-7 text-white" />
+                            <component
+                                :is="activeMeta.icon"
+                                class="size-7 text-white"
+                            />
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                                    LEVEL 0{{ activeMeta.stepNumber }} · {{ activeMeta.code }}
+                                <span
+                                    class="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400"
+                                >
+                                    LEVEL 0{{ activeMeta.stepNumber }} ·
+                                    {{ activeMeta.code }}
                                 </span>
                                 <Badge
                                     variant="outline"
@@ -520,20 +550,41 @@ return;
                                     {{ activeMeta.phase }}
                                 </Badge>
                             </div>
-                            <h3 id="inspector-heading" class="mt-0.5 text-xl font-bold text-foreground sm:text-2xl">
+                            <h3
+                                id="inspector-heading"
+                                class="mt-0.5 text-xl font-bold text-foreground sm:text-2xl"
+                            >
                                 {{ activeLevelData?.name || activeMeta.code }}
                             </h3>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <div class="rounded-xl border border-border/70 bg-muted/40 px-3.5 py-2 text-right text-xs">
-                            <span class="block text-muted-foreground">Posisi Hirarki</span>
-                            <span class="font-bold text-foreground">Urutan {{ activeLevelData?.hierarchy_order || 10 }}</span>
+                        <div
+                            class="rounded-xl border border-border/70 bg-muted/40 px-3.5 py-2 text-right text-xs"
+                        >
+                            <span class="block text-muted-foreground"
+                                >Posisi Hirarki</span
+                            >
+                            <span class="font-bold text-foreground"
+                                >Urutan
+                                {{
+                                    activeLevelData?.hierarchy_order || 10
+                                }}</span
+                            >
                         </div>
-                        <div class="rounded-xl border border-border/70 bg-muted/40 px-3.5 py-2 text-right text-xs">
-                            <span class="block text-muted-foreground">Total Pejabat</span>
-                            <span class="font-bold text-foreground">{{ activeLevelData?.position_count || 0 }} Jabatan</span>
+                        <div
+                            class="rounded-xl border border-border/70 bg-muted/40 px-3.5 py-2 text-right text-xs"
+                        >
+                            <span class="block text-muted-foreground"
+                                >Total Pejabat</span
+                            >
+                            <span class="font-bold text-foreground"
+                                >{{
+                                    activeLevelData?.position_count || 0
+                                }}
+                                Jabatan</span
+                            >
                         </div>
                     </div>
                 </div>
@@ -541,73 +592,149 @@ return;
                 <!-- 3-Column Bento Grid for Stage Intelligence -->
                 <div class="grid gap-6 md:grid-cols-3">
                     <!-- Column 1: Tanggung Jawab Operasional -->
-                    <div class="rounded-2xl border border-border/70 bg-muted/30 p-5 space-y-3">
-                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
-                            <Activity class="size-4 text-indigo-600 dark:text-indigo-400" />
+                    <div
+                        class="space-y-3 rounded-2xl border border-border/70 bg-muted/30 p-5"
+                    >
+                        <div
+                            class="flex items-center gap-2 text-xs font-bold tracking-wider text-foreground uppercase"
+                        >
+                            <Activity
+                                class="size-4 text-indigo-600 dark:text-indigo-400"
+                            />
                             <span>Tanggung Jawab Operasional</span>
                         </div>
                         <ul class="space-y-2.5 text-xs text-muted-foreground">
                             <li
-                                v-for="(task, idx) in activeMeta.responsibilities"
+                                v-for="(
+                                    task, idx
+                                ) in activeMeta.responsibilities"
                                 :key="idx"
                                 class="flex items-start gap-2 leading-relaxed"
                             >
-                                <CheckCircle2 class="size-3.5 shrink-0 text-emerald-500 mt-0.5" />
+                                <CheckCircle2
+                                    class="mt-0.5 size-3.5 shrink-0 text-emerald-500"
+                                />
                                 <span>{{ task }}</span>
                             </li>
                         </ul>
                     </div>
 
                     <!-- Column 2: Matriks Kewenangan Disposisi -->
-                    <div class="rounded-2xl border border-border/70 bg-muted/30 p-5 space-y-3">
-                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
-                            <Shield class="size-4 text-indigo-600 dark:text-indigo-400" />
+                    <div
+                        class="space-y-3 rounded-2xl border border-border/70 bg-muted/30 p-5"
+                    >
+                        <div
+                            class="flex items-center gap-2 text-xs font-bold tracking-wider text-foreground uppercase"
+                        >
+                            <Shield
+                                class="size-4 text-indigo-600 dark:text-indigo-400"
+                            />
                             <span>Matriks Hak & Kewenangan</span>
                         </div>
                         <div class="space-y-2 text-xs">
-                            <div class="flex items-center justify-between rounded-xl bg-background/80 p-2.5 border border-border/50">
-                                <span class="text-muted-foreground">Terima Surat Publik</span>
+                            <div
+                                class="flex items-center justify-between rounded-xl border border-border/50 bg-background/80 p-2.5"
+                            >
+                                <span class="text-muted-foreground"
+                                    >Terima Surat Publik</span
+                                >
                                 <Badge
-                                    :variant="activeMeta.capabilities.canReceivePublic ? 'default' : 'secondary'"
+                                    :variant="
+                                        activeMeta.capabilities.canReceivePublic
+                                            ? 'default'
+                                            : 'secondary'
+                                    "
                                     class="text-[10px]"
                                 >
-                                    {{ activeMeta.capabilities.canReceivePublic ? 'Diizinkan' : 'Dilarang' }}
+                                    {{
+                                        activeMeta.capabilities.canReceivePublic
+                                            ? 'Diizinkan'
+                                            : 'Dilarang'
+                                    }}
                                 </Badge>
                             </div>
-                            <div class="flex items-center justify-between rounded-xl bg-background/80 p-2.5 border border-border/50">
-                                <span class="text-muted-foreground">Disposisi Primer</span>
+                            <div
+                                class="flex items-center justify-between rounded-xl border border-border/50 bg-background/80 p-2.5"
+                            >
+                                <span class="text-muted-foreground"
+                                    >Disposisi Primer</span
+                                >
                                 <Badge
-                                    :variant="activeMeta.capabilities.canCreatePrimaryDisposition ? 'default' : 'secondary'"
+                                    :variant="
+                                        activeMeta.capabilities
+                                            .canCreatePrimaryDisposition
+                                            ? 'default'
+                                            : 'secondary'
+                                    "
                                     class="text-[10px]"
                                 >
-                                    {{ activeMeta.capabilities.canCreatePrimaryDisposition ? 'Otoritas Tunggal' : 'Tidak Berhak' }}
+                                    {{
+                                        activeMeta.capabilities
+                                            .canCreatePrimaryDisposition
+                                            ? 'Otoritas Tunggal'
+                                            : 'Tidak Berhak'
+                                    }}
                                 </Badge>
                             </div>
-                            <div class="flex items-center justify-between rounded-xl bg-background/80 p-2.5 border border-border/50">
-                                <span class="text-muted-foreground">Bagi Cabang (Branching)</span>
+                            <div
+                                class="flex items-center justify-between rounded-xl border border-border/50 bg-background/80 p-2.5"
+                            >
+                                <span class="text-muted-foreground"
+                                    >Bagi Cabang (Branching)</span
+                                >
                                 <Badge
-                                    :variant="activeMeta.capabilities.canBranchDisposition ? 'default' : 'secondary'"
+                                    :variant="
+                                        activeMeta.capabilities
+                                            .canBranchDisposition
+                                            ? 'default'
+                                            : 'secondary'
+                                    "
                                     class="text-[10px]"
                                 >
-                                    {{ activeMeta.capabilities.canBranchDisposition ? 'Diizinkan' : 'Tidak Berhak' }}
+                                    {{
+                                        activeMeta.capabilities
+                                            .canBranchDisposition
+                                            ? 'Diizinkan'
+                                            : 'Tidak Berhak'
+                                    }}
                                 </Badge>
                             </div>
-                            <div class="flex items-center justify-between rounded-xl bg-background/80 p-2.5 border border-border/50">
-                                <span class="text-muted-foreground">Selesaikan Disposisi</span>
+                            <div
+                                class="flex items-center justify-between rounded-xl border border-border/50 bg-background/80 p-2.5"
+                            >
+                                <span class="text-muted-foreground"
+                                    >Selesaikan Disposisi</span
+                                >
                                 <Badge
-                                    :variant="activeMeta.capabilities.canExecuteTerminalAction ? 'default' : 'secondary'"
+                                    :variant="
+                                        activeMeta.capabilities
+                                            .canExecuteTerminalAction
+                                            ? 'default'
+                                            : 'secondary'
+                                    "
                                     class="text-[10px]"
                                 >
-                                    {{ activeMeta.capabilities.canExecuteTerminalAction ? 'Terminal Node' : 'Bukan Terminal' }}
+                                    {{
+                                        activeMeta.capabilities
+                                            .canExecuteTerminalAction
+                                            ? 'Terminal Node'
+                                            : 'Bukan Terminal'
+                                    }}
                                 </Badge>
                             </div>
                         </div>
                     </div>
 
                     <!-- Column 3: Invarian Keamanan Sistem -->
-                    <div class="rounded-2xl border border-border/70 bg-muted/30 p-5 space-y-3">
-                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
-                            <Lock class="size-4 text-amber-600 dark:text-amber-400" />
+                    <div
+                        class="space-y-3 rounded-2xl border border-border/70 bg-muted/30 p-5"
+                    >
+                        <div
+                            class="flex items-center gap-2 text-xs font-bold tracking-wider text-foreground uppercase"
+                        >
+                            <Lock
+                                class="size-4 text-amber-600 dark:text-amber-400"
+                            />
                             <span>Invarian & Guardrails</span>
                         </div>
                         <ul class="space-y-2.5 text-xs text-muted-foreground">
@@ -616,7 +743,9 @@ return;
                                 :key="idx"
                                 class="flex items-start gap-2 leading-relaxed"
                             >
-                                <ShieldAlert class="size-3.5 shrink-0 text-amber-500 mt-0.5" />
+                                <ShieldAlert
+                                    class="mt-0.5 size-3.5 shrink-0 text-amber-500"
+                                />
                                 <span>{{ guard }}</span>
                             </li>
                         </ul>
@@ -624,12 +753,21 @@ return;
                 </div>
 
                 <!-- Action Example Banner -->
-                <div class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-xs text-foreground dark:border-indigo-400/20 dark:bg-indigo-400/5">
+                <div
+                    class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-xs text-foreground dark:border-indigo-400/20 dark:bg-indigo-400/5"
+                >
                     <div class="flex items-start gap-2.5">
-                        <Sparkles class="size-4 shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
+                        <Sparkles
+                            class="mt-0.5 size-4 shrink-0 text-indigo-600 dark:text-indigo-400"
+                        />
                         <div>
-                            <span class="font-semibold text-indigo-700 dark:text-indigo-300">Contoh Skenario Lapangan:</span>
-                            <p class="mt-0.5 text-muted-foreground leading-relaxed">
+                            <span
+                                class="font-semibold text-indigo-700 dark:text-indigo-300"
+                                >Contoh Skenario Lapangan:</span
+                            >
+                            <p
+                                class="mt-0.5 leading-relaxed text-muted-foreground"
+                            >
                                 {{ activeMeta.sampleLetterAction }}
                             </p>
                         </div>
@@ -645,17 +783,25 @@ return;
             class="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card/95 to-muted/20 p-6 shadow-xl shadow-black/5 backdrop-blur-2xl sm:p-8 dark:border-border/60 dark:bg-slate-900/90"
             aria-labelledby="simulation-heading"
         >
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/70 pb-5">
+            <div
+                class="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
-                    <div class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                    <div
+                        class="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-indigo-600 uppercase dark:text-indigo-400"
+                    >
                         <Play class="size-3.5" />
                         <span>Simulasi Interaktif</span>
                     </div>
-                    <h3 id="simulation-heading" class="text-xl font-bold text-foreground">
+                    <h3
+                        id="simulation-heading"
+                        class="text-xl font-bold text-foreground"
+                    >
                         Simulasi Alur Surat Masuk & Disposisi
                     </h3>
                     <p class="text-xs text-muted-foreground">
-                        Uji coba bagaimana sebuah berkas berpindah status antar level dari awal hingga tuntas.
+                        Uji coba bagaimana sebuah berkas berpindah status antar
+                        level dari awal hingga tuntas.
                     </p>
                 </div>
 
@@ -692,16 +838,18 @@ return;
                         class="flex flex-col items-start rounded-2xl border p-3.5 text-left transition-all duration-200"
                         :class="[
                             simulationStep === idx
-                                ? 'border-indigo-600 bg-indigo-50/70 dark:border-indigo-400 dark:bg-indigo-950/40 shadow-sm'
+                                ? 'border-indigo-600 bg-indigo-50/70 shadow-sm dark:border-indigo-400 dark:bg-indigo-950/40'
                                 : simulationStep > idx
                                   ? 'border-emerald-500/30 bg-emerald-50/40 dark:border-emerald-500/20 dark:bg-emerald-950/20'
                                   : 'border-border/60 bg-muted/20 hover:border-border',
                         ]"
                         @click="setSimulationStep(idx)"
                     >
-                        <div class="flex w-full items-center justify-between text-[11px]">
+                        <div
+                            class="flex w-full items-center justify-between text-[11px]"
+                        >
                             <span
-                                class="font-bold font-mono"
+                                class="font-mono font-bold"
                                 :class="[
                                     simulationStep === idx
                                         ? 'text-indigo-600 dark:text-indigo-400'
@@ -714,7 +862,7 @@ return;
                             </span>
                             <Badge
                                 v-if="simulationStep === idx"
-                                class="bg-indigo-600 text-white text-[9px] px-1.5 py-0"
+                                class="bg-indigo-600 px-1.5 py-0 text-[9px] text-white"
                             >
                                 Aktif
                             </Badge>
@@ -727,7 +875,9 @@ return;
                         <span class="mt-2 text-xs font-bold text-foreground">
                             {{ stage.title }}
                         </span>
-                        <span class="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                        <span
+                            class="mt-0.5 font-mono text-[10px] text-muted-foreground"
+                        >
                             {{ stage.levelTitle }}
                         </span>
                     </button>
@@ -737,17 +887,31 @@ return;
                 <div
                     class="mt-6 rounded-2xl border border-border/80 bg-muted/40 p-5 backdrop-blur-sm"
                 >
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div
+                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
                         <div class="space-y-1">
                             <div class="flex items-center gap-2">
-                                <Badge class="bg-emerald-600 text-white text-[10px]">
-                                    {{ simulationStages[simulationStep]?.status }}
+                                <Badge
+                                    class="bg-emerald-600 text-[10px] text-white"
+                                >
+                                    {{
+                                        simulationStages[simulationStep]?.status
+                                    }}
                                 </Badge>
-                                <span class="text-xs font-semibold text-foreground">
-                                    Diproses oleh: {{ simulationStages[simulationStep]?.levelTitle }}
+                                <span
+                                    class="text-xs font-semibold text-foreground"
+                                >
+                                    Diproses oleh:
+                                    {{
+                                        simulationStages[simulationStep]
+                                            ?.levelTitle
+                                    }}
                                 </span>
                             </div>
-                            <p class="text-xs leading-relaxed text-muted-foreground">
+                            <p
+                                class="text-xs leading-relaxed text-muted-foreground"
+                            >
                                 {{ simulationStages[simulationStep]?.desc }}
                             </p>
                         </div>
@@ -783,34 +947,60 @@ return;
             class="grid grid-flow-dense gap-4 md:grid-cols-3"
             aria-label="Jaminan Integritas Sistem"
         >
-            <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm space-y-2">
-                <div class="flex items-center gap-2 text-xs font-bold text-foreground">
-                    <Compass class="size-4 text-indigo-600 dark:text-indigo-400" />
+            <div
+                class="space-y-2 rounded-2xl border border-border/70 bg-card p-5 shadow-sm"
+            >
+                <div
+                    class="flex items-center gap-2 text-xs font-bold text-foreground"
+                >
+                    <Compass
+                        class="size-4 text-indigo-600 dark:text-indigo-400"
+                    />
                     <span>Hierarki Menurun (Strict Downward Flow)</span>
                 </div>
                 <p class="text-xs leading-relaxed text-muted-foreground">
-                    Disposisi hanya dapat mengalir dari level dengan hirarki lebih tinggi (Order 20) menuju level yang lebih rendah (Order 30 & 40). Tidak diperkenankan loncatan berlawanan arah.
+                    Disposisi hanya dapat mengalir dari level dengan hirarki
+                    lebih tinggi (Order 20) menuju level yang lebih rendah
+                    (Order 30 & 40). Tidak diperkenankan loncatan berlawanan
+                    arah.
                 </p>
             </div>
 
-            <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm space-y-2">
-                <div class="flex items-center gap-2 text-xs font-bold text-foreground">
-                    <GitFork class="size-4 text-purple-600 dark:text-purple-400" />
+            <div
+                class="space-y-2 rounded-2xl border border-border/70 bg-card p-5 shadow-sm"
+            >
+                <div
+                    class="flex items-center gap-2 text-xs font-bold text-foreground"
+                >
+                    <GitFork
+                        class="size-4 text-purple-600 dark:text-purple-400"
+                    />
                     <span>Integritas Percabangan (Branch Resolution)</span>
                 </div>
                 <p class="text-xs leading-relaxed text-muted-foreground">
-                    Ketika sebuah surat memiliki banyak cabang disposisi, status surat agregat hanya akan ditandai Selesai (Completed) setelah seluruh cabang diselesaikan oleh Kepala Bagian terkait.
+                    Ketika sebuah surat memiliki banyak cabang disposisi, status
+                    surat agregat hanya akan ditandai Selesai (Completed)
+                    setelah seluruh cabang diselesaikan oleh Kepala Bagian
+                    terkait.
                 </p>
             </div>
 
-            <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm space-y-2">
-                <div class="flex items-center gap-2 text-xs font-bold text-foreground">
+            <div
+                class="space-y-2 rounded-2xl border border-border/70 bg-card p-5 shadow-sm"
+            >
+                <div
+                    class="flex items-center gap-2 text-xs font-bold text-foreground"
+                >
                     <Lock class="size-4 text-amber-600 dark:text-amber-400" />
                     <span>Sinkronisasi Baris Perintah (CLI Invariant)</span>
                 </div>
                 <p class="text-xs leading-relaxed text-muted-foreground">
-                    Empat level dasar ini merupakan katalog yang dilindungi sistem. Pembaruan kode dan urutan level hanya dapat dilakukan melalui perintah aman:
-                    <code class="mt-1 block rounded-lg bg-muted px-2 py-1 font-mono text-[11px] text-foreground">
+                    Empat level dasar ini merupakan katalog yang dilindungi
+                    sistem. Pembaruan kode dan urutan level hanya dapat
+                    dilakukan melalui perintah aman:
+                    <code
+                        class="mt-1 block rounded-lg bg-muted px-2 py-1 font-mono text-[11px] text-foreground"
+                    >
                         php artisan organization:sync-levels
                     </code>
                 </p>

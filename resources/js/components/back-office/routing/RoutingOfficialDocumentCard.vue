@@ -1,20 +1,22 @@
 <script setup lang="ts">
 import {
+    Check,
+    Copy,
     Download,
     Eye,
     FileCheck2,
     Fingerprint,
     ShieldCheck,
 } from '@lucide/vue';
+import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     formatRoutingDateTime,
     formatRoutingFileSize,
 } from '@/lib/letterRoutingPresentation';
 import type { RoutingOfficialDocument } from '@/types';
 
-defineProps<{
+const props = defineProps<{
     document: RoutingOfficialDocument;
     preview?: boolean;
 }>();
@@ -23,120 +25,182 @@ defineEmits<{
     preview: [];
     download: [];
 }>();
+
+const isCopied = ref(false);
+function copyHash() {
+    navigator.clipboard.writeText(props.document.sha256);
+    isCopied.value = true;
+    setTimeout(() => {
+        isCopied.value = false;
+    }, 2000);
+}
 </script>
 
 <template>
-    <Card
-        class="overflow-hidden border-blue-200/80 bg-gradient-to-br from-white via-white to-blue-50/55 py-0 shadow-sm dark:border-blue-950 dark:from-slate-950 dark:via-slate-950 dark:to-blue-950/20"
+    <section
+        class="rounded-3xl border border-indigo-500/30 bg-card p-6 shadow-sm dark:border-indigo-500/20 dark:bg-slate-900/80"
     >
-        <CardHeader
-            class="border-b border-blue-100 p-5 sm:p-6 dark:border-blue-950"
+        <!-- Header -->
+        <div
+            class="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4 dark:border-border/40"
         >
-            <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-            >
-                <div class="flex items-start gap-3">
-                    <span
-                        class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-violet-700 text-white shadow-sm"
+            <div class="flex items-center gap-3">
+                <div
+                    class="flex size-10 items-center justify-center rounded-2xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400"
+                >
+                    <FileCheck2 class="size-5" />
+                </div>
+                <div>
+                    <h2
+                        class="font-['Syne',sans-serif] text-base font-bold text-foreground sm:text-lg"
                     >
-                        <FileCheck2 class="size-5" aria-hidden="true" />
-                    </span>
+                        Berkas Naskah Dinas Resmi
+                    </h2>
+                    <p class="text-xs text-muted-foreground">
+                        Dokumen acuan tunggal yang terikat dengan sidik jari
+                        kriptografis.
+                    </p>
+                </div>
+            </div>
+
+            <span
+                class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 font-mono text-[11px] font-bold text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
+            >
+                <ShieldCheck class="size-3.5 text-emerald-500" />
+                <span>Versi {{ document.version_number }} Terverifikasi</span>
+            </span>
+        </div>
+
+        <!-- File Metadata Grid -->
+        <div class="mt-5 space-y-4">
+            <div
+                class="rounded-2xl border border-border/70 bg-background/80 p-4 dark:bg-slate-950/60"
+            >
+                <p class="text-xs font-bold break-all text-foreground">
+                    {{ document.original_filename }}
+                </p>
+
+                <div
+                    class="mt-3 grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs dark:border-border/40"
+                >
                     <div>
-                        <CardTitle>Dokumen resmi terkini</CardTitle>
-                        <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                            Versi ini menjadi acuan tunggal pada saat routing.
+                        <span
+                            class="font-mono text-[10px] text-muted-foreground uppercase"
+                            >Format</span
+                        >
+                        <p class="font-semibold text-foreground">PDF Dinas</p>
+                    </div>
+                    <div>
+                        <span
+                            class="font-mono text-[10px] text-muted-foreground uppercase"
+                            >Ukuran Berkas</span
+                        >
+                        <p class="font-semibold text-foreground tabular-nums">
+                            {{ formatRoutingFileSize(document.size_bytes) }}
+                        </p>
+                    </div>
+                    <div>
+                        <span
+                            class="font-mono text-[10px] text-muted-foreground uppercase"
+                            >Direkam Pada</span
+                        >
+                        <p class="font-semibold text-foreground tabular-nums">
+                            {{ formatRoutingDateTime(document.recorded_at) }}
                         </p>
                     </div>
                 </div>
-                <span
-                    class="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-300/70 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
-                >
-                    <ShieldCheck class="size-3.5" aria-hidden="true" />
-                    Versi {{ document.version_number }} terverifikasi
-                </span>
             </div>
-        </CardHeader>
 
-        <CardContent class="p-5 sm:p-6">
-            <p class="font-semibold break-all">
-                {{ document.original_filename }}
-            </p>
-            <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-                <div class="rounded-xl bg-background/80 p-3">
-                    <dt class="text-xs text-muted-foreground">Format</dt>
-                    <dd class="mt-1 font-semibold">PDF</dd>
-                </div>
-                <div class="rounded-xl bg-background/80 p-3">
-                    <dt class="text-xs text-muted-foreground">Ukuran</dt>
-                    <dd class="mt-1 font-semibold tabular-nums">
-                        {{ formatRoutingFileSize(document.size_bytes) }}
-                    </dd>
-                </div>
-                <div class="rounded-xl bg-background/80 p-3">
-                    <dt class="text-xs text-muted-foreground">Dicatat</dt>
-                    <dd class="mt-1 font-semibold tabular-nums">
-                        {{ formatRoutingDateTime(document.recorded_at) }}
-                    </dd>
-                </div>
-            </dl>
-
+            <!-- SHA-256 Fingerprint Block with Copy Button -->
             <div
-                class="mt-4 flex items-start gap-3 rounded-xl border border-dashed p-3"
+                class="flex items-center justify-between gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-3.5 text-xs"
             >
-                <Fingerprint
-                    class="mt-0.5 size-4 shrink-0 text-violet-700 dark:text-violet-300"
-                    aria-hidden="true"
-                />
-                <div class="min-w-0">
-                    <p class="text-xs text-muted-foreground">
-                        Fingerprint SHA-256 tercatat
-                    </p>
-                    <code class="mt-1 block text-xs leading-5 break-all">
-                        {{ document.sha256 }}
-                    </code>
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <Fingerprint
+                        class="size-5 shrink-0 text-indigo-600 dark:text-indigo-400"
+                    />
+                    <div class="min-w-0">
+                        <span
+                            class="font-mono text-[10px] font-bold text-muted-foreground uppercase"
+                        >
+                            Sidik Jari Digital SHA-256:
+                        </span>
+                        <code
+                            class="block truncate font-mono text-[10px] text-indigo-600 dark:text-indigo-400"
+                        >
+                            {{ document.sha256 }}
+                        </code>
+                    </div>
                 </div>
+
+                <button
+                    type="button"
+                    class="inline-flex shrink-0 items-center gap-1 rounded-xl bg-indigo-600/10 px-2.5 py-1 font-mono text-[10px] font-bold text-indigo-700 transition-colors hover:bg-indigo-600/20 dark:text-indigo-300"
+                    @click="copyHash"
+                >
+                    <Check v-if="isCopied" class="size-3 text-emerald-500" />
+                    <Copy v-else class="size-3" />
+                    <span>{{ isCopied ? 'Tersalin' : 'Salin Hash' }}</span>
+                </button>
             </div>
 
-            <div class="mt-5 grid gap-2 sm:grid-cols-2">
+            <!-- Document Actions: Preview & Download -->
+            <div class="grid grid-cols-1 gap-2.5 pt-1 sm:grid-cols-2">
                 <template v-if="preview">
                     <Button
                         type="button"
                         variant="outline"
-                        class="min-h-11"
+                        class="h-11 rounded-2xl border-border/80 text-xs font-bold"
                         @click="$emit('preview')"
                     >
-                        <Eye class="size-4" aria-hidden="true" />
-                        Pratinjau PDF
+                        <Eye
+                            class="mr-2 size-4 text-indigo-600 dark:text-indigo-400"
+                        />
+                        <span>Pratinjau Naskah PDF</span>
                     </Button>
                     <Button
                         type="button"
                         variant="outline"
-                        class="min-h-11"
+                        class="h-11 rounded-2xl border-border/80 text-xs font-bold"
                         @click="$emit('download')"
                     >
-                        <Download class="size-4" aria-hidden="true" />
-                        Unduh PDF
+                        <Download
+                            class="mr-2 size-4 text-indigo-600 dark:text-indigo-400"
+                        />
+                        <span>Unduh Berkas Asli</span>
                     </Button>
                 </template>
                 <template v-else>
-                    <Button as-child variant="outline" class="min-h-11">
+                    <Button
+                        as-child
+                        variant="outline"
+                        class="h-11 rounded-2xl border-border/80 text-xs font-bold"
+                    >
                         <a
                             :href="document.preview_url"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <Eye class="size-4" aria-hidden="true" />
-                            Pratinjau PDF
+                            <Eye
+                                class="mr-2 size-4 text-indigo-600 dark:text-indigo-400"
+                            />
+                            <span>Pratinjau Naskah PDF</span>
                         </a>
                     </Button>
-                    <Button as-child variant="outline" class="min-h-11">
+                    <Button
+                        as-child
+                        variant="outline"
+                        class="h-11 rounded-2xl border-border/80 text-xs font-bold"
+                    >
                         <a :href="document.download_url">
-                            <Download class="size-4" aria-hidden="true" />
-                            Unduh PDF
+                            <Download
+                                class="mr-2 size-4 text-indigo-600 dark:text-indigo-400"
+                            />
+                            <span>Unduh Berkas Asli</span>
                         </a>
                     </Button>
                 </template>
             </div>
-        </CardContent>
-    </Card>
+        </div>
+    </section>
 </template>

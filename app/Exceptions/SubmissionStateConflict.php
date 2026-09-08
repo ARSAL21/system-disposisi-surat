@@ -33,6 +33,16 @@ class SubmissionStateConflict extends RuntimeException
         return new self("Submission must be in SUBMITTED or INTERNAL_REVISION_REQUIRED state; current state is {$actualStatus->value}.");
     }
 
+    public static function expectedManualRevision(SubmissionStatus $actualStatus): self
+    {
+        return new self("Manual submission must be in INTERNAL_REVISION_REQUIRED state; current state is {$actualStatus->value}.");
+    }
+
+    public static function missingReceivedAt(): self
+    {
+        return new self('Submission does not contain a valid receipt timestamp.');
+    }
+
     public function render(): JsonResponse
     {
         return response()->json([

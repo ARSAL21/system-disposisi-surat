@@ -4,7 +4,6 @@ use App\Actions\RecordAudit;
 use App\Enums\AuditAction;
 use App\Exceptions\AuditLogMutationDenied;
 use App\Models\AuditLog;
-use Closure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);

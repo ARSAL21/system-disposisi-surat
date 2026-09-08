@@ -4,6 +4,8 @@ namespace App\Auditing;
 
 use App\Models\AuditLog;
 use App\Models\Disposition;
+use App\Models\DispositionFollowUp;
+use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
@@ -58,6 +60,25 @@ final class LetterActivityTargetResolver
             ->whereKey($this->subjectIds($audits, 'disposition'))
             ->get(['id', 'incoming_letter_id'])
             ->keyBy('id');
+        $recipients = DispositionRecipient::query()
+            ->with([
+                'disposition.incomingLetter:id,letter_submission_id,agenda_number,sender_organization_id,subject',
+                'disposition.incomingLetter.submission:id,public_id,source',
+                'disposition.incomingLetter.senderOrganization:id,name',
+            ])
+            ->whereKey($this->subjectIds($audits, 'disposition_recipient'))
+            ->get(['id', 'disposition_id'])
+            ->keyBy('id');
+        $followUps = DispositionFollowUp::query()
+            ->with([
+                'dispositionRecipient:id,disposition_id',
+                'dispositionRecipient.disposition.incomingLetter:id,letter_submission_id,agenda_number,sender_organization_id,subject',
+                'dispositionRecipient.disposition.incomingLetter.submission:id,public_id,source',
+                'dispositionRecipient.disposition.incomingLetter.senderOrganization:id,name',
+            ])
+            ->whereKey($this->subjectIds($audits, 'disposition_follow_up'))
+            ->get(['id', 'disposition_recipient_id'])
+            ->keyBy('id');
         $resolved = [];
 
         foreach ($audits as $audit) {
@@ -80,6 +101,14 @@ final class LetterActivityTargetResolver
                 ),
                 'disposition' => $this->fromDisposition(
                     $dispositions->get($audit->subject_id),
+                    $audit,
+                ),
+                'disposition_recipient' => $this->fromRecipient(
+                    $recipients->get($audit->subject_id),
+                    $audit,
+                ),
+                'disposition_follow_up' => $this->fromFollowUp(
+                    $followUps->get($audit->subject_id),
                     $audit,
                 ),
                 default => $this->fallback($audit),
@@ -169,6 +198,26 @@ final class LetterActivityTargetResolver
         }
 
         return $this->fromIncomingLetter($disposition->incomingLetter, $audit);
+    }
+
+    /** @return array{target: array<string, mixed>, document: null} */
+    private function fromRecipient(?DispositionRecipient $recipient, AuditLog $audit): array
+    {
+        if (! $recipient instanceof DispositionRecipient) {
+            return $this->fallback($audit);
+        }
+
+        return $this->fromIncomingLetter($recipient->disposition->incomingLetter, $audit);
+    }
+
+    /** @return array{target: array<string, mixed>, document: null} */
+    private function fromFollowUp(?DispositionFollowUp $followUp, AuditLog $audit): array
+    {
+        if (! $followUp instanceof DispositionFollowUp) {
+            return $this->fallback($audit);
+        }
+
+        return $this->fromRecipient($followUp->dispositionRecipient, $audit);
     }
 
     /** @return array{target: array<string, mixed>, document: null} */

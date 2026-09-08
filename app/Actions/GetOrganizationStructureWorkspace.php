@@ -113,6 +113,10 @@ class GetOrganizationStructureWorkspace
                     'positions' => array_values($unit->positions
                         ->map(fn (Position $pos): array => $this->transformPosition($pos))
                         ->all()),
+                    'links' => [
+                        'update' => route('back-office.organization.units.update', $unit),
+                        'status' => route('back-office.organization.units.status', $unit),
+                    ],
                 ];
             })
             ->all());
@@ -136,6 +140,10 @@ class GetOrganizationStructureWorkspace
                 'code' => $pos->positionLevel->code,
                 'name' => $pos->positionLevel->name,
                 'hierarchy_order' => $pos->positionLevel->hierarchy_order,
+            ],
+            'links' => [
+                'update' => route('back-office.organization.positions.update', $pos),
+                'status' => route('back-office.organization.positions.status', $pos),
             ],
             'active_assignment' => $pos->activeAssignment === null ? null : [
                 'id' => $pos->activeAssignment->id,

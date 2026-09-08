@@ -31,7 +31,8 @@ defineProps<{
         >
             <CheckCircle2 class="size-4" />
             <AlertDescription class="font-medium">
-                Tautan verifikasi baru telah berhasil dikirim ke alamat email Anda.
+                Tautan verifikasi baru telah berhasil dikirim ke alamat email
+                Anda.
             </AlertDescription>
         </Alert>
 
@@ -44,7 +45,8 @@ defineProps<{
                 <MailCheck class="size-5" />
             </div>
             <p>
-                Belum menerima email? Periksa folder spam atau klik tombol di bawah untuk meminta pengiriman ulang tautan verifikasi.
+                Belum menerima email? Periksa folder spam atau klik tombol di
+                bawah untuk meminta pengiriman ulang tautan verifikasi.
             </p>
         </div>
 

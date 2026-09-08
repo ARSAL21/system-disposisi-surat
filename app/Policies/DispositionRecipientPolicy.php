@@ -53,6 +53,21 @@ class DispositionRecipientPolicy
             : Response::denyAsNotFound();
     }
 
+    public function startBranch(User $user, DispositionRecipient $recipient): Response
+    {
+        return $this->authorizeBranchProcessing($user, $recipient);
+    }
+
+    public function addFollowUp(User $user, DispositionRecipient $recipient): Response
+    {
+        return $this->authorizeBranchProcessing($user, $recipient);
+    }
+
+    public function completeBranch(User $user, DispositionRecipient $recipient): Response
+    {
+        return $this->authorizeBranchProcessing($user, $recipient);
+    }
+
     private function authorizeInboxViewing(User $user): Response
     {
         if (! $user->isInternalAccount() || ! $user->is_active || ! $user->hasVerifiedEmail()) {
@@ -64,6 +79,25 @@ class DispositionRecipientPolicy
         }
 
         return $this->positionAssignmentResolver->hasInboxAssignment($user)
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+
+    private function authorizeBranchProcessing(User $user, DispositionRecipient $recipient): Response
+    {
+        if (! $user->isInternalAccount() || ! $user->is_active || ! $user->hasVerifiedEmail()) {
+            return Response::denyAsNotFound();
+        }
+
+        if (! $user->can(PermissionName::ViewDispositions->value)
+            || ! $user->can(PermissionName::ProcessDispositions->value)) {
+            return Response::deny('You do not have permission to process disposition branches.');
+        }
+
+        return $this->positionAssignmentResolver->hasSectionHeadAssignmentForPosition(
+            $user,
+            $recipient->recipient_position_id,
+        )
             ? Response::allow()
             : Response::denyAsNotFound();
     }

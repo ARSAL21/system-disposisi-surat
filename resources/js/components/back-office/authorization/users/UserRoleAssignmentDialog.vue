@@ -29,16 +29,26 @@ const dialogOpen = computed({
     get: () => props.open,
     set: (value: boolean) => emit('update:open', value),
 });
-const customRoles = computed(() =>
-    props.roles.filter((role) => !role.is_protected),
+const assignableRoles = computed(() =>
+    props.roles.filter((role) => role.is_assignable),
 );
 const protectedRoles = computed(
-    () => props.user?.roles.filter((role) => role.is_protected) ?? [],
+    () =>
+        props.user?.roles.filter(
+            (role) =>
+                !props.roles.some(
+                    (item) => item.id === role.id && item.is_assignable,
+                ),
+        ) ?? [],
 );
 const initiallyAssignedRoleIds = computed(
     () =>
         props.user?.roles
-            .filter((role) => !role.is_protected)
+            .filter((role) =>
+                props.roles.some(
+                    (item) => item.id === role.id && item.is_assignable,
+                ),
+            )
             .map((role) => role.id) ?? [],
 );
 const userEligibleForNewRoles = computed(() =>
@@ -95,8 +105,8 @@ function submit(): void {
                     </span>
                     <DialogTitle>Atur role {{ user?.name }}</DialogTitle>
                     <DialogDescription class="leading-6">
-                        Beberapa role dapat diberikan sekaligus. Protected role
-                        dipertahankan dan tidak dikirim sebagai input perubahan.
+                        Role operasional baku dan custom role dapat diberikan
+                        sekaligus. Super-admin tetap dikelola melalui console.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -112,9 +122,11 @@ function submit(): void {
                 </div>
 
                 <fieldset class="space-y-3">
-                    <legend class="text-sm font-semibold">Custom role</legend>
+                    <legend class="text-sm font-semibold">
+                        Role yang dapat diberikan
+                    </legend>
                     <label
-                        v-for="role in customRoles"
+                        v-for="role in assignableRoles"
                         :key="role.id"
                         :for="`user-role-${role.id}`"
                         class="flex min-h-16 gap-3 rounded-2xl border p-4 transition-colors duration-200"
@@ -146,10 +158,10 @@ function submit(): void {
                         </span>
                     </label>
                     <p
-                        v-if="!customRoles.length"
+                        v-if="!assignableRoles.length"
                         class="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground"
                     >
-                        Belum ada custom role yang dapat diberikan.
+                        Belum ada role yang dapat diberikan.
                     </p>
                     <InputError :message="form.errors.role_ids" />
                 </fieldset>

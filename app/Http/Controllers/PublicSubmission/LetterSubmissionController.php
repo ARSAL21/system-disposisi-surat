@@ -12,6 +12,7 @@ use App\Http\Requests\PublicSubmission\UpdateLetterSubmissionRequest;
 use App\Http\Resources\LetterSubmissionResource;
 use App\Models\LetterSubmission;
 use App\Models\User;
+use App\OutgoingLetters\PublicResponsePresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -80,8 +81,11 @@ class LetterSubmissionController extends Controller
         return to_route('public.submissions.edit', $submission);
     }
 
-    public function show(Request $request, LetterSubmission $submission): LetterSubmissionResource|InertiaResponse
-    {
+    public function show(
+        Request $request,
+        LetterSubmission $submission,
+        PublicResponsePresenter $responsePresenter,
+    ): LetterSubmissionResource|InertiaResponse {
         Gate::authorize('view', $submission);
 
         $resource = new LetterSubmissionResource($submission->load(['document', 'latestReview', 'latestDecision']));
@@ -92,6 +96,7 @@ class LetterSubmissionController extends Controller
 
         return Inertia::render('public/submissions/Show', [
             'submission' => $resource->resolve($request),
+            'responseTracker' => $responsePresenter->forSubmission($submission),
         ]);
     }
 

@@ -62,11 +62,17 @@ function m3IntakeStaff(bool $withPosition = true, bool $withPermission = true): 
             $level->save();
         }
 
-        $unit = new OrganizationalUnit;
-        $unit->code = 'BAGIAN-UMUM-'.Str::lower(Str::random(6));
-        $unit->name = 'Bagian Umum';
-        $unit->is_active = true;
-        $unit->save();
+        $unit = OrganizationalUnit::query()
+            ->where('code', OrganizationCatalog::GENERAL_AFFAIRS_UNIT)
+            ->first();
+
+        if (! $unit instanceof OrganizationalUnit) {
+            $unit = new OrganizationalUnit;
+            $unit->code = OrganizationCatalog::GENERAL_AFFAIRS_UNIT;
+            $unit->name = 'Bagian Umum';
+            $unit->is_active = true;
+            $unit->save();
+        }
 
         $position = new Position;
         $position->position_level_id = $level->getKey();
