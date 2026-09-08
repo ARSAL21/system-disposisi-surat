@@ -3,7 +3,9 @@
 use App\Enums\AuditAction;
 use App\Enums\DispositionRecipientStatus;
 use App\Enums\IncomingLetterStatus;
+use App\Enums\LetterResponseDossierStatus;
 use App\Enums\LetterRouteStatus;
+use App\Enums\OutgoingLetterStatus;
 use App\Enums\SubmissionSource;
 use App\Enums\SubmissionStatus;
 use App\Models\AuditLog;
@@ -13,6 +15,7 @@ use App\Models\IncomingLetter;
 use App\Models\InstructionLabel;
 use App\Models\LetterRoute;
 use App\Models\LetterSubmission;
+use App\Models\OutgoingLetter;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\SenderOrganization;
@@ -342,6 +345,119 @@ function mysqlConcurrencyWorkerResult(Process $process): array
     return ['status' => $result['status']];
 }
 
+function mysqlConcurrencyAuthorizedOutgoingLetter(
+    IncomingLetter $letter,
+    User $authorizer,
+    PositionAssignment $authorizerAssignment,
+): OutgoingLetter {
+    $now = now();
+    $dossierId = DB::table('letter_response_dossiers')->insertGetId([
+        'public_id' => (string) Str::ulid(),
+        'incoming_letter_id' => $letter->getKey(),
+        'status' => LetterResponseDossierStatus::Finalized->value,
+        'opened_at' => $now,
+        'finalized_at' => $now,
+        'finalized_by_user_id' => $authorizer->getKey(),
+        'finalized_by_position_assignment_id' => $authorizerAssignment->getKey(),
+        'fulfilled_at' => null,
+        'fulfilled_by_user_id' => null,
+        'fulfilled_by_position_assignment_id' => null,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    $documentId = DB::table('letter_response_documents')->insertGetId([
+        'public_id' => (string) Str::ulid(),
+        'letter_response_dossier_id' => $dossierId,
+        'kind' => 'EXECUTIVE_CONSOLIDATION',
+        'owner_position_id' => $authorizerAssignment->position_id,
+        'source_recipient_id' => null,
+        'created_by_user_id' => $authorizer->getKey(),
+        'created_by_position_assignment_id' => $authorizerAssignment->getKey(),
+        'created_at' => $now,
+    ]);
+    $versionId = DB::table('letter_response_document_versions')->insertGetId([
+        'public_id' => (string) Str::ulid(),
+        'letter_response_document_id' => $documentId,
+        'version_number' => 1,
+        'replaces_version_id' => null,
+        'storage_disk' => 'letter-response-documents',
+        'storage_path' => 'mysql-concurrency/'.Str::ulid().'.pdf',
+        'original_filename' => 'konsolidasi.pdf',
+        'mime_type' => 'application/pdf',
+        'size_bytes' => 1,
+        'sha256' => hash('sha256', (string) Str::ulid()),
+        'revision_note' => null,
+        'uploaded_by_user_id' => $authorizer->getKey(),
+        'uploaded_by_position_assignment_id' => $authorizerAssignment->getKey(),
+        'created_at' => $now,
+    ]);
+    $outgoingId = DB::table('outgoing_letters')->insertGetId([
+        'public_id' => (string) Str::ulid(),
+        'incoming_letter_id' => $letter->getKey(),
+        'letter_response_dossier_id' => $dossierId,
+        'source_document_version_id' => $versionId,
+        'signatory_position_id' => $authorizerAssignment->position_id,
+        'subject' => 'Mandat nomor surat untuk uji konkurensi',
+        'status' => OutgoingLetterStatus::Authorized->value,
+        'authorized_by_user_id' => $authorizer->getKey(),
+        'authorized_by_position_assignment_id' => $authorizerAssignment->getKey(),
+        'authorized_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    return OutgoingLetter::query()->findOrFail($outgoingId);
+}
+
+/** @return array{0: array{status: int}, 1: array{status: int}} */
+function mysqlOutgoingNumberRace(User $actor, OutgoingLetter $first, OutgoingLetter $second): array
+{
+    $directory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'outgoing-number-concurrency-'.Str::uuid();
+
+    if (! File::makeDirectory($directory, 0700, true)) {
+        throw new RuntimeException('Unable to create the outgoing-number concurrency signal directory.');
+    }
+
+    $releaseSignal = $directory.DIRECTORY_SEPARATOR.'release-workers';
+    $firstReady = $directory.DIRECTORY_SEPARATOR.'first-ready';
+    $secondReady = $directory.DIRECTORY_SEPARATOR.'second-ready';
+    $arguments = fn (OutgoingLetter $letter, string $readySignal): array => [
+        PHP_BINARY,
+        base_path('tests/Support/RunOutgoingLetterNumberWorker.php'),
+        (string) $actor->getKey(),
+        (string) $letter->getKey(),
+        '009/1201/SETDA/2026',
+        '2026-09-09',
+        $readySignal,
+        $releaseSignal,
+    ];
+    $firstWorker = new Process($arguments($first, $firstReady), base_path(), mysqlConcurrencyProcessEnvironment(), null, 30);
+    $secondWorker = new Process($arguments($second, $secondReady), base_path(), mysqlConcurrencyProcessEnvironment(), null, 30);
+    $firstWorker->start();
+    $secondWorker->start();
+
+    try {
+        mysqlConcurrencyWaitForSignal($firstReady, $firstWorker);
+        mysqlConcurrencyWaitForSignal($secondReady, $secondWorker);
+        file_put_contents($releaseSignal, 'release', LOCK_EX);
+
+        return [
+            mysqlConcurrencyWorkerResult($firstWorker),
+            mysqlConcurrencyWorkerResult($secondWorker),
+        ];
+    } finally {
+        if ($firstWorker->isRunning()) {
+            $firstWorker->stop();
+        }
+
+        if ($secondWorker->isRunning()) {
+            $secondWorker->stop();
+        }
+
+        File::deleteDirectory($directory);
+    }
+}
+
 test('two contending final branches complete the letter with one aggregate audit', function (): void {
     $graph = mysqlConcurrencyDispositionGraph();
     $firstBranch = $graph['branches']['KABAG_KESRA'];
@@ -392,4 +508,38 @@ test('two contending completions of one branch yield one success and one conflic
             ->where('subject_type', 'incoming_letter')
             ->where('subject_id', $graph['letter']->getKey())
             ->count())->toBe(0);
+})->group('mysql-concurrency');
+
+test('two competing outgoing number assignments retain one unique registration', function (): void {
+    $firstGraph = mysqlConcurrencyDispositionGraph();
+    $secondGraph = mysqlConcurrencyDispositionGraph();
+    $authorizer = mysqlConcurrencyUser('sekda@internal.test');
+    $authorizerAssignment = mysqlConcurrencyAssignment($authorizer, mysqlConcurrencyPosition('SEKDA'));
+    $officer = mysqlConcurrencyUser('petugas.surat@internal.test');
+    $firstOutgoing = mysqlConcurrencyAuthorizedOutgoingLetter(
+        $firstGraph['letter'],
+        $authorizer,
+        $authorizerAssignment,
+    );
+    $secondOutgoing = mysqlConcurrencyAuthorizedOutgoingLetter(
+        $secondGraph['letter'],
+        $authorizer,
+        $authorizerAssignment,
+    );
+
+    $statuses = array_column(mysqlOutgoingNumberRace($officer, $firstOutgoing, $secondOutgoing), 'status');
+    sort($statuses);
+
+    expect($statuses)->toBe([200, 422])
+        ->and(OutgoingLetter::query()
+            ->where('agenda_year', 2026)
+            ->where('outgoing_number', '009/1201/SETDA/2026')
+            ->count())->toBe(1)
+        ->and(OutgoingLetter::query()
+            ->whereIn('id', [$firstOutgoing->getKey(), $secondOutgoing->getKey()])
+            ->where('status', OutgoingLetterStatus::NumberAssigned->value)
+            ->count())->toBe(1)
+        ->and(AuditLog::query()
+            ->where('action', AuditAction::OutgoingLetterNumberAssigned->value)
+            ->count())->toBe(1);
 })->group('mysql-concurrency');
