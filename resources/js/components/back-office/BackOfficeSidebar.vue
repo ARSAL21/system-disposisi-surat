@@ -16,6 +16,7 @@ import {
     ChartNoAxesCombined,
     Route as RouteIcon,
     ShieldCheck,
+    SendHorizontal,
     UserRoundCog,
 } from '@lucide/vue';
 import { computed } from 'vue';
@@ -158,6 +159,44 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: reportPath,
             icon: ChartNoAxesCombined,
             isActive: currentPath.value.startsWith(reportPath),
+        });
+    }
+
+    const isLetterResponsePreview = currentPath.value.startsWith(
+        '/back-office/previews/letter-responses',
+    );
+
+    if (
+        page.props.auth.capabilities.can_view_letter_responses ||
+        isLetterResponsePreview
+    ) {
+        const responsePath = isLetterResponsePreview
+            ? '/back-office/previews/letter-responses'
+            : '/back-office/letter-responses';
+        items.push({
+            title: 'Dossier Balasan',
+            href: responsePath,
+            icon: Network,
+            isActive: currentPath.value.startsWith(responsePath),
+        });
+    }
+
+    const isOutgoingPreview = currentPath.value.startsWith(
+        '/back-office/previews/outgoing-letters',
+    );
+
+    if (
+        page.props.auth.capabilities.can_view_outgoing_register === true ||
+        isOutgoingPreview
+    ) {
+        const outgoingPath = isOutgoingPreview
+            ? '/back-office/previews/outgoing-letters'
+            : '/back-office/outgoing-letters';
+        items.push({
+            title: 'Register Surat Keluar',
+            href: outgoingPath,
+            icon: SendHorizontal,
+            isActive: currentPath.value.startsWith(outgoingPath),
         });
     }
 

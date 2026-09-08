@@ -38,6 +38,14 @@ export type AuthCapabilities = {
     can_decide_intake: boolean;
     can_create_manual_intake: boolean;
     can_view_incoming_register: boolean;
+    can_view_letter_responses: boolean;
+    can_contribute_letter_responses: boolean;
+    can_review_letter_responses: boolean;
+    can_authorize_letter_responses: boolean;
+    can_view_outgoing_register?: boolean;
+    can_number_outgoing_letters?: boolean;
+    can_verify_outgoing_letters?: boolean;
+    can_deliver_outgoing_letters?: boolean;
 };
 
 export type Auth = {
