@@ -230,10 +230,18 @@ Input metadata
       ↓
 Upload hasil scan PDF
       ↓
-Create Manual Submission
+Pemeriksaan lengkap oleh Staf
+      ↓
+Manual Submission READY_FOR_APPROVAL
+      ↓
+Pengesahan administratif Kabag Umum
 ```
 
-Karena Bagian Umum sudah melakukan pemeriksaan langsung, manual submission dapat dilanjutkan ke registrasi pada sesi kerja yang sama.
+Pencatatan manual membuat submission dan hasil screening dalam satu transaksi,
+tetapi tidak membuat `IncomingLetter`. Kepala Bagian Umum tetap menjadi
+satu-satunya pejabat yang boleh mengesahkan registrasi. Jika hasil persiapan
+dikembalikan, Staf dapat memperbaiki metadata atau mengganti scan dan
+mengajukannya kembali.
 
 Namun secara domain:
 
@@ -658,10 +666,18 @@ Create Manual Submission
     ↓
 Upload scan PDF
     ↓
-Register
+Screening Staf tercatat
+    ↓
+READY_FOR_APPROVAL
+    ↓
+Keputusan Kabag Umum
 ```
 
-Manual intake boleh lebih cepat secara operasional, tetapi tetap melewati domain submission.
+Manual intake boleh lebih cepat secara operasional karena input dan screening
+terjadi pada satu aksi, tetapi tetap melewati domain submission dan meja
+keputusan Kepala Bagian Umum. `received_at` berasal dari waktu penerimaan fisik,
+bukan waktu registrasi. Buku Agenda Surat Masuk hanya membaca `IncomingLetter`
+yang sudah sah dan menggabungkan sumber `ONLINE` serta `MANUAL`.
 
 ---
 
@@ -1142,6 +1158,11 @@ confirmation, transaction, dan audit.
 Asisten dapat meneruskan satu tindakan disposisi kepada satu atau lebih
 Position level `SECTION_HEAD`. Setiap recipient menjadi cabang terminal
 independen: memulai atau menyelesaikan satu cabang tidak memutasi cabang lain.
+Dalam satu surat, satu Position Kepala Bagian hanya boleh berada pada satu
+subtree Asisten. Setelah dipilih Asisten pertama, Position tersebut tidak lagi
+ditampilkan kepada Asisten lain dan crafted/concurrent request divalidasi ulang
+setelah surat dikunci. Aturan ini mencegah kepemilikan arahan, monitoring, serta
+bahan teknis menjadi ambigu.
 Cabang tetap dimiliki Position, sehingga pergantian pejabat tidak mengubah
 target historis dan pejabat aktif baru dapat melanjutkan pekerjaan melalui
 Position Assignment yang sah.
@@ -1274,6 +1295,7 @@ Setiap event audit didefinisikan secara deklaratif pada `AuditActionContractRegi
 | `SUBMISSION_DOCUMENT_REPLACED` | Submission | `letter_submission` | Wajib | Flexible | Forbidden |
 | `SUBMISSION_SUBMITTED` | Submission | `letter_submission` | Wajib | Update | Forbidden |
 | `SUBMISSION_RESUBMITTED` | Submission | `letter_submission` | Wajib | Update | Forbidden |
+| `MANUAL_SUBMISSION_CREATED` | Intake Review | `letter_submission` | Wajib | Create | Required |
 | `SUBMISSION_REVISION_REQUESTED` | Intake Review | `letter_submission` | Wajib | Update | Required |
 | `SUBMISSION_READY_FOR_APPROVAL` | Intake Review | `letter_submission` | Wajib | Update | Required |
 | `SUBMISSION_RETURNED_TO_STAFF` | Intake Decision | `letter_submission` | Wajib | Update | Required |
@@ -1631,3 +1653,69 @@ AGENTS.md
 ```
 
 `system-design.md` tetap mendefinisikan arsitektur konseptual dan tidak menjadi tempat detail migration atau exact workflow transition.
+
+---
+
+# 35. Dossier Balasan Berjenjang M8.2
+
+Penyelesaian disposisi internal dan penerbitan surat balasan merupakan dua
+boundary berbeda. `IncomingLetter::COMPLETED` hanya menyatakan semua cabang
+terminal selesai. Setelah cabang pertama selesai, sistem membuka satu dossier
+balasan untuk surat tersebut agar hasil teknis dapat dikumpulkan tanpa membuka
+kembali lifecycle disposisi.
+
+```text
+Kepala Bagian -> bahan teknis immutable
+Asisten       -> proposal dari subtree langsung
+Eksekutif     -> pilih proposal / unggah konsolidasi
+              -> satu atau lebih mandat AUTHORIZED
+```
+
+Asisten hanya membaca bahan Kepala Bagian yang merupakan anak langsung
+recipient miliknya. Kepala Bagian hanya membaca dan merevisi seri dokumen
+Position-nya. Eksekutif hanya memperoleh kewenangan penuh bila Position-nya
+merupakan penerima routing awal surat. Permission tidak menjadi bypass Position.
+
+Pengembalian dokumen menghasilkan review append-only terhadap versi tertentu.
+Versi baru menggantikan versi yang dikembalikan tanpa menimpa atau menghapus
+file lama. Finalisasi dossier membutuhkan surat `COMPLETED` dan minimal satu
+mandat. M8.2 berhenti pada status mandat `AUTHORIZED`; penomoran, tanda tangan,
+verifikasi administratif, dan pengiriman merupakan boundary M8.3.
+
+---
+
+# 36. Register dan Penerbitan Surat Keluar M8.3
+
+Mandat yang telah difinalisasi eksekutif masuk ke pipeline administratif yang
+terpisah dari penyusunan substansi:
+
+```text
+AUTHORIZED
+    -> NUMBER_ASSIGNED             Petugas memberi nomor dan tanggal resmi
+    -> SIGNED_DOCUMENT_UPLOADED    Penyusun/Petugas mengunggah PDF bertanda tangan
+    -> ADMIN_VERIFIED              Kabag Umum memverifikasi administrasi
+    -> DELIVERED                   Petugas mempublikasikan/mencatat penyerahan
+```
+
+Tanda tangan dilakukan di luar aplikasi. Aplikasi tidak mengklaim PDF sebagai
+TTE; sistem hanya menyimpan versi final, aktor, Position Assignment, waktu
+server, keputusan verifikasi, dan audit. PDF tersimpan privat, immutable, dan
+setiap perbaikan membuat versi baru. Versi yang dikembalikan tetap dapat dibaca
+sesuai scope dan tidak pernah ditimpa.
+
+Petugas dan Kepala Bagian Umum memperoleh akses register administratif global
+sesuai Position. Pejabat teknis hanya melihat mandat yang diturunkan dari bahan
+atau proposal dalam scope-nya. Eksekutif hanya melihat surat yang routing
+awalnya ditujukan kepada Position-nya. Daftar selalu dibatasi pada query
+database; permission frontend tidak menjadi boundary keamanan.
+
+Mandat `AUTHORIZED` dapat ditarik oleh eksekutif penerima dengan alasan, tetapi
+mandat yang sudah bernomor tidak dapat ditarik. Mandat aktif terakhir pada
+dossier `FINALIZED` juga tidak dapat ditarik karena akan membuat kewajiban
+balasan mustahil dipenuhi. Dossier berubah `FINALIZED -> FULFILLED` secara
+atomik hanya ketika seluruh mandat yang tidak ditarik berstatus `DELIVERED`.
+
+Pengajuan online memperoleh kartu balasan dan tautan unduh privat setelah
+pengiriman; email hanya berisi tautan login tanpa lampiran. Surat manual tidak
+membuat akun publik. Petugas mencatat metode, penerima, waktu, nomor pelacakan,
+dan catatan penyerahan offline.

@@ -25,11 +25,11 @@ disinkronkan secara exact melalui `authorization:sync`, tetapi selain
 
 | Role | Permission |
 | --- | --- |
-| `petugas-surat` | `intake.view`, `intake.screen`, `letter-activities.view`, `document-versions.view`, `letter-routing.view` |
-| `kabag-umum` | `intake.view`, `intake.decide`, `letter-activities.view`, `document-versions.view`, `document-versions.create`, `letter-routing.view`, `letter-routing.create`, `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view` |
-| `pimpinan-eksekutif` | `executive-inbox.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `reports.view`, `reports.export`, `disposition-instructions.view` |
-| `asisten` | `dispositions.view`, `dispositions.create`, `reports.view`, `reports.export`, `disposition-instructions.view` |
-| `kepala-bagian` | `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view` |
+| `petugas-surat` | `intake.view`, `intake.screen`, `intake.create-manual`, `incoming-register.view`, `letter-activities.view`, `document-versions.view`, `letter-routing.view`, `outgoing-register.view`, `outgoing-letters.number`, `outgoing-letters.deliver` |
+| `kabag-umum` | `intake.view`, `intake.decide`, `incoming-register.view`, `letter-activities.view`, `document-versions.view`, `document-versions.create`, `letter-routing.view`, `letter-routing.create`, `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `outgoing-register.view`, `outgoing-letters.verify` |
+| `pimpinan-eksekutif` | `executive-inbox.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `letter-responses.review`, `letter-responses.authorize`, `outgoing-register.view` |
+| `asisten` | `dispositions.view`, `dispositions.create`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `letter-responses.review`, `outgoing-register.view` |
+| `kepala-bagian` | `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `outgoing-register.view` |
 
 Role adalah capability bundle, bukan identitas jabatan. Wali Kota dan Sekda
 berbagi role `pimpinan-eksekutif`, tetapi resource yang dapat diakses tetap
@@ -111,6 +111,24 @@ pada level `SECTION_HEAD` di Organizational Unit berkode `BAGIAN_UMUM`.
 `intake.screen` tidak memberikan hak menolak atau meregistrasikan surat.
 `super-admin` yang tidak menduduki Position tersebut tetap tidak dapat membaca
 atau memutuskan submission pada meja Kepala Bagian Umum.
+
+## Penambahan M8.1 Intake Manual dan Buku Agenda Masuk
+
+| Protected Role | Permission | Tujuan |
+| --- | --- | --- |
+| `super-admin`, `petugas-surat` | `intake.create-manual` | Mencatat surat fisik lengkap dengan scan privat dan screening, serta memperbaikinya setelah dikembalikan Kabag Umum. |
+| `super-admin`, `petugas-surat`, `kabag-umum` | `incoming-register.view` | Membaca Buku Agenda Surat Masuk resmi yang menggabungkan sumber online dan manual. |
+
+`intake.create-manual` tetap membutuhkan account internal aktif dan terverifikasi
+serta Position Assignment aktif level `GENERAL_AFFAIRS` pada unit
+`BAGIAN_UMUM`. `incoming-register.view` membutuhkan Position aktif pada unit
+yang sama dengan level `GENERAL_AFFAIRS` atau `SECTION_HEAD`. Permission tidak
+menjadi bypass: super-admin tanpa Position bisnis atau pejabat unit lain tetap
+menerima `404`.
+
+Capability Inertia `can_create_manual_intake` dan
+`can_view_incoming_register` hanya mengendalikan presentasi menu. Policy dan
+authorized query tetap menjadi boundary server-side.
 
 ## Penambahan M3.5 Aktivitas Surat
 
@@ -328,3 +346,49 @@ Command mutasi bawaan package seperti `permission:create-role`,
 `permission:create-permission`, dan `permission:assign-role` bukan administrative
 flow yang didukung aplikasi karena tidak membawa audit context. Akses shell dan
 database tetap harus dibatasi sebagai infrastructure security boundary.
+
+## Penambahan M8.2 Dossier Balasan
+
+| Role resmi | view | contribute | review | authorize |
+| --- | --- | --- | --- | --- |
+| `petugas-surat` | - | - | - | - |
+| `kabag-umum` | Ya | Ya | - | - |
+| `kepala-bagian` | Ya | Ya | - | - |
+| `asisten` | Ya | Ya | Ya | - |
+| `pimpinan-eksekutif` | Ya | Ya | Ya | Ya |
+| `super-admin` | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync |
+
+Permission resmi adalah `letter-responses.view`,
+`letter-responses.contribute`, `letter-responses.review`, dan
+`letter-responses.authorize`. Semuanya tetap membutuhkan account internal aktif,
+email terverifikasi, serta Position Assignment yang sesuai resource. Super-admin
+tanpa Position bisnis menerima `404`.
+
+Kepala Bagian dibatasi pada bahan Position-nya, Asisten pada subtree langsung,
+dan eksekutif pada surat yang routing awalnya ditujukan kepada Position-nya.
+Capability Inertia mengikuti pasangan permission dan Position:
+`can_view_letter_responses`, `can_contribute_letter_responses`,
+`can_review_letter_responses`, dan `can_authorize_letter_responses`.
+
+## Penambahan M8.3 Register dan Penerbitan Surat Keluar
+
+| Role resmi | Lihat register | Beri nomor | Verifikasi | Kirim |
+| --- | --- | --- | --- | --- |
+| `petugas-surat` | Ya, global administratif | Ya | - | Ya |
+| `kabag-umum` | Ya, global administratif | - | Ya | - |
+| `kepala-bagian` | Ya, hanya mandat dari kontribusinya | - | - | - |
+| `asisten` | Ya, hanya mandat dari subtree/proposalnya | - | - | - |
+| `pimpinan-eksekutif` | Ya, seluruh mandat surat yang diterimanya | - | - | - |
+| `super-admin` | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync |
+
+Permission resminya adalah `outgoing-register.view`,
+`outgoing-letters.number`, `outgoing-letters.verify`, dan
+`outgoing-letters.deliver`. Permission tidak menggantikan Position: Petugas dan
+Kabag Umum harus berada pada unit `BAGIAN_UMUM`, sedangkan pejabat struktural
+dibatasi oleh graph kontribusi dan routing surat. Super-admin tanpa Position
+bisnis tetap menerima `404`.
+
+Capability Inertia `can_view_outgoing_register`,
+`can_number_outgoing_letters`, `can_verify_outgoing_letters`, dan
+`can_deliver_outgoing_letters` hanya mengendalikan presentasi antarmuka.
+Policy dan authorized query tetap menjadi batas akses produksi.

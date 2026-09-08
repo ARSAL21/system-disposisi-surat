@@ -389,12 +389,13 @@ Merepresentasikan intake sebelum surat diregistrasi secara resmi oleh Bagian Umu
 | recorded_by_user_id          | bigint       | FK nullable → users.id                      |
 | sender_organization_name     | varchar(200) | required                                    |
 | contact_name                 | varchar(150) | required                                    |
-| contact_email                | varchar(255) | required                                    |
+| contact_email                | varchar(255) | nullable; required untuk source `ONLINE`    |
 | contact_phone                | varchar(30)  | nullable                                    |
 | external_letter_number       | varchar(100) | nullable                                    |
 | external_letter_date         | date         | nullable                                    |
 | subject                      | varchar(255) | required                                    |
 | summary                      | text         | nullable                                    |
+| received_at                  | timestamp    | nullable; required untuk source `MANUAL`    |
 | submitted_at                 | timestamp    | nullable                                    |
 | created_at                   | timestamp    |                                             |
 | updated_at                   | timestamp    |                                             |
@@ -425,6 +426,12 @@ ONLINE → submitted_by_user_id required, recorded_by_user_id null
 MANUAL → submitted_by_user_id null, recorded_by_user_id required
 ```
 
+`received_at` pada submission manual menyimpan waktu surat fisik benar-benar
+diterima dan kemudian disalin ke `incoming_letters.received_at` saat Kepala
+Bagian Umum mengesahkan registrasi. Submission online memakai `submitted_at`
+sebagai waktu penerimaan saat registrasi. Email pengirim manual boleh kosong dan
+tidak menyebabkan pembuatan akun publik.
+
 Untuk online submission, `contact_name` dan `contact_email` merupakan snapshot server-side dari authenticated user pada saat draft dibuat. Field trust boundary, source, status, actor, dan timestamp tidak pernah dipercaya dari frontend.
 
 `public_id` digunakan untuk route dan response publik. Sequential bigint `id` tetap menjadi key internal dan tidak diekspos sebagai identifier publik.
@@ -435,6 +442,7 @@ Index:
 UNIQUE (public_id)
 source
 status
+received_at
 submitted_at
 (submitted_by_user_id, status)
 (submitted_by_user_id, created_at)
@@ -1165,6 +1173,7 @@ SUBMISSION_SUBMITTED
 SUBMISSION_RESUBMITTED
 SUBMISSION_REVISION_REQUESTED
 SUBMISSION_READY_FOR_APPROVAL
+MANUAL_SUBMISSION_CREATED
 SUBMISSION_RETURNED_TO_STAFF
 SUBMISSION_REJECTED
 SUBMISSION_DRAFT_DELETED
@@ -1317,7 +1326,14 @@ Recipient harus:
 
 * Position aktif;
 * berada pada hierarchy yang valid;
-* tidak duplikat dalam disposition yang sama.
+* tidak duplikat dalam disposition yang sama;
+* untuk level Kepala Bagian, tidak pernah muncul pada subtree Asisten lain dalam
+  surat masuk yang sama.
+
+Invariant lintas Asisten ditegakkan oleh authorized target query dan validasi
+ulang di dalam transaction setelah `incoming_letters` dikunci. Struktur tabel
+tetap append-only sehingga recipient historis tidak dihapus saat invariant
+diperketat.
 
 ### Completion
 
@@ -1707,3 +1723,83 @@ Hal berikut ditentukan pada dokumen lanjutan:
 * database privilege hardening.
 
 Schema ini tidak boleh diubah hanya untuk mengakomodasi detail UI. Database harus merepresentasikan domain dan invariant bisnis, bukan struktur halaman Vue.
+
+---
+
+# 27. Persistence Dossier Balasan M8.2
+
+`letter_response_dossiers` mempunyai relasi unik ke `incoming_letters` dan
+lifecycle `OPEN -> FINALIZED`. Finalisasi menyimpan user, Position Assignment,
+dan timestamp historis.
+
+`letter_response_documents` adalah seri immutable dengan jenis
+`TECHNICAL_MATERIAL`, `ASSISTANT_PROPOSAL`, atau `EXECUTIVE_CONSOLIDATION`.
+Kepemilikan selalu berupa Position. Seri bahan/proposal dapat menunjuk
+`source_recipient_id`; konsolidasi eksekutif tidak memerlukannya. Keunikan seri
+berbasis `(dossier, kind, source_recipient_id)`, bukan hanya Position pemilik.
+Dengan demikian cabang duplikat historis yang tercipta sebelum invariant M6
+diperketat tetap dapat menyimpan bahan teknis masing-masing tanpa menghapus
+riwayat. Disposisi baru tetap melarang duplikasi Kepala Bagian lintas Asisten.
+
+`letter_response_document_versions` menyimpan versi PDF immutable, versi yang
+digantikan, private disk/path, nama asli, MIME, ukuran, SHA-256, alasan revisi,
+uploader, Position Assignment, dan waktu server. Kombinasi seri/nomor versi dan
+seri/SHA-256 bersifat unik. `letter_response_document_sources` mencatat lineage
+bahan teknis yang membentuk proposal serta proposal yang dipakai oleh
+konsolidasi. Versi sumber yang sudah dipakai tidak dapat dikembalikan atau
+direvisi; koreksi dilakukan pada dokumen tingkat berikutnya agar rantai audit
+tidak berubah.
+
+`letter_response_reviews` adalah keputusan append-only terhadap satu versi.
+M8.2 hanya memakai `RETURNED` dengan alasan wajib. Upload versi lebih baru
+membuat seri siap ditinjau kembali tanpa mengubah review lama.
+
+`outgoing_letters` mulai dibuat sebagai mandat `AUTHORIZED`. Pada M8.2 tabel
+menyimpan surat masuk sumber, dossier, versi sumber, Position penandatangan,
+subjek, eksekutif pemberi otorisasi, dan timestamp. Kolom penomoran, dokumen
+bertanda tangan, verifikasi, serta pengiriman ditambahkan pada M8.3.
+Relasi surat masuk dan dossier disiapkan nullable untuk kompatibilitas surat
+keluar mandiri pada milestone terakhir, tetapi Action M8.2 selalu mewajibkan
+keduanya untuk mandat yang berasal dari balasan surat masuk.
+
+Seluruh foreign key menggunakan `RESTRICT ON DELETE`. Dokumen disimpan pada
+private disk `letter-response-documents` dengan prefix per surat masuk.
+
+---
+
+# 28. Persistence Penerbitan Surat Keluar M8.3
+
+`outgoing_letters` diperluas dengan `outgoing_number`, `agenda_year`,
+`letter_date`, identitas dan Position Assignment Petugas penomoran,
+`numbered_at`, data penarikan mandat, serta
+`corrects_outgoing_letter_id`. Kombinasi `(agenda_year, outgoing_number)` unik.
+Kolom koreksi merupakan self-reference `RESTRICT`; M8 tidak mengizinkan mandat
+tanpa `incoming_letter_id` dan `letter_response_dossier_id`, walaupun keduanya
+tetap nullable untuk workflow surat keluar mandiri di milestone berikutnya.
+
+`outgoing_letter_document_versions` menyimpan PDF final secara immutable:
+`public_id`, mandat, nomor versi, versi yang digantikan, private disk/path,
+filename, MIME, ukuran, SHA-256, catatan upload, uploader, Position Assignment,
+dan `created_at`. Tabel tidak mempunyai `updated_at`. Kombinasi mandat/nomor
+versi dan mandat/SHA-256 bersifat unik.
+
+`outgoing_letter_document_reviews` menyimpan satu keputusan append-only
+`RETURNED` atau `VERIFIED` untuk setiap versi beserta catatan, Kabag Umum,
+Position Assignment, dan waktu. Tabel tidak mempunyai `updated_at` dan versi
+yang telah diputus tidak dapat diubah.
+
+`outgoing_letter_deliveries` menyimpan tepat satu bukti pengiriman per mandat:
+metode, penerima manual, nomor pelacakan, catatan, Petugas, Position Assignment,
+waktu penyerahan, dan waktu pencatatan. Pengiriman online menggunakan metode
+`PORTAL`; surat manual menggunakan `IN_PERSON`, `POSTAL`, `COURIER`, atau
+`OTHER`. Record bersifat append-only tanpa `updated_at`.
+
+`letter_response_dossiers` memperoleh `fulfilled_at`,
+`fulfilled_by_user_id`, dan `fulfilled_by_position_assignment_id`. Ketiganya
+hanya diisi bersamaan pada transition `FINALIZED -> FULFILLED` setelah seluruh
+mandat non-`WITHDRAWN` selesai dikirim.
+
+Seluruh foreign key memakai `RESTRICT ON DELETE`. Berkas surat keluar disimpan
+pada private disk `outgoing-letter-documents` dengan prefix
+`letters/{incomingLetterId}/mandates/{outgoingLetterId}/`. Disk dan path privat
+tidak boleh dikirim ke Vue atau portal publik.
