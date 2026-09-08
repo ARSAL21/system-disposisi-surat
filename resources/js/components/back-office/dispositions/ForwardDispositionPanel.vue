@@ -54,6 +54,11 @@ const availableSectionHeads = computed(() =>
             position.holder_name,
     ),
 );
+const allSectionHeads = computed(() =>
+    props.positions.filter(
+        (position) => position.level_code === 'SECTION_HEAD',
+    ),
+);
 const searchTerm = computed(() =>
     search.value.trim().toLocaleLowerCase('id-ID'),
 );
@@ -390,6 +395,8 @@ function confirmDisposition(): void {
                                 :class="
                                     isRecipientSelected(position.id)
                                         ? 'border-violet-500 bg-violet-50/80 shadow-sm dark:border-violet-700 dark:bg-violet-950/30'
+                                        : position.assigned_by_name
+                                          ? 'border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20'
                                         : 'border-border hover:border-violet-300 hover:bg-violet-50/40 dark:hover:border-violet-800 dark:hover:bg-violet-950/15'
                                 "
                             >
@@ -401,6 +408,8 @@ function confirmDisposition(): void {
                                     :disabled="
                                         !canForward ||
                                         Boolean(processing) ||
+                                        !position.is_available ||
+                                        Boolean(position.assigned_by_name) ||
                                         (!isRecipientSelected(position.id) &&
                                             remainingRecipientSlots === 0)
                                     "
@@ -430,7 +439,14 @@ function confirmDisposition(): void {
                                     <span
                                         class="mt-1 block text-xs leading-5 text-muted-foreground"
                                     >
-                                        {{ position.holder_name }}
+                                        {{ position.holder_name ?? 'Belum ada pejabat aktif' }}
+                                    </span>
+                                    <span
+                                        v-if="position.assigned_by_name"
+                                        class="mt-1 block text-xs leading-5 font-medium text-amber-700 dark:text-amber-300"
+                                    >
+                                        Sudah ditugaskan oleh
+                                        {{ position.assigned_by_name }}
                                     </span>
                                 </span>
                             </label>
@@ -438,14 +454,14 @@ function confirmDisposition(): void {
                     </section>
 
                     <Alert
-                        v-if="availableSectionHeads.length === 0"
-                        variant="destructive"
+                        v-if="allSectionHeads.length > 0 && availableSectionHeads.length === 0"
+                        variant="default"
                     >
                         <CircleHelp class="size-4" aria-hidden="true" />
-                        <AlertTitle>Kepala Bagian belum tersedia</AlertTitle>
+                        <AlertTitle>Semua pilihan sudah terpakai</AlertTitle>
                         <AlertDescription>
-                            Belum ada jabatan Kepala Bagian dengan satu pejabat
-                            aktif yang dapat menerima disposisi.
+                            Periksa keterangan pada setiap kartu untuk mengetahui
+                            Asisten yang sudah menugaskan Kepala Bagian tersebut.
                         </AlertDescription>
                     </Alert>
 
@@ -465,8 +481,8 @@ function confirmDisposition(): void {
                     class="mt-3 text-xs leading-5 text-muted-foreground"
                 >
                     Maksimal {{ maximumRecipients }} penerima dalam satu
-                    tindakan. Penerima yang dipilih akan memperoleh branch kerja
-                    independen pada tahap berikutnya.
+                    tindakan. Kepala Bagian yang sudah ditugaskan pada surat ini
+                    tidak dapat dipilih kembali oleh Asisten lain.
                 </p>
                 <div
                     id="recipient-selection-error"

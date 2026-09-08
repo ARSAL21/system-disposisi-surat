@@ -321,6 +321,12 @@ onBeforeUnmount(() => {
                 <AlertDescription>{{ successNotice }}</AlertDescription>
             </Alert>
 
+            <Alert v-if="errors.workflow" variant="destructive">
+                <FileWarning class="size-4" aria-hidden="true" />
+                <AlertTitle>Tindakan belum dapat diproses</AlertTitle>
+                <AlertDescription>{{ errors.workflow }}</AlertDescription>
+            </Alert>
+
             <div
                 class="grid items-start gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.85fr)]"
             >
