@@ -9,6 +9,8 @@ export * from './intake-dashboard';
 export * from './incoming-register';
 export * from './letter-activity';
 export * from './letter-routing';
+export * from './letter-response';
+export * from './outgoing-letter';
 export * from './manual-intake';
 export * from './navigation';
 export * from './organization';

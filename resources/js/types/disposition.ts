@@ -17,6 +17,7 @@ export type DispositionPositionOption = {
     unit_name: string | null;
     holder_name: string | null;
     is_available: boolean;
+    assigned_by_name?: string | null;
 };
 
 export type DispositionInstructionLabelOption = {
