@@ -8,6 +8,7 @@ use App\Authorization\AuthorizationCatalog;
 use App\Enums\AuditAction;
 use App\Enums\DispositionRecipientStatus;
 use App\Enums\IncomingLetterStatus;
+use App\Enums\LetterResponseDossierStatus;
 use App\Enums\LetterRouteStatus;
 use App\Enums\PermissionName;
 use App\Enums\SubmissionSource;
@@ -21,19 +22,30 @@ use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
 use App\Models\InstructionLabel;
 use App\Models\LetterDocument;
+use App\Models\LetterResponseDocument;
+use App\Models\LetterResponseDocumentVersion;
+use App\Models\LetterResponseDossier;
+use App\Models\LetterResponseReview;
 use App\Models\LetterRoute;
 use App\Models\LetterSubmission;
 use App\Models\OrganizationalUnit;
+use App\Models\OutgoingLetter;
+use App\Models\OutgoingLetterDelivery;
+use App\Models\OutgoingLetterDocumentReview;
+use App\Models\OutgoingLetterDocumentVersion;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\PositionLevel;
 use App\Models\SenderOrganization;
 use App\Models\SubmissionDocument;
 use App\Models\User;
+use App\Notifications\OfficialResponseAvailable;
 use App\Organization\OrganizationCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -47,6 +59,8 @@ beforeEach(function (): void {
     Date::setTestNow('2026-09-01 02:00:00');
     Storage::fake('submission-documents');
     Storage::fake('letter-documents');
+    Storage::fake('letter-response-documents');
+    Storage::fake('outgoing-letter-documents');
 });
 
 afterEach(function (): void {
@@ -1046,6 +1060,198 @@ test('multiple-recipient forwarding preserves permission, position, and target b
         ->and(AuditLog::query()->where('action', AuditAction::DispositionCreated->value)->count())->toBe(1);
 });
 
+test('a section head can only belong to one assistant branch on the same letter', function (): void {
+    $executive = m6Actor(
+        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+        'Sekretaris Daerah',
+        [PermissionName::CreateDispositions],
+    );
+    $firstAssistant = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten I',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $secondAssistant = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten II',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $sectionHead = m6Actor(
+        OrganizationCatalog::SECTION_HEAD_LEVEL,
+        'Kepala Bagian Ekonomi',
+        [PermissionName::ViewDispositions],
+    );
+    $fixture = m6RoutedLetter($executive, 'Koordinasi ekonomi lintas Asisten');
+    $label = InstructionLabel::query()->firstOrFail();
+    $initialDisposition = app(CreateInitialDisposition::class)->execute(
+        $executive['user'],
+        $fixture['route'],
+        [$firstAssistant['position']->getKey(), $secondAssistant['position']->getKey()],
+        [$label->getKey()],
+        'Pelajari dan teruskan kepada Bagian yang paling relevan.',
+    );
+    $assistantRecipients = $initialDisposition->recipients()
+        ->get()
+        ->keyBy('recipient_position_id');
+    $firstRecipient = $assistantRecipients->get($firstAssistant['position']->getKey());
+    $secondRecipient = $assistantRecipients->get($secondAssistant['position']->getKey());
+
+    if (! $firstRecipient instanceof DispositionRecipient
+        || ! $secondRecipient instanceof DispositionRecipient) {
+        throw new RuntimeException('Fixture penerima Asisten tidak lengkap.');
+    }
+
+    $this->actingAs($firstAssistant['user'])
+        ->post(route('back-office.dispositions.inbox.forward.store', $firstRecipient), [
+            'recipient_position_ids' => [$sectionHead['position']->getKey()],
+            'instruction_label_ids' => [$label->getKey()],
+            'instruction_note' => 'Siapkan telaahan teknis bidang ekonomi.',
+        ])
+        ->assertRedirect();
+
+    $this->actingAs($secondAssistant['user'])
+        ->get(route('back-office.dispositions.inbox.show', $secondRecipient))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('capabilities.can_forward_disposition', true)
+            ->where('sectionHeadPositions', fn ($positions): bool => collect($positions)
+                ->where('id', $sectionHead['position']->getKey())
+                ->where('assigned_by_name', 'Asisten I')
+                ->where('is_available', true)
+                ->isNotEmpty()));
+
+    $this->actingAs($secondAssistant['user'])
+        ->from(route('back-office.dispositions.inbox.show', $secondRecipient))
+        ->post(route('back-office.dispositions.inbox.forward.store', $secondRecipient), [
+            'recipient_position_ids' => [$sectionHead['position']->getKey()],
+            'instruction_label_ids' => [$label->getKey()],
+            'instruction_note' => 'Crafted request tidak boleh melewati validasi server.',
+        ])
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $secondRecipient))
+        ->assertSessionHasErrors('recipient_position_ids');
+
+    expect(Disposition::query()->whereNotNull('parent_recipient_id')->count())->toBe(1)
+        ->and(DispositionRecipient::query()
+            ->where('recipient_position_id', $sectionHead['position']->getKey())
+            ->count())->toBe(1)
+        ->and($secondRecipient->refresh()->status)->toBe(DispositionRecipientStatus::Pending);
+});
+
+test('historical duplicate section head branches can still complete with separate technical materials', function (): void {
+    $executive = m6Actor(
+        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+        'Sekretaris Daerah',
+        [PermissionName::CreateDispositions],
+    );
+    $firstAssistant = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten I',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $secondAssistant = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten II',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $sectionHead = m6Actor(
+        OrganizationCatalog::SECTION_HEAD_LEVEL,
+        'Kepala Bagian Ekonomi',
+        [PermissionName::ViewDispositions, PermissionName::ProcessDispositions],
+    );
+    $fixture = m6RoutedLetter($executive, 'Surat lama dengan penerima Bagian ganda');
+    $label = InstructionLabel::query()->firstOrFail();
+    $initialDisposition = app(CreateInitialDisposition::class)->execute(
+        $executive['user'],
+        $fixture['route'],
+        [$firstAssistant['position']->getKey(), $secondAssistant['position']->getKey()],
+        [$label->getKey()],
+        null,
+    );
+    $assistantRecipients = $initialDisposition->recipients()
+        ->get()
+        ->keyBy('recipient_position_id');
+    $firstAssistantRecipient = $assistantRecipients->get($firstAssistant['position']->getKey());
+    $secondAssistantRecipient = $assistantRecipients->get($secondAssistant['position']->getKey());
+
+    if (! $firstAssistantRecipient instanceof DispositionRecipient
+        || ! $secondAssistantRecipient instanceof DispositionRecipient) {
+        throw new RuntimeException('Fixture penerima Asisten tidak lengkap.');
+    }
+
+    $firstChildDisposition = app(ForwardDisposition::class)->execute(
+        $firstAssistant['user'],
+        $firstAssistantRecipient,
+        [$sectionHead['position']->getKey()],
+        [$label->getKey()],
+        'Cabang pertama yang sudah tercatat sebelum invariant diperketat.',
+    );
+    $firstBranch = $firstChildDisposition->recipients()->firstOrFail();
+
+    $historicalDisposition = new Disposition;
+    $historicalDisposition->incoming_letter_id = $fixture['letter']->getKey();
+    $historicalDisposition->source_route_id = null;
+    $historicalDisposition->parent_recipient_id = $secondAssistantRecipient->getKey();
+    $historicalDisposition->created_by_user_id = $secondAssistant['user']->getKey();
+    $historicalDisposition->created_by_position_assignment_id = $secondAssistant['assignment']->getKey();
+    $historicalDisposition->instruction_note = 'Data historis sebelum validasi recipient lintas Asisten tersedia.';
+    $historicalDisposition->created_at = now();
+    $historicalDisposition->save();
+    $historicalDisposition->instructionLabels()->attach([$label->getKey()]);
+
+    $historicalBranch = new DispositionRecipient;
+    $historicalBranch->disposition_id = $historicalDisposition->getKey();
+    $historicalBranch->recipient_position_id = $sectionHead['position']->getKey();
+    $historicalBranch->status = DispositionRecipientStatus::Pending;
+    $historicalBranch->received_at = now();
+    $historicalBranch->started_at = null;
+    $historicalBranch->completed_at = null;
+    $historicalBranch->completed_by_user_id = null;
+    $historicalBranch->completed_by_position_assignment_id = null;
+    $historicalBranch->completion_note = null;
+    $historicalBranch->save();
+
+    $secondAssistantRecipient->status = DispositionRecipientStatus::Completed;
+    $secondAssistantRecipient->completed_at = now();
+    $secondAssistantRecipient->completed_by_user_id = $secondAssistant['user']->getKey();
+    $secondAssistantRecipient->completed_by_position_assignment_id = $secondAssistant['assignment']->getKey();
+    $secondAssistantRecipient->completion_note = null;
+    $secondAssistantRecipient->save();
+
+    $this->actingAs($sectionHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $firstBranch), [
+            'completion_note' => 'Tindak lanjut cabang Asisten pertama sudah diselesaikan.',
+            'technical_document' => UploadedFile::fake()->createWithContent(
+                'bahan-asisten-satu.pdf',
+                "%PDF-1.4\nBahan teknis cabang Asisten pertama.\n%%EOF",
+            ),
+            'technical_document_note' => 'Bahan teknis khusus cabang Asisten pertama.',
+        ])
+        ->assertRedirect();
+    $this->actingAs($sectionHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $historicalBranch), [
+            'completion_note' => 'Tindak lanjut cabang Asisten kedua sudah diselesaikan.',
+            'technical_document' => UploadedFile::fake()->createWithContent(
+                'bahan-asisten-dua.pdf',
+                "%PDF-1.4\nBahan teknis cabang Asisten kedua yang berbeda.\n%%EOF",
+            ),
+            'technical_document_note' => 'Bahan teknis khusus cabang Asisten kedua.',
+        ])
+        ->assertRedirect();
+
+    $documents = LetterResponseDocument::query()
+        ->where('owner_position_id', $sectionHead['position']->getKey())
+        ->orderBy('source_recipient_id')
+        ->get();
+
+    expect($documents)->toHaveCount(2)
+        ->and($documents->pluck('source_recipient_id')->all())->toEqualCanonicalizing([
+            $firstBranch->getKey(),
+            $historicalBranch->getKey(),
+        ])
+        ->and(LetterResponseDocumentVersion::query()->count())->toBe(2)
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::Completed);
+});
+
 test('multiple-recipient forwarding rejects invalid targets and labels without partial state changes', function (): void {
     $executive = m6Actor(
         OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
@@ -1544,6 +1750,14 @@ test('branch lifecycle rejects invalid input stale states and mutations after co
         ->assertUnprocessable()
         ->assertJsonValidationErrors('completion_note');
     $this->actingAs($head['user'])
+        ->withHeader('X-Inertia', 'true')
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Pendek',
+        ])
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $branch))
+        ->assertSessionHasErrors('completion_note');
+    $this->flushHeaders();
+    $this->actingAs($head['user'])
         ->postJson(route('back-office.dispositions.inbox.branch.complete', $branch), [
             'completion_note' => str_repeat('a', 2001),
         ])
@@ -1556,6 +1770,13 @@ test('branch lifecycle rejects invalid input stale states and mutations after co
     $this->actingAs($head['user'])
         ->postJson(route('back-office.dispositions.inbox.branch.start', $branch))
         ->assertConflict();
+    $this->actingAs($head['user'])
+        ->from(route('back-office.dispositions.inbox.show', $branch))
+        ->withHeader('X-Inertia', 'true')
+        ->post(route('back-office.dispositions.inbox.branch.start', $branch))
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $branch))
+        ->assertSessionHasErrors('workflow');
+    $this->flushHeaders();
     $this->actingAs($head['user'])
         ->postJson(route('back-office.dispositions.inbox.branch.follow-ups.store', $branch), [
             'note' => 'Terlalu',
@@ -1723,4 +1944,513 @@ test('executive inbox fails closed for inconsistent route and branch graphs', fu
         ->getJson(route('back-office.executive.inbox.index', ['progress' => 'UNKNOWN']))
         ->assertUnprocessable()
         ->assertJsonValidationErrors('progress');
+});
+
+test('response dossier supports immutable materials proposal revision mandate and finalization', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    [$firstBranch, $secondBranch] = $fixture['branches'];
+    [$firstHead, $secondHead] = $fixture['heads'];
+
+    m6Grant($firstHead['user'], PermissionName::ViewLetterResponses, PermissionName::ContributeLetterResponses);
+    m6Grant($secondHead['user'], PermissionName::ViewLetterResponses, PermissionName::ContributeLetterResponses);
+    m6Grant(
+        $fixture['assistant']['user'],
+        PermissionName::ViewLetterResponses,
+        PermissionName::ContributeLetterResponses,
+        PermissionName::ReviewLetterResponses,
+    );
+    m6Grant(
+        $fixture['executive']['user'],
+        PermissionName::ViewLetterResponses,
+        PermissionName::ContributeLetterResponses,
+        PermissionName::ReviewLetterResponses,
+        PermissionName::AuthorizeLetterResponses,
+    );
+
+    $this->actingAs($firstHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $firstBranch), [
+            'completion_note' => 'Cabang pertama selesai dengan bahan telaah teknis terlampir.',
+            'technical_document' => UploadedFile::fake()->create('bahan-teknis.pdf', 64, 'application/pdf'),
+            'technical_document_note' => 'Telaah teknis final dari Kepala Bagian terkait.',
+        ])
+        ->assertRedirect();
+
+    $dossier = LetterResponseDossier::query()->firstOrFail();
+    $technicalVersion = LetterResponseDocumentVersion::query()->firstOrFail();
+
+    expect($dossier->incoming_letter_id)->toBe($fixture['letter']->getKey())
+        ->and($technicalVersion->version_number)->toBe(1)
+        ->and($technicalVersion->storage_disk)->toBe('letter-response-documents')
+        ->and($technicalVersion->storage_path)->toStartWith('letters/'.$fixture['letter']->getKey().'/')
+        ->and(Storage::disk('letter-response-documents')->exists($technicalVersion->storage_path))->toBeTrue()
+        ->and(AuditLog::query()->where('action', AuditAction::LetterResponseDossierOpened->value)->count())->toBe(1);
+
+    $this->actingAs($secondHead['user'])
+        ->get(route('back-office.letter-responses.documents.preview', [$dossier, $technicalVersion]))
+        ->assertNotFound();
+
+    $this->actingAs($secondHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $secondBranch), [
+            'completion_note' => 'Cabang kedua selesai dan hasil akhirnya siap dikonsolidasikan.',
+        ])
+        ->assertRedirect();
+
+    expect(LetterResponseDossier::query()->count())->toBe(1)
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::Completed);
+
+    $this->actingAs($fixture['assistant']['user'])
+        ->post(route('back-office.letter-responses.proposals.store', [$dossier, $fixture['assistant_recipient']]), [
+            'document' => UploadedFile::fake()->create('proposal-asisten.pdf', 64, 'application/pdf'),
+            'revision_note' => 'Proposal awal berdasarkan seluruh bahan Kepala Bagian.',
+        ])
+        ->assertRedirect(route('back-office.letter-responses.show', $dossier));
+
+    $proposal = LetterResponseDocumentVersion::query()->orderByDesc('id')->firstOrFail();
+
+    expect(DB::table('letter_response_document_sources')
+        ->where('target_version_id', $proposal->getKey())
+        ->where('source_version_id', $technicalVersion->getKey())
+        ->exists())->toBeTrue();
+
+    $this->actingAs($fixture['executive']['user'])
+        ->post(route('back-office.letter-responses.documents.return', [$dossier, $proposal->document]), [
+            'reason' => 'Gabungkan rekomendasi cabang kedua dan perjelas dasar tindak lanjut.',
+        ])
+        ->assertRedirect(route('back-office.letter-responses.show', $dossier));
+
+    expect(LetterResponseReview::query()->count())->toBe(1);
+
+    $this->actingAs($fixture['assistant']['user'])
+        ->post(route('back-office.letter-responses.documents.versions.store', [$dossier, $proposal->document]), [
+            'document' => UploadedFile::fake()->createWithContent(
+                'proposal-asisten-revisi.pdf',
+                '%PDF-1.4 proposal revision with additional substance',
+            ),
+            'revision_note' => 'Revisi menggabungkan seluruh rekomendasi teknis yang diminta.',
+        ])
+        ->assertRedirect(route('back-office.letter-responses.show', $dossier));
+
+    $revisedProposal = LetterResponseDocumentVersion::query()
+        ->where('letter_response_document_id', $proposal->letter_response_document_id)
+        ->orderByDesc('version_number')
+        ->firstOrFail();
+
+    expect($revisedProposal->version_number)->toBe(2)
+        ->and($revisedProposal->replaces_version_id)->toBe($proposal->getKey())
+        ->and(DB::table('letter_response_document_sources')
+            ->where('target_version_id', $revisedProposal->getKey())
+            ->where('source_version_id', $technicalVersion->getKey())
+            ->exists())->toBeTrue();
+
+    $this->actingAs($fixture['executive']['user'])
+        ->post(route('back-office.letter-responses.mandates.store', $dossier), [
+            'source_version_public_id' => $revisedProposal->public_id,
+            'signatory_position_code' => $fixture['executive']['position']->code,
+            'subject' => 'Balasan resmi hasil tindak lanjut surat masuk',
+        ])
+        ->assertRedirect(route('back-office.letter-responses.show', $dossier));
+
+    $mandate = OutgoingLetter::query()->firstOrFail();
+    expect($mandate->source_document_version_id)->toBe($revisedProposal->getKey())
+        ->and($mandate->signatory_position_id)->toBe($fixture['executive']['position']->getKey());
+
+    $this->actingAs($fixture['executive']['user'])
+        ->post(route('back-office.letter-responses.finalize', $dossier))
+        ->assertRedirect(route('back-office.letter-responses.show', $dossier));
+
+    expect($dossier->refresh()->status->value)->toBe('FINALIZED')
+        ->and(AuditLog::query()->where('action', AuditAction::LetterResponseDocumentReturned->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::LetterResponseMandateAuthorized->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::LetterResponseDossierFinalized->value)->count())->toBe(1);
+
+    $this->actingAs($fixture['executive']['user'])
+        ->get(route('back-office.letter-responses.show', $dossier))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.capabilities.can_view_letter_responses', true)
+            ->where('auth.capabilities.can_contribute_letter_responses', true)
+            ->where('auth.capabilities.can_review_letter_responses', true)
+            ->where('auth.capabilities.can_authorize_letter_responses', true)
+            ->where('dossier.status', 'FINALIZED')
+            ->has('dossier.mandates', 1)
+            ->missing('dossier.assistants.0.children.0.material.current_version.storage_disk')
+            ->missing('dossier.assistants.0.children.0.material.current_version.storage_path')
+            ->missing('dossier.assistants.0.children.0.material.current_version.uploaded_by.email'));
+});
+
+test('response dossier distinguishes permission denial from position and resource boundaries', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $branch = $fixture['branches'][0];
+    $owner = $fixture['heads'][0];
+
+    $this->actingAs($owner['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $branch), [
+            'completion_note' => 'Penyelesaian membuka dossier untuk pengujian batas akses.',
+        ])
+        ->assertRedirect();
+    $dossier = LetterResponseDossier::query()->firstOrFail();
+
+    $this->actingAs($owner['user'])
+        ->get(route('back-office.letter-responses.index'))
+        ->assertForbidden();
+
+    $unrelated = m6Actor(
+        OrganizationCatalog::SECTION_HEAD_LEVEL,
+        'Kepala Bagian Tidak Terkait',
+        [PermissionName::ViewLetterResponses],
+    );
+    $this->actingAs($unrelated['user'])
+        ->get(route('back-office.letter-responses.show', $dossier))
+        ->assertNotFound();
+
+    $technicalAdministrator = User::factory()->internal()->withTwoFactor()->create();
+    m6Grant($technicalAdministrator, ...PermissionName::cases());
+    $this->actingAs($technicalAdministrator)
+        ->get(route('back-office.letter-responses.index'))
+        ->assertNotFound();
+});
+
+test('outgoing letter publication runs from numbering through secure public delivery', function (): void {
+    Notification::fake();
+    $fixture = m6IndependentBranchFixture();
+    [$firstBranch, $secondBranch] = $fixture['branches'];
+    [$firstHead, $secondHead] = $fixture['heads'];
+    m6Grant($firstHead['user'], PermissionName::ViewLetterResponses, PermissionName::ContributeLetterResponses);
+    m6Grant($secondHead['user'], PermissionName::ViewLetterResponses, PermissionName::ContributeLetterResponses);
+    m6Grant(
+        $fixture['assistant']['user'],
+        PermissionName::ViewLetterResponses,
+        PermissionName::ContributeLetterResponses,
+        PermissionName::ViewOutgoingRegister,
+    );
+    m6Grant(
+        $fixture['executive']['user'],
+        PermissionName::ViewLetterResponses,
+        PermissionName::ContributeLetterResponses,
+        PermissionName::AuthorizeLetterResponses,
+        PermissionName::ViewOutgoingRegister,
+    );
+
+    $this->actingAs($firstHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $firstBranch), [
+            'completion_note' => 'Cabang teknis pertama telah selesai dan menyertakan bahan balasan.',
+            'technical_document' => UploadedFile::fake()->create('bahan-teknis.pdf', 32, 'application/pdf'),
+            'technical_document_note' => 'Bahan teknis untuk penyusunan proposal balasan resmi.',
+        ])
+        ->assertRedirect();
+    $this->actingAs($secondHead['user'])
+        ->post(route('back-office.dispositions.inbox.branch.complete', $secondBranch), [
+            'completion_note' => 'Cabang teknis kedua telah selesai dan siap dirangkum oleh Asisten.',
+        ])
+        ->assertRedirect();
+
+    $dossier = LetterResponseDossier::query()->firstOrFail();
+    $this->actingAs($fixture['assistant']['user'])
+        ->post(route('back-office.letter-responses.proposals.store', [$dossier, $fixture['assistant_recipient']]), [
+            'document' => UploadedFile::fake()->create('proposal-balasan.pdf', 32, 'application/pdf'),
+            'revision_note' => 'Proposal final berdasarkan hasil seluruh cabang teknis terkait.',
+        ])
+        ->assertRedirect();
+    $proposal = LetterResponseDocumentVersion::query()->orderByDesc('id')->firstOrFail();
+    $this->actingAs($fixture['executive']['user'])
+        ->post(route('back-office.letter-responses.mandates.store', $dossier), [
+            'source_version_public_id' => $proposal->public_id,
+            'signatory_position_code' => $fixture['executive']['position']->code,
+            'subject' => 'Balasan resmi atas permohonan koordinasi program',
+        ])
+        ->assertRedirect();
+    $this->actingAs($fixture['executive']['user'])
+        ->post(route('back-office.letter-responses.mandates.store', $dossier), [
+            'source_version_public_id' => $proposal->public_id,
+            'signatory_position_code' => $fixture['executive']['position']->code,
+            'subject' => 'Tembusan resmi hasil koordinasi program',
+        ])
+        ->assertRedirect();
+    $outgoing = OutgoingLetter::query()->orderBy('id')->firstOrFail();
+    $withdrawnMandate = OutgoingLetter::query()->orderByDesc('id')->firstOrFail();
+    $this->actingAs($fixture['executive']['user'])
+        ->post(route('back-office.letter-responses.finalize', $dossier))
+        ->assertRedirect();
+
+    $officer = User::factory()->internal()->create();
+    m6Grant(
+        $officer,
+        PermissionName::ViewOutgoingRegister,
+        PermissionName::NumberOutgoingLetters,
+        PermissionName::DeliverOutgoingLetters,
+    );
+    $officerPosition = m6Position(
+        OrganizationCatalog::GENERAL_AFFAIRS_LEVEL,
+        'Petugas Register Surat Keluar',
+        OrganizationCatalog::GENERAL_AFFAIRS_UNIT,
+    );
+    m6Assignment($officer, $officerPosition);
+    $generalAffairsHead = User::factory()->internal()->create();
+    m6Grant(
+        $generalAffairsHead,
+        PermissionName::ViewOutgoingRegister,
+        PermissionName::VerifyOutgoingLetters,
+    );
+    $generalAffairsHeadPosition = m6Position(
+        OrganizationCatalog::SECTION_HEAD_LEVEL,
+        'Kepala Bagian Umum Verifikator',
+        OrganizationCatalog::GENERAL_AFFAIRS_UNIT,
+    );
+    m6Assignment($generalAffairsHead, $generalAffairsHeadPosition);
+
+    DB::beginTransaction();
+    try {
+        $this->actingAs($fixture['executive']['user'])
+            ->post(route('back-office.outgoing-letters.withdraw', $withdrawnMandate), [
+                'withdrawal_reason' => 'Mandat kedua ditarik untuk menguji batas mandat aktif terakhir.',
+            ])
+            ->assertRedirect();
+        $this->actingAs($fixture['executive']['user'])
+            ->postJson(route('back-office.outgoing-letters.withdraw', $outgoing), [
+                'withdrawal_reason' => 'Mandat aktif terakhir tidak boleh ikut ditarik setelah finalisasi.',
+            ])
+            ->assertConflict();
+    } finally {
+        DB::rollBack();
+        $outgoing->refresh();
+        $withdrawnMandate->refresh();
+    }
+
+    $this->actingAs($officer)
+        ->post(route('back-office.outgoing-letters.assign-number', $outgoing), [
+            'outgoing_number' => '005/1201/SETDA/2026',
+            'letter_date' => '2026-09-01',
+        ])
+        ->assertRedirect();
+
+    expect($outgoing->refresh()->status->value)->toBe('NUMBER_ASSIGNED')
+        ->and($outgoing->agenda_year)->toBe(2026);
+
+    $this->actingAs($officer)
+        ->postJson(route('back-office.outgoing-letters.assign-number', $outgoing), [
+            'outgoing_number' => '005/9999/SETDA/2026',
+            'letter_date' => '2026-09-01',
+        ])
+        ->assertConflict();
+    $this->actingAs($officer)
+        ->postJson(route('back-office.outgoing-letters.assign-number', $withdrawnMandate), [
+            'outgoing_number' => '005/1201/SETDA/2026',
+            'letter_date' => '2026-09-01',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('outgoing_number');
+    $this->actingAs($fixture['executive']['user'])
+        ->post(route('back-office.outgoing-letters.withdraw', $withdrawnMandate), [
+            'withdrawal_reason' => 'Mandat tembusan tidak lagi diperlukan setelah konsolidasi akhir.',
+        ])
+        ->assertRedirect();
+
+    expect($withdrawnMandate->refresh()->status->value)->toBe('WITHDRAWN');
+
+    $this->actingAs($fixture['assistant']['user'])
+        ->post(route('back-office.outgoing-letters.documents.store', $outgoing), [
+            'signed_document' => UploadedFile::fake()->create('balasan-ditandatangani.pdf', 48, 'application/pdf'),
+            'upload_note' => 'PDF final sudah bernomor dan ditandatangani di luar sistem.',
+        ])
+        ->assertRedirect();
+    $finalVersion = OutgoingLetterDocumentVersion::query()->firstOrFail();
+
+    expect($outgoing->refresh()->status->value)->toBe('SIGNED_DOCUMENT_UPLOADED')
+        ->and($finalVersion->version_number)->toBe(1)
+        ->and($finalVersion->storage_path)->toStartWith(
+            'letters/'.$fixture['letter']->getKey().'/mandates/'.$outgoing->getKey().'/',
+        )
+        ->and(Storage::disk('outgoing-letter-documents')->exists($finalVersion->storage_path))->toBeTrue();
+
+    $this->actingAs($generalAffairsHead)
+        ->post(route('back-office.outgoing-letters.return-document', $outgoing), [
+            'revision_reason' => 'Halaman tanda tangan belum terbaca jelas pada dokumen final.',
+        ])
+        ->assertRedirect();
+    $this->actingAs($generalAffairsHead)
+        ->postJson(route('back-office.outgoing-letters.verify', $outgoing))
+        ->assertConflict();
+    $this->actingAs($fixture['assistant']['user'])
+        ->post(route('back-office.outgoing-letters.documents.store', $outgoing), [
+            'signed_document' => UploadedFile::fake()->createWithContent(
+                'balasan-ditandatangani-revisi.pdf',
+                "%PDF-1.4\nDokumen final revisi dengan halaman tanda tangan yang telah diperjelas.\n%%EOF",
+            ),
+            'upload_note' => 'Versi perbaikan memuat halaman tanda tangan yang terbaca jelas.',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+    $revisedFinalVersion = OutgoingLetterDocumentVersion::query()->orderByDesc('version_number')->firstOrFail();
+
+    expect($revisedFinalVersion->version_number)->toBe(2)
+        ->and($revisedFinalVersion->replaces_version_id)->toBe($finalVersion->getKey())
+        ->and(OutgoingLetterDocumentReview::query()->count())->toBe(1)
+        ->and(Storage::disk('outgoing-letter-documents')->exists($finalVersion->storage_path))->toBeTrue();
+
+    $this->actingAs($generalAffairsHead)
+        ->post(route('back-office.outgoing-letters.verify', $outgoing), [
+            'verification_note' => 'Nomor, tanggal, penandatangan, dan PDF telah sesuai.',
+        ])
+        ->assertRedirect();
+
+    expect($outgoing->refresh()->status->value)->toBe('ADMIN_VERIFIED')
+        ->and(OutgoingLetterDocumentReview::query()->count())->toBe(2);
+
+    $this->actingAs($officer)
+        ->get(route('back-office.outgoing-letters.show', $outgoing))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.capabilities.can_view_outgoing_register', true)
+            ->where('auth.capabilities.can_number_outgoing_letters', true)
+            ->where('auth.capabilities.can_verify_outgoing_letters', false)
+            ->where('auth.capabilities.can_deliver_outgoing_letters', true)
+            ->where('outgoingLetter.status', 'ADMIN_VERIFIED')
+            ->where('outgoingLetter.capabilities.can_deliver', true)
+            ->missing('outgoingLetter.documents.0.storage_disk')
+            ->missing('outgoingLetter.documents.0.storage_path')
+            ->missing('outgoingLetter.documents.0.uploaded_by_email'));
+    $this->actingAs($officer)
+        ->get(route('back-office.outgoing-letters.documents.preview', [$outgoing, $revisedFinalVersion]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
+    $this->actingAs($officer)
+        ->get(route('back-office.outgoing-letters.documents.download', [$withdrawnMandate, $revisedFinalVersion]))
+        ->assertNotFound();
+
+    $submissionId = $fixture['letter']->submission()->value('id');
+    DB::beginTransaction();
+    try {
+        LetterSubmission::query()->whereKey($submissionId)->update([
+            'source' => SubmissionSource::Manual->value,
+        ]);
+        $this->actingAs($officer)
+            ->post(route('back-office.outgoing-letters.deliver', $outgoing))
+            ->assertSessionHasErrors(['delivery_method', 'recipient_name', 'delivered_at']);
+        $this->actingAs($officer)
+            ->post(route('back-office.outgoing-letters.deliver', $outgoing), [
+                'delivery_method' => 'IN_PERSON',
+                'recipient_name' => 'La Ode Penerima Surat',
+                'delivered_at' => '2026-09-01 01:30:00',
+                'delivery_note' => 'Diserahkan langsung dan identitas penerima telah diperiksa.',
+            ])
+            ->assertRedirect();
+
+        $manualDelivery = OutgoingLetterDelivery::query()->firstOrFail();
+        expect($outgoing->refresh()->status->value)->toBe('DELIVERED')
+            ->and($manualDelivery->method->value)->toBe('IN_PERSON')
+            ->and($manualDelivery->recipient_name)->toBe('La Ode Penerima Surat');
+    } finally {
+        DB::rollBack();
+        $outgoing->refresh();
+        $dossier->refresh();
+    }
+
+    $this->actingAs($officer)
+        ->post(route('back-office.outgoing-letters.deliver', $outgoing))
+        ->assertRedirect();
+
+    expect($outgoing->refresh()->status->value)->toBe('DELIVERED')
+        ->and(OutgoingLetterDelivery::query()->count())->toBe(1)
+        ->and($dossier->refresh()->status->value)->toBe('FULFILLED')
+        ->and(AuditLog::query()->where('action', AuditAction::OutgoingLetterNumberAssigned->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::OutgoingLetterDocumentVersionCreated->value)->count())->toBe(2)
+        ->and(AuditLog::query()->where('action', AuditAction::OutgoingLetterDocumentReturned->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::OutgoingLetterAdminVerified->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::OutgoingLetterDelivered->value)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::LetterResponseDossierFulfilled->value)->count())->toBe(1);
+
+    $submission = $fixture['letter']->submission()->with('submitter')->firstOrFail();
+    Notification::assertSentTo($submission->submitter, OfficialResponseAvailable::class);
+    Notification::assertSentTimes(OfficialResponseAvailable::class, 1);
+    Notification::assertCount(1);
+
+    $this->actingAs($submission->submitter)
+        ->get(route('public.submissions.show', $submission))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('responseTracker.status', 'RESPONSE_AVAILABLE')
+            ->has('responseTracker.responses', 1)
+            ->where('responseTracker.responses.0.outgoing_number', '005/1201/SETDA/2026')
+            ->missing('responseTracker.responses.0.storage_disk')
+            ->missing('responseTracker.responses.0.storage_path'));
+    $this->actingAs($submission->submitter)
+        ->get(route('public.submissions.responses.preview', [$submission, $outgoing]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeader('X-Content-Type-Options', 'nosniff');
+    $this->actingAs($submission->submitter)
+        ->get(route('public.submissions.responses.download', [$submission, $outgoing]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+    $otherPublicUser = User::factory()->create();
+    $this->actingAs($otherPublicUser)
+        ->get(route('public.submissions.responses.preview', [$submission, $outgoing]))
+        ->assertNotFound();
+    $this->actingAs($otherPublicUser)
+        ->get(route('public.submissions.responses.download', [$submission, $outgoing]))
+        ->assertNotFound();
+
+    $this->actingAs($officer)
+        ->get(route('back-office.outgoing-letters.index', [
+            'status' => 'DELIVERED',
+            'source' => 'ONLINE',
+            'year' => 2026,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('letters.data', 1)
+            ->where('letters.data.0.public_id', $outgoing->public_id)
+            ->where('summary.total', 2)
+            ->where('summary.delivered_this_month', 1)
+            ->missing('letters.data.0.storage_disk')
+            ->missing('letters.data.0.storage_path'));
+});
+
+test('outgoing register rejects missing permissions and technical administrators without a business position', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $dossier = new LetterResponseDossier;
+    $dossier->incoming_letter_id = $fixture['letter']->getKey();
+    $dossier->status = LetterResponseDossierStatus::Open;
+    $dossier->opened_at = now();
+    $dossier->save();
+
+    $technicalAdministrator = User::factory()->internal()->withTwoFactor()->create();
+    m6Grant($technicalAdministrator, ...PermissionName::cases());
+    $this->actingAs($technicalAdministrator)
+        ->get(route('back-office.outgoing-letters.index'))
+        ->assertNotFound();
+
+    $withoutPermission = $fixture['assistant']['user'];
+    $this->actingAs($withoutPermission)
+        ->get(route('back-office.outgoing-letters.index'))
+        ->assertForbidden();
+
+    expect(OutgoingLetterDocumentVersion::query()->count())->toBe(0)
+        ->and(OutgoingLetterDelivery::query()->count())->toBe(0);
+});
+
+test('disposition branch action endpoints redirect GET requests to the detail page instead of method not allowed', function (): void {
+    $fixture = m6IndependentBranchFixture();
+    $firstBranch = $fixture['branches'][0];
+    $head = $fixture['heads'][0];
+
+    $this->actingAs($head['user'])
+        ->get("/back-office/dispositions/inbox/recipients/{$firstBranch->getKey()}/complete")
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $firstBranch));
+
+    $this->actingAs($head['user'])
+        ->get("/back-office/dispositions/inbox/recipients/{$firstBranch->getKey()}/start")
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $firstBranch));
+
+    $this->actingAs($head['user'])
+        ->get("/back-office/dispositions/inbox/recipients/{$firstBranch->getKey()}/follow-ups")
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $firstBranch));
+
+    $this->actingAs($head['user'])
+        ->get("/back-office/dispositions/inbox/recipients/{$firstBranch->getKey()}/forward")
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $firstBranch));
 });
