@@ -31,7 +31,7 @@ Workflow formal MVP:
 ```text
 Bagian Umum / Tata Usaha
         ↓
-Wali Kota ATAU Sekda
+Sekda (langsung atau melalui arahan formal Wali Kota)
         ↓
 Asisten I / II / III
         ↓
@@ -43,6 +43,10 @@ Bagian Umum menjadi gerbang administratif surat masuk.
 Bagian Umum bertanggung jawab pada intake, metadata, dokumen, dan registrasi surat, tetapi tidak melakukan disposisi substantif.
 
 Disposisi tidak boleh melompati hierarki.
+
+Routing awal memilih satu jalur: **langsung ke Sekda** atau **melalui Wali
+Kota**. Wali Kota hanya dapat memberi arahan formal kepada Sekda; hanya Sekda
+yang dapat membuat disposisi substantif kepada Asisten.
 
 Satu disposisi dapat memiliki beberapa penerima.
 

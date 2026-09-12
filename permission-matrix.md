@@ -1,5 +1,10 @@
 # Permission Matrix
 
+> **Status role aktif.** Role `pimpinan-eksekutif` pada catatan milestone
+> historis telah digantikan oleh `wali-kota` dan `sekda`. Wali Kota memiliki
+> pengawasan dan arahan formal kepada Sekda; Sekda memegang tindakan
+> substantif kepada Asisten, dossier balasan, dan persetujuan akhir mandiri.
+
 Dokumen ini adalah katalog awal RBAC aplikasi. Katalog akan ditambah secara
 bertahap bersama milestone yang benar-benar membutuhkan capability baru.
 
@@ -27,14 +32,16 @@ disinkronkan secara exact melalui `authorization:sync`, tetapi selain
 | --- | --- |
 | `petugas-surat` | `intake.view`, `intake.screen`, `intake.create-manual`, `incoming-register.view`, `letter-activities.view`, `document-versions.view`, `letter-routing.view`, `outgoing-register.view`, `outgoing-letters.number`, `outgoing-letters.deliver` |
 | `kabag-umum` | `intake.view`, `intake.decide`, `incoming-register.view`, `letter-activities.view`, `document-versions.view`, `document-versions.create`, `letter-routing.view`, `letter-routing.create`, `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `outgoing-register.view`, `outgoing-letters.verify` |
-| `pimpinan-eksekutif` | `executive-inbox.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `letter-responses.review`, `letter-responses.authorize`, `outgoing-register.view` |
+| `wali-kota` | `executive-inbox.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `outgoing-register.view`, `standalone-outgoing.view` |
+| `sekda` | `executive-inbox.view`, `dispositions.view`, `dispositions.create`, `document-versions.view`, `letter-activities.view`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `letter-responses.review`, `letter-responses.authorize`, `outgoing-register.view`, `standalone-outgoing.view`, `standalone-outgoing.approve` |
 | `asisten` | `dispositions.view`, `dispositions.create`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `letter-responses.review`, `outgoing-register.view` |
 | `kepala-bagian` | `dispositions.view`, `dispositions.process`, `reports.view`, `reports.export`, `disposition-instructions.view`, `letter-responses.view`, `letter-responses.contribute`, `outgoing-register.view` |
 
 Role adalah capability bundle, bukan identitas jabatan. Wali Kota dan Sekda
-berbagi role `pimpinan-eksekutif`, tetapi resource yang dapat diakses tetap
-dibatasi oleh Position dan Position Assignment masing-masing. Prinsip yang sama
-berlaku untuk tiga Asisten dan seluruh Kepala Bagian.
+memiliki role terpisah: Wali Kota mengawasi dan memberi arahan formal hanya
+kepada Sekda, sedangkan Sekda membuat disposisi substantif, mengelola dossier,
+dan menyetujui surat keluar mandiri. Resource tetap dibatasi oleh Position dan
+Position Assignment masing-masing.
 
 ## Katalog M2.1
 
@@ -138,8 +145,8 @@ authorized query tetap menjadi boundary server-side.
 
 Permission ini dapat diberikan kepada custom role. Permission tidak otomatis
 memberikan akses detail bisnis. Detail hanya diberikan jika account juga
-memiliki Position Assignment aktif sebagai Wali Kota/Sekda pada level
-`EXECUTIVE_ENTRY`, atau sebagai Kepala Bagian Umum pada level `SECTION_HEAD` di
+memiliki Position Assignment aktif sebagai Wali Kota pada level `MAYOR`, Sekda
+pada level `REGIONAL_SECRETARY`, atau sebagai Kepala Bagian Umum pada level `SECTION_HEAD` di
 unit `BAGIAN_UMUM`.
 
 Super-admin tanpa Position bisnis tersebut tetap tidak menerima identitas
@@ -162,7 +169,8 @@ aktif berikut:
 ```text
 GENERAL_AFFAIRS + unit BAGIAN_UMUM
 SECTION_HEAD + unit BAGIAN_UMUM
-EXECUTIVE_ENTRY
+MAYOR
+REGIONAL_SECRETARY
 ```
 
 `document-versions.create` hanya dapat dijalankan oleh Kepala Bagian Umum
@@ -186,22 +194,23 @@ tetapi tetap tidak memberikan global business visibility tanpa Position.
 | Protected Role | Permission | Tujuan |
 | --- | --- | --- |
 | `super-admin` | `letter-routing.view` | Katalog capability untuk membaca antrean surat resmi yang menunggu atau telah memperoleh routing awal. |
-| `super-admin` | `letter-routing.create` | Katalog capability untuk mengarahkan satu surat `REGISTERED` kepada tepat satu Wali Kota atau Sekda. |
+| `super-admin` | `letter-routing.create` | Katalog capability untuk memilih jalur surat `REGISTERED` langsung kepada Sekda atau melalui Wali Kota. |
 | `super-admin` | `executive-inbox.view` | Katalog capability untuk membaca inbox surat pada Position eksekutif aktif pengguna. |
 
 Permission tidak menjadi bypass Position maupun resource. Visibility antrean
 routing memerlukan account `INTERNAL` aktif dan terverifikasi dengan Position
 Assignment aktif sebagai staf `GENERAL_AFFAIRS` atau `SECTION_HEAD` pada unit
 `BAGIAN_UMUM`. Pembuatan routing hanya dapat dilakukan oleh `SECTION_HEAD` pada
-unit tersebut, hanya terhadap surat `REGISTERED`, dan tujuan wajib satu Position
-aktif pada level `EXECUTIVE_ENTRY` yang mempunyai tepat satu pejabat internal
-aktif dan terverifikasi.
+unit tersebut, hanya terhadap surat `REGISTERED`, dan target server wajib
+Position `SEKDA` aktif pada level `REGIONAL_SECRETARY` atau Position `WALI_KOTA`
+aktif pada level `MAYOR`, masing-masing dengan tepat satu pejabat internal aktif
+dan terverifikasi.
 
-Inbox pimpinan hanya menampilkan route `PENDING` dengan
-`recipient_position_id` yang sama dengan Position Assignment aktif pengguna
-pada level `EXECUTIVE_ENTRY`. Wali Kota tidak dapat membaca route milik Sekda,
-dan sebaliknya. Asisten, Kepala Bagian lain, serta super-admin tanpa Position
-bisnis menerima `404`, sekalipun permission katalog dimiliki.
+Inbox pimpinan hanya menampilkan route atau recipient yang sesuai dengan
+Position `MAYOR` atau `REGIONAL_SECRETARY` aktif pengguna. Sekda juga melihat
+recipient yang dibentuk oleh arahan Wali Kota. Asisten, Kepala Bagian lain, dan
+super-admin tanpa Position bisnis menerima `404`, sekalipun permission katalog
+dimiliki.
 
 Capability Inertia berikut hanya bernilai benar jika permission dan Position
 sama-sama terpenuhi:
@@ -225,9 +234,10 @@ permission yang sesuai kepada custom role operasional melalui UI RBAC.
 | `super-admin` | `disposition-instructions.view` | Melihat katalog label instruksi disposisi. |
 | `super-admin` | `disposition-instructions.manage` | Membuat, memperbarui, mengaktifkan, dan menonaktifkan label instruksi dengan MFA serta konfirmasi password terbaru. |
 
-`dispositions.create` selalu mengikuti hierarchy: pemegang Position
-`EXECUTIVE_ENTRY` yang menjadi penerima route hanya dapat memilih satu sampai
-tiga Asisten,
+`dispositions.create` selalu mengikuti hierarchy: Wali Kota hanya dapat
+meneruskan secara formal kepada Sekda; pemegang Position `SEKDA` yang menerima
+route langsung atau recipient dari Wali Kota dapat memilih satu sampai tiga
+Asisten,
 sedangkan Asisten hanya dapat memilih satu atau lebih Position
 `SECTION_HEAD` yang eligible. Position actor atau Position lain yang dipegang
 user actor tidak boleh menjadi tujuan.
@@ -272,9 +282,9 @@ memerlukan `dispositions.process`.
 | `super-admin` | `reports.export` | Katalog capability untuk mengekspor ringkasan dan daftar surat terotorisasi dalam CSV. |
 
 Kedua permission disinkronkan secara exact kepada `super-admin`, `kabag-umum`,
-`pimpinan-eksekutif`, `asisten`, dan `kepala-bagian`. `petugas-surat` tidak
+`wali-kota`, `sekda`, `asisten`, dan `kepala-bagian`. `petugas-surat` tidak
 menerimanya. Permission tidak menjadi global bypass; tanpa Position pada level
-`EXECUTIVE_ENTRY`, `ASSISTANT`, atau `SECTION_HEAD` yang sah, resource laporan
+`MAYOR`, `REGIONAL_SECRETARY`, `ASSISTANT`, atau `SECTION_HEAD` yang sah, resource laporan
 ditolak sebagai `404`.
 
 | Position aktif | Aggregate | Daftar/detail |
@@ -310,9 +320,9 @@ Command tersebut tidak memberikan Role, Permission langsung, atau Position.
 Permission di luar katalog tidak dihapus otomatis, tetapi dilaporkan sebagai
 catalog drift.
 
-`organization:sync-levels` melakukan exact-sync hanya terhadap empat Position
-Level workflow terlindungi: `GENERAL_AFFAIRS`, `EXECUTIVE_ENTRY`, `ASSISTANT`, dan
-`SECTION_HEAD`. Level asing dipertahankan dan dilaporkan sebagai drift. Unit,
+`organization:sync-levels` melakukan exact-sync hanya terhadap enam Position
+Level workflow terlindungi: `MAYOR`, `REGIONAL_SECRETARY`, `GENERAL_AFFAIRS`,
+`ASSISTANT`, `SECTION_HEAD`, dan `UNIT_STAFF`. Level asing dipertahankan dan dilaporkan sebagai drift. Unit,
 Position konkret, dan Position Assignment tidak dibuat atau diubah oleh command
 ini.
 
@@ -355,7 +365,8 @@ database tetap harus dibatasi sebagai infrastructure security boundary.
 | `kabag-umum` | Ya | Ya | - | - |
 | `kepala-bagian` | Ya | Ya | - | - |
 | `asisten` | Ya | Ya | Ya | - |
-| `pimpinan-eksekutif` | Ya | Ya | Ya | Ya |
+| `wali-kota` | Ya, pengawasan read-only | - | - | - |
+| `sekda` | Ya | Ya | Ya | Ya |
 | `super-admin` | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync |
 
 Permission resmi adalah `letter-responses.view`,
@@ -378,7 +389,8 @@ Capability Inertia mengikuti pasangan permission dan Position:
 | `kabag-umum` | Ya, global administratif | - | Ya | - |
 | `kepala-bagian` | Ya, hanya mandat dari kontribusinya | - | - | - |
 | `asisten` | Ya, hanya mandat dari subtree/proposalnya | - | - | - |
-| `pimpinan-eksekutif` | Ya, seluruh mandat surat yang diterimanya | - | - | - |
+| `wali-kota` | Ya, read-only untuk surat dalam pengawasannya | - | - | - |
+| `sekda` | Ya, seluruh mandat surat yang menjadi tanggung jawabnya | - | - | - |
 | `super-admin` | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync |
 
 Permission resminya adalah `outgoing-register.view`,
@@ -392,3 +404,67 @@ Capability Inertia `can_view_outgoing_register`,
 `can_number_outgoing_letters`, `can_verify_outgoing_letters`, dan
 `can_deliver_outgoing_letters` hanya mengendalikan presentasi antarmuka.
 Policy dan authorized query tetap menjadi batas akses produksi.
+
+## Penambahan M10.1â€“M10.3 Persiapan Surat Keluar Mandiri
+
+| Role resmi | Template | Konsep sendiri | Pemeriksaan Kabag/Asisten | Persetujuan akhir |
+| --- | --- | --- | --- | --- |
+| `staf-bagian` | Lihat template unitnya | Buat, ubah, unggah versi, ajukan | - | - |
+| `kepala-bagian` | Kelola template unitnya | Lihat konsep unitnya | Kabag unit sendiri | - |
+| `kabag-umum` | Kelola template Bagian Umum | Lihat konsep Bagian Umum | Kabag Bagian Umum | - |
+| `asisten` | - | Lihat konsep unit anak langsung | Asisten unit anak langsung | - |
+| `wali-kota` | - | - | - | - |
+| `sekda` | - | - | - | Tahap M10.4 |
+| `super-admin` | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync |
+
+Permission resmi: `outgoing-templates.view`, `outgoing-templates.manage`,
+`standalone-outgoing.view`, `standalone-outgoing.create`,
+`standalone-outgoing.review`, dan `standalone-outgoing.approve`. Enam permission
+tersebut tidak menggantikan Position Assignment. Super-admin tanpa Position bisnis
+tetap menerima `404` pada resource kerja.
+
+Capability Inertia: `can_view_outgoing_templates`, `can_manage_outgoing_templates`,
+`can_view_standalone_outgoing`, `can_create_standalone_outgoing`, dan
+`can_review_standalone_outgoing`. Capability hanya mengatur visibilitas UI;
+Policy dan query terotorisasi adalah batas akses produksi.
+
+## Penambahan M10.4-M10.5 Nomor dan Pengesahan Sekda
+
+| Role resmi | Nomor surat mandiri | Pengesahan QR/fisik | Upload scan | Periksa scan | Kirim |
+| --- | --- | --- | --- | --- | --- |
+| `petugas-surat` | Ya, global administratif | - | - | - | - |
+| `kepala-bagian` | - | - | Ya, hanya unit sendiri | Ya, hanya unit sendiri | Ya, unit sendiri |
+| `staf-bagian` | - | - | Ya, hanya unit sendiri | - | Ya, hanya surat yang disusun sendiri |
+| `asisten` | - | - | - | - | - |
+| `wali-kota` | - | - | - | - | - |
+| `sekda` | - | Ya, hanya Position `SEKDA` aktif | - | - | - |
+| `super-admin` | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync | katalog exact-sync |
+
+M10 memakai permission yang telah dikatalogkan pada M10.1-M10.3:
+`outgoing-register.view`, `outgoing-letters.number`, `outgoing-letters.deliver`,
+`standalone-outgoing.create`, `standalone-outgoing.review`, dan
+`standalone-outgoing.approve`. `standalone-outgoing.approve` tidak memberi hak
+kepada Wali Kota atau eksekutif lain: Policy secara eksplisit mensyaratkan
+Position `SEKDA` aktif. Capability `can_approve_standalone_outgoing` hanya
+bernilai benar bila permission dan Position tersebut sama-sama valid.
+
+Pada M10.6 tidak ada permission baru: Policy menggabungkan
+`standalone-outgoing.create` + assignment Staf pemilik, atau
+`standalone-outgoing.review` + assignment Kabag unit asal, untuk pengiriman,
+tautan email, dan pembuatan koreksi. Tautan email tidak diberikan kepada
+tembusan internal; Policy tetap harus meloloskan akses back-office sebelum
+notifikasi tembusan dicatat.
+
+Role `staf-bagian` juga memiliki `outgoing-register.view` agar dapat membuka
+hanya surat mandiri yang ia susun; authorized query tetap membatasi daftar dan
+detail ke unit/draf yang sah.
+
+## Release Gate M10.7
+
+M10.7 tidak menambah permission atau capability. Matrix M10.1-M10.6 tetap
+berlaku bersama Policy resource dan Position Assignment aktif; super-admin
+tanpa Position bisnis tetap tidak memperoleh scope kerja (`404`). Semua route
+mutasi M10 berada di limiter upload atau mutation yang sesuai, sedangkan QR
+verification dan tautan unduh publik memakai limiter berbasis IP. Setelah
+deploy, jalankan `php artisan authorization:sync` untuk memastikan role resmi
+tetap exact-sync dengan katalog yang sudah ada.
