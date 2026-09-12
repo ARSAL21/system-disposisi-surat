@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { Lock } from '@lucide/vue';
+import { toast } from 'vue-sonner';
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -8,6 +10,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { useTwoFactorWalkthrough } from '@/composables/useTwoFactorWalkthrough';
 import type { NavItem } from '@/types';
 
 defineProps<{
@@ -16,6 +19,16 @@ defineProps<{
 }>();
 
 const { isCurrentUrl } = useCurrentUrl();
+const { startTour } = useTwoFactorWalkthrough();
+
+const handleLockedItemClick = (item: NavItem) => {
+    toast.warning(`Menu ${item.title} terkunci.`, {
+        description:
+            item.lockReason ||
+            'Aktifkan Autentikasi Dua Faktor (2FA) terlebih dahulu untuk membuka akses operasional.',
+    });
+    startTour();
+};
 </script>
 
 <template>
@@ -24,6 +37,26 @@ const { isCurrentUrl } = useCurrentUrl();
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
                 <SidebarMenuButton
+                    v-if="item.isLocked"
+                    type="button"
+                    class="group relative flex w-full cursor-pointer items-center justify-between opacity-75 transition-colors hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-300"
+                    :tooltip="`${item.title} (Akses Terkunci: Wajib 2FA)`"
+                    @click="handleLockedItemClick(item)"
+                >
+                    <div class="flex min-w-0 items-center gap-2">
+                        <component
+                            :is="item.icon"
+                            class="size-4 shrink-0 text-muted-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400"
+                        />
+                        <span class="truncate">{{ item.title }}</span>
+                    </div>
+                    <Lock
+                        class="size-3.5 shrink-0 text-amber-500/80 transition-transform group-hover:scale-110"
+                    />
+                </SidebarMenuButton>
+
+                <SidebarMenuButton
+                    v-else
                     as-child
                     :is-active="item.isActive ?? isCurrentUrl(item.href)"
                     :tooltip="item.title"

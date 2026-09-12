@@ -22,7 +22,7 @@ class StoreLetterRouteController extends Controller
         $routeIncomingLetter->execute(
             actor: $actor,
             incomingLetter: $incomingLetter,
-            targetPositionId: $request->targetPositionId(),
+            routePath: $request->routePath(),
         );
 
         return to_route('back-office.letter-routing.show', $incomingLetter)

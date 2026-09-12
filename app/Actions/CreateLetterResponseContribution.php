@@ -6,9 +6,9 @@ use App\Enums\DispositionRecipientStatus;
 use App\Enums\IncomingLetterStatus;
 use App\Enums\LetterResponseDocumentKind;
 use App\Enums\LetterResponseDossierStatus;
-use App\Exceptions\DispositionStateConflict;
 use App\Exceptions\LetterResponseStateConflict;
 use App\LetterResponses\LetterResponseDocumentVersionWriter;
+use App\LetterResponses\LetterResponseSekdaPositionResolver;
 use App\LetterResponses\StoredLetterResponseDocument;
 use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
@@ -31,6 +31,7 @@ final class CreateLetterResponseContribution
     public function __construct(
         private readonly LetterResponseDocumentStorage $storage,
         private readonly LetterResponsePositionAssignmentResolver $assignmentResolver,
+        private readonly LetterResponseSekdaPositionResolver $sekdaPositionResolver,
         private readonly LetterResponseDocumentVersionWriter $writer,
     ) {}
 
@@ -124,7 +125,7 @@ final class CreateLetterResponseContribution
                     throw LetterResponseStateConflict::staleDossier();
                 }
 
-                $executivePositionId = $this->initialExecutivePositionId($letter);
+                $executivePositionId = $this->sekdaPositionResolver->lockPositionId($letter);
                 $assignment = $this->assignmentResolver->lockAssignmentForPosition($lockedActor, $executivePositionId);
                 $this->ensureSeriesDoesNotExist($lockedDossier, LetterResponseDocumentKind::ExecutiveConsolidation, $executivePositionId);
                 $sourceIds = $this->resolveConsolidationSources($lockedDossier, $sourceVersionPublicIds);
@@ -336,17 +337,6 @@ final class CreateLetterResponseContribution
         if ($query->exists()) {
             throw LetterResponseStateConflict::staleDossier();
         }
-    }
-
-    private function initialExecutivePositionId(IncomingLetter $letter): int
-    {
-        $positionId = (int) $letter->routes()->orderBy('id')->value('recipient_position_id');
-
-        if ($positionId < 1) {
-            throw DispositionStateConflict::inconsistentGraph();
-        }
-
-        return $positionId;
     }
 
     /**

@@ -67,6 +67,17 @@ final class LetterActivityCatalog
             AuditAction::OutgoingLetterDelivered->value => 'Surat keluar dikirim',
             AuditAction::OutgoingLetterMandateWithdrawn->value => 'Mandat surat keluar ditarik',
             AuditAction::LetterResponseDossierFulfilled->value => 'Kewajiban balasan terpenuhi',
+            AuditAction::OutgoingTemplateVersionCreated->value => 'Versi template surat keluar dibuat',
+            AuditAction::OutgoingTemplateStatusChanged->value => 'Status template surat keluar diubah',
+            AuditAction::StandaloneOutgoingDraftCreated->value => 'Konsep surat keluar dibuat',
+            AuditAction::StandaloneOutgoingDraftUpdated->value => 'Konsep surat keluar diperbarui',
+            AuditAction::StandaloneOutgoingDocumentVersionCreated->value => 'Versi konsep surat keluar dibuat',
+            AuditAction::StandaloneOutgoingSubmitted->value => 'Konsep surat keluar dikirim untuk diperiksa',
+            AuditAction::StandaloneOutgoingReviewed->value => 'Konsep surat keluar diperiksa',
+            AuditAction::StandaloneOutgoingDelivered->value => 'Surat keluar mandiri dikirim',
+            AuditAction::StandaloneOutgoingEmailLinkIssued->value => 'Tautan unduh surat keluar diterbitkan',
+            AuditAction::StandaloneOutgoingEmailLinkRevoked->value => 'Tautan unduh surat keluar dicabut',
+            AuditAction::StandaloneOutgoingCorrectionDraftCreated->value => 'Konsep surat koreksi dibuat',
         ];
     }
 

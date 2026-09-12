@@ -9,21 +9,27 @@ use App\Enums\LetterResponseDossierStatus;
 use App\Enums\PermissionName;
 use App\Models\Disposition;
 use App\Models\DispositionRecipient;
+use App\Models\IncomingLetter;
 use App\Models\LetterResponseDocument;
 use App\Models\LetterResponseDocumentVersion;
 use App\Models\LetterResponseDossier;
 use App\Models\LetterResponseReview;
+use App\Models\LetterRoute;
 use App\Models\OrganizationalUnit;
 use App\Models\OutgoingLetter;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\User;
+use App\Organization\OrganizationCatalog;
 use App\Reporting\ReportScopeResolver;
 use Illuminate\Support\Collection;
 
 final class LetterResponsePresenter
 {
-    public function __construct(private readonly ReportScopeResolver $scopeResolver) {}
+    public function __construct(
+        private readonly ReportScopeResolver $scopeResolver,
+        private readonly LetterResponseSekdaPositionResolver $sekdaPositionResolver,
+    ) {}
 
     /** @return array<string, mixed> */
     public function dossier(LetterResponseDossier $dossier, User $user): array
@@ -35,14 +41,22 @@ final class LetterResponsePresenter
         $letter = $dossier->incomingLetter;
         $route = $letter->routes->sortBy('id')->first();
         abort_if($route === null, 409, 'Routing awal surat tidak konsisten.');
-        $isExecutive = in_array($route->recipient_position_id, $scope->executivePositionIds, true);
-        $initialDisposition = $letter->dispositions->first(fn (Disposition $item): bool => $item->source_route_id !== null);
-        abort_if(! $initialDisposition instanceof Disposition, 409, 'Graph disposisi surat tidak konsisten.');
+        $sekdaPositionId = $this->sekdaPositionResolver->positionId($letter);
+        abort_if($sekdaPositionId === null, 409, 'Penerima Sekda untuk dossier balasan tidak konsisten.');
+        $sourceDisposition = $letter->dispositions->first(fn (Disposition $item): bool => $item->source_route_id !== null);
+        abort_if(! $sourceDisposition instanceof Disposition, 409, 'Graph disposisi surat tidak konsisten.');
+        $assistantDisposition = $this->assistantDisposition($letter, $sourceDisposition, $sekdaPositionId);
+        abort_if(! $assistantDisposition instanceof Disposition, 409, 'Graph disposisi menuju Asisten tidak konsisten.');
+        $sekdaPosition = $this->sekdaPosition($route, $sourceDisposition, $sekdaPositionId);
+        abort_if(! $sekdaPosition instanceof Position, 409, 'Position Sekda pada dossier balasan tidak konsisten.');
+        $hasExecutiveOversight = in_array($route->recipient_position_id, $scope->executivePositionIds, true)
+            || in_array($sekdaPositionId, $scope->executivePositionIds, true);
+        $canControlAsSekda = in_array($sekdaPositionId, $scope->executivePositionIds, true);
         $documents = $dossier->documents;
         $reviews = $dossier->reviews;
         $assistants = [];
 
-        foreach ($initialDisposition->recipients->sortBy([['received_at', 'asc'], ['id', 'asc']]) as $assistantRecipient) {
+        foreach ($assistantDisposition->recipients->sortBy([['received_at', 'asc'], ['id', 'asc']]) as $assistantRecipient) {
             $ownsAssistant = in_array($assistantRecipient->recipient_position_id, $scope->assistantPositionIds, true);
             $childDisposition = $letter->dispositions->first(
                 fn (Disposition $item): bool => $item->parent_recipient_id === $assistantRecipient->getKey(),
@@ -50,7 +64,7 @@ final class LetterResponsePresenter
             $children = $childDisposition instanceof Disposition
                 ? $childDisposition->recipients->sortBy([['received_at', 'asc'], ['id', 'asc']])
                 : collect();
-            $visibleChildren = $isExecutive || $ownsAssistant
+            $visibleChildren = $hasExecutiveOversight || $ownsAssistant
                 ? $children
                 : $children->filter(fn (DispositionRecipient $child): bool => in_array(
                     $child->recipient_position_id,
@@ -58,7 +72,7 @@ final class LetterResponsePresenter
                     true,
                 ));
 
-            if (! $isExecutive && ! $ownsAssistant && $visibleChildren->isEmpty()) {
+            if (! $hasExecutiveOversight && ! $ownsAssistant && $visibleChildren->isEmpty()) {
                 continue;
             }
 
@@ -80,7 +94,14 @@ final class LetterResponsePresenter
                 'status' => $assistantRecipient->status->value,
                 'forwarded_at' => $childDisposition?->created_at?->toISOString(),
                 'child_progress' => $this->progress($visibleChildren),
-                'children' => $visibleChildren->map(function (DispositionRecipient $child) use ($documents, $reviews, $dossier, $user): array {
+                'children' => $visibleChildren->map(function (DispositionRecipient $child) use (
+                    $documents,
+                    $reviews,
+                    $dossier,
+                    $user,
+                    $canControlAsSekda,
+                    $sekdaPositionId,
+                ): array {
                     $material = $documents->first(fn (LetterResponseDocument $document): bool => $document->kind === LetterResponseDocumentKind::TechnicalMaterial
                         && $document->source_recipient_id === $child->getKey());
                     $canUploadMaterial = $user->can(PermissionName::ContributeLetterResponses->value)
@@ -102,7 +123,7 @@ final class LetterResponsePresenter
                         'completed_at' => $child->completed_at?->toISOString(),
                         'completion_note' => $child->completion_note,
                         'material' => $material instanceof LetterResponseDocument
-                            ? $this->document($material, $reviews, $dossier, $user)
+                        ? $this->document($material, $reviews, $dossier, $user, $canControlAsSekda, $sekdaPositionId)
                             : null,
                         'can_upload_material' => $canUploadMaterial,
                         'routes' => $canUploadMaterial ? [
@@ -110,8 +131,8 @@ final class LetterResponsePresenter
                         ] : [],
                     ];
                 })->values()->all(),
-                'proposal' => ($isExecutive || $ownsAssistant) && $proposal instanceof LetterResponseDocument
-                    ? $this->document($proposal, $reviews, $dossier, $user)
+                'proposal' => ($hasExecutiveOversight || $ownsAssistant) && $proposal instanceof LetterResponseDocument
+                    ? $this->document($proposal, $reviews, $dossier, $user, $canControlAsSekda, $sekdaPositionId)
                     : null,
                 'can_submit_proposal' => $canSubmitProposal,
                 'can_return_material' => $ownsAssistant && $user->can(PermissionName::ReviewLetterResponses->value),
@@ -145,44 +166,44 @@ final class LetterResponsePresenter
                 'received_at' => $letter->received_at->toISOString(),
             ],
             'executive' => [
-                'position_name' => $route->recipientPosition->name,
-                'official_name' => $this->officialName($route->recipientPosition),
+                'position_name' => $sekdaPosition->name,
+                'official_name' => $this->officialName($sekdaPosition),
                 'role' => 'EXECUTIVE',
             ],
             'assistants' => $assistants,
-            'consolidation' => $isExecutive
+            'consolidation' => $hasExecutiveOversight
                 ? (($consolidation = $documents->first(fn (LetterResponseDocument $document): bool => $document->kind === LetterResponseDocumentKind::ExecutiveConsolidation)) instanceof LetterResponseDocument
-                    ? $this->document($consolidation, $reviews, $dossier, $user)
+                    ? $this->document($consolidation, $reviews, $dossier, $user, $canControlAsSekda, $sekdaPositionId)
                     : null)
                 : null,
             'progress' => $progress,
-            'mandates' => $isExecutive
+            'mandates' => $hasExecutiveOversight
                 ? $dossier->mandates->map(fn (OutgoingLetter $mandate): array => $this->mandate($mandate))->values()->all()
                 : [],
-            'eligible_signatories' => $isExecutive ? $this->eligibleSignatories($route->recipientPosition, $initialDisposition) : [],
+            'eligible_signatories' => $hasExecutiveOversight ? $this->eligibleSignatories($sekdaPosition, $assistantDisposition) : [],
             'viewer' => [
-                'role' => $isExecutive ? 'EXECUTIVE' : ($scope->assistantPositionIds !== [] ? 'ASSISTANT' : 'SECTION_HEAD'),
+                'role' => $hasExecutiveOversight ? 'EXECUTIVE' : ($scope->assistantPositionIds !== [] ? 'ASSISTANT' : 'SECTION_HEAD'),
                 'display_name' => $user->name,
                 'can_view' => true,
                 'can_contribute' => $user->can(PermissionName::ContributeLetterResponses->value),
                 'can_review' => $user->can(PermissionName::ReviewLetterResponses->value),
-                'can_authorize' => $isExecutive && $user->can(PermissionName::AuthorizeLetterResponses->value),
+                'can_authorize' => $canControlAsSekda && $user->can(PermissionName::AuthorizeLetterResponses->value),
             ],
             'links' => [
                 'index' => route('back-office.letter-responses.index'),
-                'consolidation_store' => $isExecutive
+                'consolidation_store' => $canControlAsSekda
                     && $dossier->status === LetterResponseDossierStatus::Open
                     && $letter->status === IncomingLetterStatus::Completed
                     && $user->can(PermissionName::ContributeLetterResponses->value)
                     ? route('back-office.letter-responses.consolidations.store', $dossier)
                     : null,
-                'mandate_store' => $isExecutive
+                'mandate_store' => $canControlAsSekda
                     && $dossier->status === LetterResponseDossierStatus::Open
                     && $letter->status === IncomingLetterStatus::Completed
                     && $user->can(PermissionName::AuthorizeLetterResponses->value)
                     ? route('back-office.letter-responses.mandates.store', $dossier)
                     : null,
-                'finalize' => $isExecutive
+                'finalize' => $canControlAsSekda
                     && $dossier->status === LetterResponseDossierStatus::Open
                     && $letter->status === IncomingLetterStatus::Completed
                     && $user->can(PermissionName::AuthorizeLetterResponses->value)
@@ -240,6 +261,8 @@ final class LetterResponsePresenter
         Collection $reviews,
         LetterResponseDossier $dossier,
         User $user,
+        bool $canControlAsSekda,
+        int $sekdaPositionId,
     ): array {
         $versions = $document->versions->map(fn (LetterResponseDocumentVersion $version): array => [
             'public_id' => $version->public_id,
@@ -268,7 +291,7 @@ final class LetterResponsePresenter
                 || $review instanceof LetterResponseReview);
         $canReturn = $review === null
             && $user->can(PermissionName::ReviewLetterResponses->value)
-            && $this->canReturnDocument($user, $dossier, $document);
+            && $this->canReturnDocument($user, $document, $sekdaPositionId);
 
         return [
             'public_id' => $document->public_id,
@@ -284,6 +307,7 @@ final class LetterResponsePresenter
             'can_upload' => $canUpload,
             'can_return' => $canReturn,
             'can_select' => $document->kind === LetterResponseDocumentKind::AssistantProposal
+                && $canControlAsSekda
                 && ! $review instanceof LetterResponseReview
                 && $dossier->status === LetterResponseDossierStatus::Open
                 && $dossier->incomingLetter->status === IncomingLetterStatus::Completed
@@ -362,13 +386,11 @@ final class LetterResponsePresenter
 
     private function canReturnDocument(
         User $user,
-        LetterResponseDossier $dossier,
         LetterResponseDocument $document,
+        int $sekdaPositionId,
     ): bool {
         if ($document->kind === LetterResponseDocumentKind::AssistantProposal) {
-            $executivePositionId = (int) $dossier->incomingLetter->routes->sortBy('id')->first()?->recipient_position_id;
-
-            return $executivePositionId > 0 && $this->ownsPosition($user, $executivePositionId);
+            return $this->ownsPosition($user, $sekdaPositionId);
         }
 
         if ($document->kind !== LetterResponseDocumentKind::TechnicalMaterial) {
@@ -379,5 +401,45 @@ final class LetterResponsePresenter
 
         return $parent instanceof DispositionRecipient
             && $this->ownsPosition($user, $parent->recipient_position_id);
+    }
+
+    private function assistantDisposition(
+        IncomingLetter $letter,
+        Disposition $sourceDisposition,
+        int $sekdaPositionId,
+    ): ?Disposition {
+        $hasDirectAssistant = $sourceDisposition->recipients->contains(
+            fn (DispositionRecipient $recipient): bool => $recipient->recipientPosition->positionLevel->code === OrganizationCatalog::ASSISTANT_LEVEL,
+        );
+
+        if ($hasDirectAssistant) {
+            return $sourceDisposition;
+        }
+
+        $sekdaRecipient = $sourceDisposition->recipients->first(
+            fn (DispositionRecipient $recipient): bool => (int) $recipient->recipient_position_id === $sekdaPositionId,
+        );
+
+        if (! $sekdaRecipient instanceof DispositionRecipient) {
+            return null;
+        }
+
+        return $letter->dispositions->first(
+            fn (Disposition $disposition): bool => (int) $disposition->parent_recipient_id === (int) $sekdaRecipient->getKey(),
+        );
+    }
+
+    private function sekdaPosition(
+        LetterRoute $route,
+        Disposition $sourceDisposition,
+        int $sekdaPositionId,
+    ): ?Position {
+        if ((int) $route->recipient_position_id === $sekdaPositionId) {
+            return $route->recipientPosition;
+        }
+
+        return $sourceDisposition->recipients
+            ->first(fn (DispositionRecipient $recipient): bool => (int) $recipient->recipient_position_id === $sekdaPositionId)
+            ?->recipientPosition;
     }
 }

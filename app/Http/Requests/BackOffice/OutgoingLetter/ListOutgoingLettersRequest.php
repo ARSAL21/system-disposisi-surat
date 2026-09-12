@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\BackOffice\OutgoingLetter;
 
+use App\Enums\OutgoingLetterOrigin;
 use App\Enums\OutgoingLetterStatus;
 use App\Enums\SubmissionSource;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,6 +22,7 @@ final class ListOutgoingLettersRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:200'],
             'status' => ['nullable', Rule::enum(OutgoingLetterStatus::class)],
             'source' => ['nullable', Rule::enum(SubmissionSource::class)],
+            'origin' => ['nullable', Rule::enum(OutgoingLetterOrigin::class)],
             'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
             'page' => ['nullable', 'integer', 'min:1'],
         ];

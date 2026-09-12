@@ -105,7 +105,7 @@ const letterOperationModules = computed(() => {
         list.push({
             title: 'Routing Surat',
             description:
-                'Tinjau dokumen resmi terkini dan arahkan surat terdaftar kepada satu pimpinan tujuan.',
+                'Tinjau dokumen resmi terkini dan pilih jalur langsung ke Sekda atau melalui Wali Kota.',
             href: '/back-office/letter-routing',
             icon: RouteIcon,
             color: 'from-violet-500 to-fuchsia-600',
@@ -119,7 +119,7 @@ const letterOperationModules = computed(() => {
         list.push({
             title: 'Inbox Pimpinan',
             description:
-                'Periksa surat resmi dan buat disposisi pertama kepada satu jabatan Asisten yang sah.',
+                'Wali Kota memberi arahan formal ke Sekda; Sekda menetapkan Asisten yang menangani surat.',
             href: '/back-office/executive/inbox',
             icon: Landmark,
             color: 'from-amber-500 to-orange-600',

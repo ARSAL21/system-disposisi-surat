@@ -17,7 +17,11 @@ import {
     Route as RouteIcon,
     ShieldCheck,
     SendHorizontal,
+    FilePenLine,
+    HelpCircle,
+    ShieldAlert,
     UserRoundCog,
+    Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -32,13 +36,18 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useTwoFactorWalkthrough } from '@/composables/useTwoFactorWalkthrough';
 import backOffice from '@/routes/back-office';
 import { index as authorizationIndex } from '@/routes/back-office/authorization';
 import { index as privilegeAuditIndex } from '@/routes/back-office/privilege-audits';
 import type { NavItem } from '@/types';
 
 const page = usePage();
+const { startTour } = useTwoFactorWalkthrough();
 const currentPath = computed(() => page.url.split('?')[0]);
+const requiresMfaSetup = computed(() =>
+    Boolean(page.props.auth.user?.requires_mfa_setup),
+);
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
@@ -89,6 +98,26 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: incomingRegisterPath,
             icon: BookOpenCheck,
             isActive: currentPath.value.startsWith(incomingRegisterPath),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_standalone_outgoing === true) {
+        const draftPath = '/back-office/standalone-outgoing';
+        items.push({
+            title: 'Konsep Surat Keluar',
+            href: draftPath,
+            icon: FilePenLine,
+            isActive: currentPath.value.startsWith(draftPath),
+        });
+    }
+
+    if (page.props.auth.capabilities.can_view_outgoing_templates === true) {
+        const templatePath = '/back-office/outgoing-templates';
+        items.push({
+            title: 'Template Surat',
+            href: templatePath,
+            icon: Archive,
+            isActive: currentPath.value.startsWith(templatePath),
         });
     }
 
@@ -174,7 +203,7 @@ const mainNavItems = computed<NavItem[]>(() => {
             ? '/back-office/previews/letter-responses'
             : '/back-office/letter-responses';
         items.push({
-            title: 'Dossier Balasan',
+            title: 'Penyusunan Balasan',
             href: responsePath,
             icon: Network,
             isActive: currentPath.value.startsWith(responsePath),
@@ -207,6 +236,27 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: activityPath,
             icon: Activity,
             isActive: currentPath.value === activityPath,
+        });
+    }
+
+    const isUserManagementPreview =
+        currentPath.value.startsWith('/back-office/previews/users') ||
+        currentPath.value.startsWith('/back-office/users');
+
+    if (
+        page.props.auth.capabilities.can_view_users ||
+        isUserManagementPreview
+    ) {
+        const usersPath = isUserManagementPreview
+            ? '/back-office/previews/users'
+            : '/back-office/users';
+        items.push({
+            title: 'Kelola Pengguna',
+            href: usersPath,
+            icon: Users,
+            isActive:
+                currentPath.value.startsWith('/back-office/users') ||
+                currentPath.value.startsWith('/back-office/previews/users'),
         });
     }
 
@@ -258,6 +308,15 @@ const mainNavItems = computed<NavItem[]>(() => {
         });
     }
 
+    if (requiresMfaSetup.value) {
+        return items.map((item) => ({
+            ...item,
+            isLocked: true,
+            lockReason:
+                'Fitur operasional ditangguhkan hingga 2FA berhasil dikonfirmasi.',
+        }));
+    }
+
     return items;
 });
 </script>
@@ -274,6 +333,32 @@ const mainNavItems = computed<NavItem[]>(() => {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
+
+            <!-- Restricted Access Notice in Sidebar -->
+            <div
+                v-if="requiresMfaSetup"
+                class="mx-2 my-1 rounded-xl border border-amber-300/70 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-amber-500/15 p-2.5 shadow-2xs group-data-[collapsible=icon]:hidden dark:border-amber-600/40 dark:from-amber-950/40 dark:to-orange-950/30"
+            >
+                <div
+                    class="flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300"
+                >
+                    <ShieldAlert
+                        class="size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                    />
+                    <span>Akses Terbatas</span>
+                </div>
+                <p class="mt-1 text-[11px] leading-tight text-muted-foreground">
+                    Menu dikunci. Wajib verifikasi 2FA untuk admin.
+                </p>
+                <button
+                    type="button"
+                    class="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-2 py-1.5 text-[11px] font-semibold text-white shadow-2xs transition-colors hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500"
+                    @click="startTour"
+                >
+                    <HelpCircle class="size-3.5" />
+                    <span>Panduan Aktivasi</span>
+                </button>
+            </div>
         </SidebarHeader>
 
         <SidebarContent>

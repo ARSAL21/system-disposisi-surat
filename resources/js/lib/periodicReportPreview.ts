@@ -9,6 +9,7 @@ import type {
     PeriodicReportSourceBreakdown,
     PeriodicReportSummary,
     PeriodicReportTrendPoint,
+    ReportAggregateGraphNode,
     ReportProcessDetail,
 } from '@/types';
 
@@ -343,6 +344,7 @@ export const previewReportProcessDetail: ReportProcessDetail = {
         },
         routed_at: '2026-09-21T08:47:00+08:00',
     },
+    sekda_handoff: null,
     branches: [
         {
             reference: 'assistant-branch-01',
@@ -508,469 +510,547 @@ export const previewReportProcessDetail: ReportProcessDetail = {
         'Tampilan pimpinan memperlihatkan seluruh cabang, pelaksana, instruksi, jurnal, dan hasil penyelesaian surat ini.',
 };
 
+type PreviewAggregateNode = Omit<
+    ReportAggregateGraphNode,
+    'level' | 'children'
+> & {
+    level?: ReportAggregateGraphNode['level'];
+    children?: PreviewAggregateNode[];
+};
+
+function aggregateLevel(
+    node: PreviewAggregateNode,
+): ReportAggregateGraphNode['level'] {
+    if (node.level) {
+        return node.level;
+    }
+
+    if (node.recipient_position.code === 'WALI_KOTA') {
+        return 'MAYOR';
+    }
+
+    if (node.recipient_position.code === 'SEKDA') {
+        return 'REGIONAL_SECRETARY';
+    }
+
+    return node.recipient_position.code.startsWith('ASISTEN')
+        ? 'ASSISTANT'
+        : 'SECTION_HEAD';
+}
+
+function presentAggregateNode(
+    node: PreviewAggregateNode,
+): ReportAggregateGraphNode {
+    const level = aggregateLevel(node);
+    const children = (node.children ?? []).map(presentAggregateNode);
+
+    // Older preview fixtures placed Assistants directly below Wali Kota. Keep
+    // preview aligned with the production graph by showing the required Sekda
+    // handoff as an explicit intermediate node.
+    if (
+        level === 'MAYOR' &&
+        children.some((child) => child.level === 'ASSISTANT')
+    ) {
+        return {
+            ...node,
+            level,
+            children: [
+                {
+                    reference: `${node.reference}-sekda`,
+                    recipient_position: {
+                        code: 'SEKDA',
+                        name: 'Sekretaris Daerah',
+                        unit_name: 'Sekretariat Daerah',
+                        official_name: node.recipient_position.official_name,
+                    },
+                    level: 'REGIONAL_SECRETARY',
+                    progress: node.progress,
+                    last_activity_at: node.last_activity_at,
+                    average_completion_hours: node.average_completion_hours,
+                    attention: node.attention,
+                    children,
+                },
+            ],
+        };
+    }
+
+    return {
+        ...node,
+        level,
+        children,
+    };
+}
+
+const previewPeriodicReportOrganizationGraphSeed: {
+    generated_at: string;
+    executives: PreviewAggregateNode[];
+} = {
+    generated_at: '2026-09-30T16:00:00+08:00',
+    executives: [
+        {
+            reference: 'aggregate-wali-kota',
+            recipient_position: {
+                code: 'WALI_KOTA',
+                name: 'Wali Kota',
+                unit_name: 'Pemerintah Kota Baubau',
+                official_name: 'Dr. H. Ahmad Darmawan, S.E., M.Si.',
+            },
+            progress: {
+                total: 79,
+                pending: 5,
+                in_progress: 17,
+                completed: 57,
+                percent_complete: 72,
+            },
+            last_activity_at: '2026-09-30T15:42:00+08:00',
+            attention: {
+                needs_attention: true,
+                idle_hours: 55,
+                reason: 'Terdapat 2 cabang tanpa aktivitas lebih dari 48 jam.',
+            },
+            children: [
+                {
+                    reference: 'aggregate-wali-asisten-i',
+                    recipient_position: {
+                        code: 'ASISTEN-I',
+                        name: 'Asisten Pemerintahan dan Kesejahteraan Rakyat',
+                        unit_name: 'Sekretariat Daerah',
+                        official_name: 'Drs. Abdul Malik, M.Si.',
+                    },
+                    progress: {
+                        total: 28,
+                        pending: 1,
+                        in_progress: 5,
+                        completed: 22,
+                        percent_complete: 79,
+                    },
+                    last_activity_at: '2026-09-30T15:42:00+08:00',
+                    attention: {
+                        needs_attention: false,
+                        idle_hours: 3,
+                        reason: null,
+                    },
+                    children: [
+                        {
+                            reference: 'aggregate-wali-asisten-i-tapem',
+                            recipient_position: {
+                                code: 'KABAG_TAPEM',
+                                name: 'Kepala Bagian Tata Pemerintahan',
+                                unit_name: 'Bagian Tata Pemerintahan',
+                                official_name: 'Drs. Arman Saleh, M.Si.',
+                            },
+                            progress: {
+                                total: 15,
+                                pending: 0,
+                                in_progress: 2,
+                                completed: 13,
+                                percent_complete: 87,
+                            },
+                            last_activity_at: '2026-09-30T14:22:00+08:00',
+                            attention: {
+                                needs_attention: false,
+                                idle_hours: 4,
+                                reason: null,
+                            },
+                        },
+                        {
+                            reference: 'aggregate-wali-asisten-i-kesra',
+                            recipient_position: {
+                                code: 'KABAG_KESRA',
+                                name: 'Kepala Bagian Kesejahteraan Rakyat',
+                                unit_name: 'Bagian Kesejahteraan Rakyat',
+                                official_name: 'Abd. Karim, S.Ag., M.Pd.',
+                            },
+                            progress: {
+                                total: 13,
+                                pending: 1,
+                                in_progress: 3,
+                                completed: 9,
+                                percent_complete: 69,
+                            },
+                            last_activity_at: '2026-09-28T07:30:00+08:00',
+                            attention: {
+                                needs_attention: true,
+                                idle_hours: 56,
+                                reason: 'Satu cabang belum bergerak selama 56 jam.',
+                            },
+                        },
+                    ],
+                },
+                {
+                    reference: 'aggregate-wali-asisten-ii',
+                    recipient_position: {
+                        code: 'ASISTEN-II',
+                        name: 'Asisten Perekonomian dan Pembangunan',
+                        unit_name: 'Sekretariat Daerah',
+                        official_name: 'Ir. Fatmawati Yusuf, M.Si.',
+                    },
+                    progress: {
+                        total: 27,
+                        pending: 2,
+                        in_progress: 6,
+                        completed: 19,
+                        percent_complete: 70,
+                    },
+                    last_activity_at: '2026-09-30T13:12:00+08:00',
+                    attention: {
+                        needs_attention: false,
+                        idle_hours: 6,
+                        reason: null,
+                    },
+                    children: [
+                        {
+                            reference: 'aggregate-wali-asisten-ii-ekonomi',
+                            recipient_position: {
+                                code: 'KABAG_EKONOMI',
+                                name: 'Kepala Bagian Ekonomi',
+                                unit_name: 'Bagian Ekonomi',
+                                official_name: 'Rahmat Hidayat, S.E.',
+                            },
+                            progress: {
+                                total: 14,
+                                pending: 1,
+                                in_progress: 3,
+                                completed: 10,
+                                percent_complete: 71,
+                            },
+                            last_activity_at: '2026-09-30T13:12:00+08:00',
+                            attention: {
+                                needs_attention: false,
+                                idle_hours: 6,
+                                reason: null,
+                            },
+                        },
+                        {
+                            reference: 'aggregate-wali-asisten-ii-pembangunan',
+                            recipient_position: {
+                                code: 'KABAG_PEMBANGUNAN',
+                                name: 'Kepala Bagian Pembangunan',
+                                unit_name: 'Bagian Pembangunan',
+                                official_name: 'Maya Sari, S.T., M.T.',
+                            },
+                            progress: {
+                                total: 13,
+                                pending: 1,
+                                in_progress: 3,
+                                completed: 9,
+                                percent_complete: 69,
+                            },
+                            last_activity_at: '2026-09-29T16:48:00+08:00',
+                            attention: {
+                                needs_attention: false,
+                                idle_hours: 26,
+                                reason: null,
+                            },
+                        },
+                    ],
+                },
+                {
+                    reference: 'aggregate-wali-asisten-iii',
+                    recipient_position: {
+                        code: 'ASISTEN-III',
+                        name: 'Asisten Administrasi Umum',
+                        unit_name: 'Sekretariat Daerah',
+                        official_name: 'Dra. Nur Aisyah, M.Si.',
+                    },
+                    progress: {
+                        total: 24,
+                        pending: 2,
+                        in_progress: 6,
+                        completed: 16,
+                        percent_complete: 67,
+                    },
+                    last_activity_at: '2026-09-30T11:05:00+08:00',
+                    attention: {
+                        needs_attention: true,
+                        idle_hours: 52,
+                        reason: 'Satu cabang belum diperbarui selama 52 jam.',
+                    },
+                    children: [
+                        {
+                            reference: 'aggregate-wali-asisten-iii-umum',
+                            recipient_position: {
+                                code: 'KABAG_UMUM',
+                                name: 'Kepala Bagian Umum',
+                                unit_name: 'Bagian Umum',
+                                official_name: 'Hendra Wijaya, S.Sos.',
+                            },
+                            progress: {
+                                total: 12,
+                                pending: 1,
+                                in_progress: 2,
+                                completed: 9,
+                                percent_complete: 75,
+                            },
+                            last_activity_at: '2026-09-30T11:05:00+08:00',
+                            attention: {
+                                needs_attention: false,
+                                idle_hours: 8,
+                                reason: null,
+                            },
+                        },
+                        {
+                            reference: 'aggregate-wali-asisten-iii-organisasi',
+                            recipient_position: {
+                                code: 'KABAG_ORGANISASI',
+                                name: 'Kepala Bagian Organisasi',
+                                unit_name: 'Bagian Organisasi',
+                                official_name: 'Fitriani, S.IP., M.Si.',
+                            },
+                            progress: {
+                                total: 12,
+                                pending: 1,
+                                in_progress: 4,
+                                completed: 7,
+                                percent_complete: 58,
+                            },
+                            last_activity_at: '2026-09-28T11:04:00+08:00',
+                            attention: {
+                                needs_attention: true,
+                                idle_hours: 52,
+                                reason: 'Satu cabang belum diperbarui selama 52 jam.',
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+        {
+            reference: 'aggregate-sekda',
+            recipient_position: {
+                code: 'SEKDA',
+                name: 'Sekretaris Daerah',
+                unit_name: 'Sekretariat Daerah',
+                official_name: executiveActor.name,
+            },
+            progress: {
+                total: 105,
+                pending: 8,
+                in_progress: 20,
+                completed: 77,
+                percent_complete: 73,
+            },
+            last_activity_at: '2026-09-30T15:58:00+08:00',
+            attention: {
+                needs_attention: true,
+                idle_hours: 50,
+                reason: 'Terdapat 3 cabang tanpa aktivitas lebih dari 48 jam.',
+            },
+            children: [
+                {
+                    reference: 'aggregate-sekda-asisten-i',
+                    recipient_position: {
+                        code: 'ASISTEN-I',
+                        name: 'Asisten Pemerintahan dan Kesejahteraan Rakyat',
+                        unit_name: 'Sekretariat Daerah',
+                        official_name: assistantActor.name,
+                    },
+                    progress: {
+                        total: 40,
+                        pending: 3,
+                        in_progress: 7,
+                        completed: 30,
+                        percent_complete: 75,
+                    },
+                    last_activity_at: '2026-09-30T15:58:00+08:00',
+                    attention: {
+                        needs_attention: false,
+                        idle_hours: 2,
+                        reason: null,
+                    },
+                    children: [
+                        {
+                            reference: 'aggregate-sekda-asisten-i-hukum',
+                            recipient_position: {
+                                code: 'KABAG_HUKUM',
+                                name: 'Kepala Bagian Hukum',
+                                unit_name: 'Bagian Hukum',
+                                official_name: 'Nurlina, S.H., M.H.',
+                            },
+                            progress: {
+                                total: 22,
+                                pending: 1,
+                                in_progress: 4,
+                                completed: 17,
+                                percent_complete: 77,
+                            },
+                            last_activity_at: '2026-09-30T15:58:00+08:00',
+                            attention: {
+                                needs_attention: false,
+                                idle_hours: 2,
+                                reason: null,
+                            },
+                        },
+                        {
+                            reference: 'aggregate-sekda-asisten-i-tapem',
+                            recipient_position: {
+                                code: 'KABAG_TAPEM',
+                                name: 'Kepala Bagian Tata Pemerintahan',
+                                unit_name: 'Bagian Tata Pemerintahan',
+                                official_name: 'Drs. Arman Saleh, M.Si.',
+                            },
+                            progress: {
+                                total: 18,
+                                pending: 2,
+                                in_progress: 3,
+                                completed: 13,
+                                percent_complete: 72,
+                            },
+                            last_activity_at: '2026-09-29T10:10:00+08:00',
+                            attention: {
+                                needs_attention: false,
+                                idle_hours: 30,
+                                reason: null,
+                            },
+                        },
+                    ],
+                },
+                {
+                    reference: 'aggregate-sekda-asisten-iii',
+                    recipient_position: {
+                        code: 'ASISTEN-III',
+                        name: 'Asisten Administrasi Umum',
+                        unit_name: 'Sekretariat Daerah',
+                        official_name: 'Dra. Nur Aisyah, M.Si.',
+                    },
+                    progress: {
+                        total: 35,
+                        pending: 2,
+                        in_progress: 7,
+                        completed: 26,
+                        percent_complete: 74,
+                    },
+                    last_activity_at: '2026-09-30T14:35:00+08:00',
+                    attention: {
+                        needs_attention: false,
+                        idle_hours: 4,
+                        reason: null,
+                    },
+                    children: [
+                        {
+                            reference: 'aggregate-sekda-asisten-iii-umum',
+                            recipient_position: {
+                                code: 'KABAG_UMUM',
+                                name: 'Kepala Bagian Umum',
+                                unit_name: 'Bagian Umum',
+                                official_name: 'Hendra Wijaya, S.Sos.',
+                            },
+                            progress: {
+                                total: 18,
+                                pending: 1,
+                                in_progress: 3,
+                                completed: 14,
+                                percent_complete: 78,
+                            },
+                            last_activity_at: '2026-09-30T14:35:00+08:00',
+                            attention: {
+                                needs_attention: false,
+                                idle_hours: 4,
+                                reason: null,
+                            },
+                        },
+                        {
+                            reference: 'aggregate-sekda-asisten-iii-organisasi',
+                            recipient_position: {
+                                code: 'KABAG_ORGANISASI',
+                                name: 'Kepala Bagian Organisasi',
+                                unit_name: 'Bagian Organisasi',
+                                official_name: 'Fitriani, S.IP., M.Si.',
+                            },
+                            progress: {
+                                total: 17,
+                                pending: 1,
+                                in_progress: 4,
+                                completed: 12,
+                                percent_complete: 71,
+                            },
+                            last_activity_at: '2026-09-28T14:35:00+08:00',
+                            attention: {
+                                needs_attention: true,
+                                idle_hours: 50,
+                                reason: 'Satu cabang belum bergerak selama 50 jam.',
+                            },
+                        },
+                    ],
+                },
+                {
+                    reference: 'aggregate-sekda-asisten-ii',
+                    recipient_position: {
+                        code: 'ASISTEN-II',
+                        name: 'Asisten Perekonomian dan Pembangunan',
+                        unit_name: 'Sekretariat Daerah',
+                        official_name: 'Ir. Fatmawati Yusuf, M.Si.',
+                    },
+                    progress: {
+                        total: 30,
+                        pending: 3,
+                        in_progress: 6,
+                        completed: 21,
+                        percent_complete: 70,
+                    },
+                    last_activity_at: '2026-09-28T12:10:00+08:00',
+                    attention: {
+                        needs_attention: true,
+                        idle_hours: 52,
+                        reason: 'Dua cabang belum diperbarui selama 52 jam.',
+                    },
+                    children: [
+                        {
+                            reference: 'aggregate-sekda-asisten-ii-ekonomi',
+                            recipient_position: {
+                                code: 'KABAG_EKONOMI',
+                                name: 'Kepala Bagian Ekonomi',
+                                unit_name: 'Bagian Ekonomi',
+                                official_name: 'Rahmat Hidayat, S.E.',
+                            },
+                            progress: {
+                                total: 16,
+                                pending: 2,
+                                in_progress: 3,
+                                completed: 11,
+                                percent_complete: 69,
+                            },
+                            last_activity_at: '2026-09-28T12:10:00+08:00',
+                            attention: {
+                                needs_attention: true,
+                                idle_hours: 52,
+                                reason: 'Satu cabang belum bergerak selama 52 jam.',
+                            },
+                        },
+                        {
+                            reference: 'aggregate-sekda-asisten-ii-pembangunan',
+                            recipient_position: {
+                                code: 'KABAG_PEMBANGUNAN',
+                                name: 'Kepala Bagian Pembangunan',
+                                unit_name: 'Bagian Pembangunan',
+                                official_name: 'Maya Sari, S.T., M.T.',
+                            },
+                            progress: {
+                                total: 14,
+                                pending: 1,
+                                in_progress: 3,
+                                completed: 10,
+                                percent_complete: 71,
+                            },
+                            last_activity_at: '2026-09-29T15:30:00+08:00',
+                            attention: {
+                                needs_attention: false,
+                                idle_hours: 25,
+                                reason: null,
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+    ],
+};
+
 export const previewPeriodicReportOrganizationGraph: PeriodicReportOrganizationGraph =
     {
-        generated_at: '2026-09-30T16:00:00+08:00',
-        executives: [
-            {
-                reference: 'aggregate-wali-kota',
-                recipient_position: {
-                    code: 'WALI_KOTA',
-                    name: 'Wali Kota',
-                    unit_name: 'Pemerintah Kota Baubau',
-                    official_name: 'Dr. H. Ahmad Darmawan, S.E., M.Si.',
-                },
-                progress: {
-                    total: 79,
-                    pending: 5,
-                    in_progress: 17,
-                    completed: 57,
-                    percent_complete: 72,
-                },
-                last_activity_at: '2026-09-30T15:42:00+08:00',
-                attention: {
-                    needs_attention: true,
-                    idle_hours: 55,
-                    reason: 'Terdapat 2 cabang tanpa aktivitas lebih dari 48 jam.',
-                },
-                children: [
-                    {
-                        reference: 'aggregate-wali-asisten-i',
-                        recipient_position: {
-                            code: 'ASISTEN-I',
-                            name: 'Asisten Pemerintahan dan Kesejahteraan Rakyat',
-                            unit_name: 'Sekretariat Daerah',
-                            official_name: 'Drs. Abdul Malik, M.Si.',
-                        },
-                        progress: {
-                            total: 28,
-                            pending: 1,
-                            in_progress: 5,
-                            completed: 22,
-                            percent_complete: 79,
-                        },
-                        last_activity_at: '2026-09-30T15:42:00+08:00',
-                        attention: {
-                            needs_attention: false,
-                            idle_hours: 3,
-                            reason: null,
-                        },
-                        children: [
-                            {
-                                reference: 'aggregate-wali-asisten-i-tapem',
-                                recipient_position: {
-                                    code: 'KABAG_TAPEM',
-                                    name: 'Kepala Bagian Tata Pemerintahan',
-                                    unit_name: 'Bagian Tata Pemerintahan',
-                                    official_name: 'Drs. Arman Saleh, M.Si.',
-                                },
-                                progress: {
-                                    total: 15,
-                                    pending: 0,
-                                    in_progress: 2,
-                                    completed: 13,
-                                    percent_complete: 87,
-                                },
-                                last_activity_at: '2026-09-30T14:22:00+08:00',
-                                attention: {
-                                    needs_attention: false,
-                                    idle_hours: 4,
-                                    reason: null,
-                                },
-                            },
-                            {
-                                reference: 'aggregate-wali-asisten-i-kesra',
-                                recipient_position: {
-                                    code: 'KABAG_KESRA',
-                                    name: 'Kepala Bagian Kesejahteraan Rakyat',
-                                    unit_name: 'Bagian Kesejahteraan Rakyat',
-                                    official_name: 'Abd. Karim, S.Ag., M.Pd.',
-                                },
-                                progress: {
-                                    total: 13,
-                                    pending: 1,
-                                    in_progress: 3,
-                                    completed: 9,
-                                    percent_complete: 69,
-                                },
-                                last_activity_at: '2026-09-28T07:30:00+08:00',
-                                attention: {
-                                    needs_attention: true,
-                                    idle_hours: 56,
-                                    reason: 'Satu cabang belum bergerak selama 56 jam.',
-                                },
-                            },
-                        ],
-                    },
-                    {
-                        reference: 'aggregate-wali-asisten-ii',
-                        recipient_position: {
-                            code: 'ASISTEN-II',
-                            name: 'Asisten Perekonomian dan Pembangunan',
-                            unit_name: 'Sekretariat Daerah',
-                            official_name: 'Ir. Fatmawati Yusuf, M.Si.',
-                        },
-                        progress: {
-                            total: 27,
-                            pending: 2,
-                            in_progress: 6,
-                            completed: 19,
-                            percent_complete: 70,
-                        },
-                        last_activity_at: '2026-09-30T13:12:00+08:00',
-                        attention: {
-                            needs_attention: false,
-                            idle_hours: 6,
-                            reason: null,
-                        },
-                        children: [
-                            {
-                                reference: 'aggregate-wali-asisten-ii-ekonomi',
-                                recipient_position: {
-                                    code: 'KABAG_EKONOMI',
-                                    name: 'Kepala Bagian Ekonomi',
-                                    unit_name: 'Bagian Ekonomi',
-                                    official_name: 'Rahmat Hidayat, S.E.',
-                                },
-                                progress: {
-                                    total: 14,
-                                    pending: 1,
-                                    in_progress: 3,
-                                    completed: 10,
-                                    percent_complete: 71,
-                                },
-                                last_activity_at: '2026-09-30T13:12:00+08:00',
-                                attention: {
-                                    needs_attention: false,
-                                    idle_hours: 6,
-                                    reason: null,
-                                },
-                            },
-                            {
-                                reference:
-                                    'aggregate-wali-asisten-ii-pembangunan',
-                                recipient_position: {
-                                    code: 'KABAG_PEMBANGUNAN',
-                                    name: 'Kepala Bagian Pembangunan',
-                                    unit_name: 'Bagian Pembangunan',
-                                    official_name: 'Maya Sari, S.T., M.T.',
-                                },
-                                progress: {
-                                    total: 13,
-                                    pending: 1,
-                                    in_progress: 3,
-                                    completed: 9,
-                                    percent_complete: 69,
-                                },
-                                last_activity_at: '2026-09-29T16:48:00+08:00',
-                                attention: {
-                                    needs_attention: false,
-                                    idle_hours: 26,
-                                    reason: null,
-                                },
-                            },
-                        ],
-                    },
-                    {
-                        reference: 'aggregate-wali-asisten-iii',
-                        recipient_position: {
-                            code: 'ASISTEN-III',
-                            name: 'Asisten Administrasi Umum',
-                            unit_name: 'Sekretariat Daerah',
-                            official_name: 'Dra. Nur Aisyah, M.Si.',
-                        },
-                        progress: {
-                            total: 24,
-                            pending: 2,
-                            in_progress: 6,
-                            completed: 16,
-                            percent_complete: 67,
-                        },
-                        last_activity_at: '2026-09-30T11:05:00+08:00',
-                        attention: {
-                            needs_attention: true,
-                            idle_hours: 52,
-                            reason: 'Satu cabang belum diperbarui selama 52 jam.',
-                        },
-                        children: [
-                            {
-                                reference: 'aggregate-wali-asisten-iii-umum',
-                                recipient_position: {
-                                    code: 'KABAG_UMUM',
-                                    name: 'Kepala Bagian Umum',
-                                    unit_name: 'Bagian Umum',
-                                    official_name: 'Hendra Wijaya, S.Sos.',
-                                },
-                                progress: {
-                                    total: 12,
-                                    pending: 1,
-                                    in_progress: 2,
-                                    completed: 9,
-                                    percent_complete: 75,
-                                },
-                                last_activity_at: '2026-09-30T11:05:00+08:00',
-                                attention: {
-                                    needs_attention: false,
-                                    idle_hours: 8,
-                                    reason: null,
-                                },
-                            },
-                            {
-                                reference:
-                                    'aggregate-wali-asisten-iii-organisasi',
-                                recipient_position: {
-                                    code: 'KABAG_ORGANISASI',
-                                    name: 'Kepala Bagian Organisasi',
-                                    unit_name: 'Bagian Organisasi',
-                                    official_name: 'Fitriani, S.IP., M.Si.',
-                                },
-                                progress: {
-                                    total: 12,
-                                    pending: 1,
-                                    in_progress: 4,
-                                    completed: 7,
-                                    percent_complete: 58,
-                                },
-                                last_activity_at: '2026-09-28T11:04:00+08:00',
-                                attention: {
-                                    needs_attention: true,
-                                    idle_hours: 52,
-                                    reason: 'Satu cabang belum diperbarui selama 52 jam.',
-                                },
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                reference: 'aggregate-sekda',
-                recipient_position: {
-                    code: 'SEKDA',
-                    name: 'Sekretaris Daerah',
-                    unit_name: 'Sekretariat Daerah',
-                    official_name: executiveActor.name,
-                },
-                progress: {
-                    total: 105,
-                    pending: 8,
-                    in_progress: 20,
-                    completed: 77,
-                    percent_complete: 73,
-                },
-                last_activity_at: '2026-09-30T15:58:00+08:00',
-                attention: {
-                    needs_attention: true,
-                    idle_hours: 50,
-                    reason: 'Terdapat 3 cabang tanpa aktivitas lebih dari 48 jam.',
-                },
-                children: [
-                    {
-                        reference: 'aggregate-sekda-asisten-i',
-                        recipient_position: {
-                            code: 'ASISTEN-I',
-                            name: 'Asisten Pemerintahan dan Kesejahteraan Rakyat',
-                            unit_name: 'Sekretariat Daerah',
-                            official_name: assistantActor.name,
-                        },
-                        progress: {
-                            total: 40,
-                            pending: 3,
-                            in_progress: 7,
-                            completed: 30,
-                            percent_complete: 75,
-                        },
-                        last_activity_at: '2026-09-30T15:58:00+08:00',
-                        attention: {
-                            needs_attention: false,
-                            idle_hours: 2,
-                            reason: null,
-                        },
-                        children: [
-                            {
-                                reference: 'aggregate-sekda-asisten-i-hukum',
-                                recipient_position: {
-                                    code: 'KABAG_HUKUM',
-                                    name: 'Kepala Bagian Hukum',
-                                    unit_name: 'Bagian Hukum',
-                                    official_name: 'Nurlina, S.H., M.H.',
-                                },
-                                progress: {
-                                    total: 22,
-                                    pending: 1,
-                                    in_progress: 4,
-                                    completed: 17,
-                                    percent_complete: 77,
-                                },
-                                last_activity_at: '2026-09-30T15:58:00+08:00',
-                                attention: {
-                                    needs_attention: false,
-                                    idle_hours: 2,
-                                    reason: null,
-                                },
-                            },
-                            {
-                                reference: 'aggregate-sekda-asisten-i-tapem',
-                                recipient_position: {
-                                    code: 'KABAG_TAPEM',
-                                    name: 'Kepala Bagian Tata Pemerintahan',
-                                    unit_name: 'Bagian Tata Pemerintahan',
-                                    official_name: 'Drs. Arman Saleh, M.Si.',
-                                },
-                                progress: {
-                                    total: 18,
-                                    pending: 2,
-                                    in_progress: 3,
-                                    completed: 13,
-                                    percent_complete: 72,
-                                },
-                                last_activity_at: '2026-09-29T10:10:00+08:00',
-                                attention: {
-                                    needs_attention: false,
-                                    idle_hours: 30,
-                                    reason: null,
-                                },
-                            },
-                        ],
-                    },
-                    {
-                        reference: 'aggregate-sekda-asisten-iii',
-                        recipient_position: {
-                            code: 'ASISTEN-III',
-                            name: 'Asisten Administrasi Umum',
-                            unit_name: 'Sekretariat Daerah',
-                            official_name: 'Dra. Nur Aisyah, M.Si.',
-                        },
-                        progress: {
-                            total: 35,
-                            pending: 2,
-                            in_progress: 7,
-                            completed: 26,
-                            percent_complete: 74,
-                        },
-                        last_activity_at: '2026-09-30T14:35:00+08:00',
-                        attention: {
-                            needs_attention: false,
-                            idle_hours: 4,
-                            reason: null,
-                        },
-                        children: [
-                            {
-                                reference: 'aggregate-sekda-asisten-iii-umum',
-                                recipient_position: {
-                                    code: 'KABAG_UMUM',
-                                    name: 'Kepala Bagian Umum',
-                                    unit_name: 'Bagian Umum',
-                                    official_name: 'Hendra Wijaya, S.Sos.',
-                                },
-                                progress: {
-                                    total: 18,
-                                    pending: 1,
-                                    in_progress: 3,
-                                    completed: 14,
-                                    percent_complete: 78,
-                                },
-                                last_activity_at: '2026-09-30T14:35:00+08:00',
-                                attention: {
-                                    needs_attention: false,
-                                    idle_hours: 4,
-                                    reason: null,
-                                },
-                            },
-                            {
-                                reference:
-                                    'aggregate-sekda-asisten-iii-organisasi',
-                                recipient_position: {
-                                    code: 'KABAG_ORGANISASI',
-                                    name: 'Kepala Bagian Organisasi',
-                                    unit_name: 'Bagian Organisasi',
-                                    official_name: 'Fitriani, S.IP., M.Si.',
-                                },
-                                progress: {
-                                    total: 17,
-                                    pending: 1,
-                                    in_progress: 4,
-                                    completed: 12,
-                                    percent_complete: 71,
-                                },
-                                last_activity_at: '2026-09-28T14:35:00+08:00',
-                                attention: {
-                                    needs_attention: true,
-                                    idle_hours: 50,
-                                    reason: 'Satu cabang belum bergerak selama 50 jam.',
-                                },
-                            },
-                        ],
-                    },
-                    {
-                        reference: 'aggregate-sekda-asisten-ii',
-                        recipient_position: {
-                            code: 'ASISTEN-II',
-                            name: 'Asisten Perekonomian dan Pembangunan',
-                            unit_name: 'Sekretariat Daerah',
-                            official_name: 'Ir. Fatmawati Yusuf, M.Si.',
-                        },
-                        progress: {
-                            total: 30,
-                            pending: 3,
-                            in_progress: 6,
-                            completed: 21,
-                            percent_complete: 70,
-                        },
-                        last_activity_at: '2026-09-28T12:10:00+08:00',
-                        attention: {
-                            needs_attention: true,
-                            idle_hours: 52,
-                            reason: 'Dua cabang belum diperbarui selama 52 jam.',
-                        },
-                        children: [
-                            {
-                                reference: 'aggregate-sekda-asisten-ii-ekonomi',
-                                recipient_position: {
-                                    code: 'KABAG_EKONOMI',
-                                    name: 'Kepala Bagian Ekonomi',
-                                    unit_name: 'Bagian Ekonomi',
-                                    official_name: 'Rahmat Hidayat, S.E.',
-                                },
-                                progress: {
-                                    total: 16,
-                                    pending: 2,
-                                    in_progress: 3,
-                                    completed: 11,
-                                    percent_complete: 69,
-                                },
-                                last_activity_at: '2026-09-28T12:10:00+08:00',
-                                attention: {
-                                    needs_attention: true,
-                                    idle_hours: 52,
-                                    reason: 'Satu cabang belum bergerak selama 52 jam.',
-                                },
-                            },
-                            {
-                                reference:
-                                    'aggregate-sekda-asisten-ii-pembangunan',
-                                recipient_position: {
-                                    code: 'KABAG_PEMBANGUNAN',
-                                    name: 'Kepala Bagian Pembangunan',
-                                    unit_name: 'Bagian Pembangunan',
-                                    official_name: 'Maya Sari, S.T., M.T.',
-                                },
-                                progress: {
-                                    total: 14,
-                                    pending: 1,
-                                    in_progress: 3,
-                                    completed: 10,
-                                    percent_complete: 71,
-                                },
-                                last_activity_at: '2026-09-29T15:30:00+08:00',
-                                attention: {
-                                    needs_attention: false,
-                                    idle_hours: 25,
-                                    reason: null,
-                                },
-                            },
-                        ],
-                    },
-                ],
-            },
-        ],
+        generated_at: previewPeriodicReportOrganizationGraphSeed.generated_at,
+        executives:
+            previewPeriodicReportOrganizationGraphSeed.executives.map(
+                presentAggregateNode,
+            ),
     };

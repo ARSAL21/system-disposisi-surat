@@ -50,7 +50,7 @@ class DocumentVersionPositionAssignmentResolver
                     ->where(function (Builder $authority): void {
                         $authority
                             ->whereHas('positionLevel', fn (Builder $level): Builder => $level
-                                ->where('code', OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL)
+                                ->whereIn('code', OrganizationCatalog::executiveLevelCodes())
                                 ->where('is_active', true))
                             ->orWhere(function (Builder $generalAffairs): void {
                                 $generalAffairs

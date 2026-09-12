@@ -51,7 +51,10 @@ final class OutgoingLetterScopeResolver
 
         return new OutgoingLetterScope(
             positionIds: array_values($positions->map(fn (Position $position): int => (int) $position->getKey())->all()),
-            executivePositionIds: $idsAtLevel(OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL),
+            executivePositionIds: array_values($positions
+                ->filter(fn (Position $position): bool => in_array($position->positionLevel->code, OrganizationCatalog::executiveLevelCodes(), true))
+                ->map(fn (Position $position): int => (int) $position->getKey())
+                ->all()),
             assistantPositionIds: $idsAtLevel(OrganizationCatalog::ASSISTANT_LEVEL),
             sectionHeadPositionIds: $idsAtLevel(OrganizationCatalog::SECTION_HEAD_LEVEL),
             generalAffairsOfficerPositionIds: array_values($positions

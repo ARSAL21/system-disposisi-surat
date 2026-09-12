@@ -79,9 +79,39 @@ const levelMetaMap: Record<string, LevelWorkflowMeta> = {
         sampleLetterAction:
             'Petugas Bagian Umum memverifikasi surat masuk dari instansi luar, mencatat nomor agenda, dan meneruskan berkas ke Sekda/Wali Kota.',
     },
-    EXECUTIVE_ENTRY: {
-        code: 'EXECUTIVE_ENTRY',
+    MAYOR: {
+        code: 'MAYOR',
         stepNumber: 2,
+        phase: 'Fase Arahan Formal Wali Kota',
+        badgeColor:
+            'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-300 dark:border-amber-400/20',
+        glowClass: 'from-amber-500/20 to-orange-600/10',
+        activeBorderClass: 'border-amber-500 shadow-amber-500/15',
+        icon: Crown,
+        shortDesc:
+            'Wali Kota memberi arahan formal kepada Sekda tanpa melewati garis koordinasi organisasi.',
+        responsibilities: [
+            'Menelaah surat yang secara formal diteruskan melalui meja Wali Kota.',
+            'Memberikan arahan dan instruksi kepada Sekda sebagai pengendali substansi.',
+            'Memantau progres dan hasil tanpa memilih Asisten secara langsung.',
+        ],
+        capabilities: {
+            canReceivePublic: false,
+            canCreatePrimaryDisposition: false,
+            canBranchDisposition: false,
+            canExecuteTerminalAction: false,
+        },
+        guardrails: [
+            'Wali Kota berada di atas Sekda dalam struktur (Order 10).',
+            'Tidak dapat langsung memilih Asisten atau Kepala Bagian.',
+            'Arahan formal selalu dicatat sebelum diteruskan ke Sekda.',
+        ],
+        sampleLetterAction:
+            'Wali Kota memberi arahan "Telaah dan tindak lanjuti" kepada Sekda.',
+    },
+    REGIONAL_SECRETARY: {
+        code: 'REGIONAL_SECRETARY',
+        stepNumber: 3,
         phase: 'Fase Penelaahan Kebijakan & Disposisi Primer',
         badgeColor:
             'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-300 dark:border-amber-400/20',
@@ -89,12 +119,11 @@ const levelMetaMap: Record<string, LevelWorkflowMeta> = {
         activeBorderClass: 'border-amber-500 shadow-amber-500/15',
         icon: Crown,
         shortDesc:
-            'Pemegang otoritas penentu kebijakan dan perumus instruksi disposisi pertama.',
+            'Sekda mengubah arahan formal menjadi disposisi substantif kepada Asisten.',
         responsibilities: [
-            'Menelaah urgensi, perihal, dan derajat kerahasiaan surat masuk.',
-            'Menentukan arah kebijakan dan instruksi disposisi primer.',
-            'Mendelegasikan mandat penanganan surat ke Asisten / Pembantu Pimpinan.',
-            'Memberikan tenggat waktu dan petunjuk khusus tindak lanjut surat.',
+            'Menelaah urgensi, perihal, dan arahan Wali Kota bila tersedia.',
+            'Menentukan Asisten yang akan mengoordinasikan tindak lanjut.',
+            'Menetapkan instruksi dan tenggat tindak lanjut secara substantif.',
         ],
         capabilities: {
             canReceivePublic: false,
@@ -103,12 +132,12 @@ const levelMetaMap: Record<string, LevelWorkflowMeta> = {
             canExecuteTerminalAction: false,
         },
         guardrails: [
-            'Level tertinggi penentu arah kebijakan disposisi (Order 20).',
-            'Satu-satunya level yang dapat menerbitkan disposisi primer.',
-            'Wajib mengisi catatan arahan sebelum surat diteruskan ke level di bawahnya.',
+            'Sekda berada tepat di bawah Wali Kota (Order 20).',
+            'Hanya Sekda yang dapat membuat disposisi primer ke Asisten.',
+            'Wajib mengisi instruksi sebelum surat diteruskan ke tingkat koordinasi.',
         ],
         sampleLetterAction:
-            'Wali Kota / Sekda menelaah proposal kerja sama, memberikan arahan "Pelajari dan koordinasikan draf telaah", lalu mendisposisikan ke Asisten I.',
+            'Sekda meneruskan surat kepada Asisten I dengan instruksi untuk menelaah dan mengoordinasikan bahan teknis.',
     },
     ASSISTANT: {
         code: 'ASSISTANT',
@@ -211,10 +240,10 @@ const simulationStages = [
     },
     {
         title: 'Penelaahan Pimpinan',
-        levelCode: 'EXECUTIVE_ENTRY',
-        levelTitle: 'Wali Kota / Sekda',
+        levelCode: 'REGIONAL_SECRETARY',
+        levelTitle: 'Sekretaris Daerah',
         status: 'DISPOSISI PRIMER DITERBITKAN',
-        desc: 'Pimpinan membaca surat, merumuskan arahan kebijakan strategis, dan menentukan Asisten pembina teknis.',
+        desc: 'Sekda membaca surat dan arahan Wali Kota bila ada, lalu menentukan Asisten pembina teknis.',
     },
     {
         title: 'Delegasi & Percabangan',

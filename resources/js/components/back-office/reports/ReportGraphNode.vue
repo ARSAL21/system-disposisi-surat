@@ -21,7 +21,7 @@ import type {
 } from '@/types';
 
 const props = defineProps<{
-    level: 'EXECUTIVE_ENTRY' | 'ASSISTANT' | 'SECTION_HEAD';
+    level: 'MAYOR' | 'REGIONAL_SECRETARY' | 'ASSISTANT' | 'SECTION_HEAD';
     position: ReportProcessPosition;
     progress?: PeriodicReportBranchProgress | null;
     status?: DispositionRecipientStatus | null;
@@ -34,15 +34,21 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [] }>();
 
 const levelLabel = computed(() => {
-    if (props.level === 'EXECUTIVE_ENTRY') {
-        return 'Pimpinan';
+    if (props.level === 'MAYOR') {
+        return 'Wali Kota';
+    }
+
+    if (props.level === 'REGIONAL_SECRETARY') {
+        return 'Sekda';
     }
 
     return props.level === 'ASSISTANT' ? 'Asisten' : 'Kepala Bagian';
 });
 
 const levelIcon = computed<Component>(() =>
-    props.level === 'EXECUTIVE_ENTRY' ? Landmark : UserRound,
+    props.level === 'MAYOR' || props.level === 'REGIONAL_SECRETARY'
+        ? Landmark
+        : UserRound,
 );
 
 const nodeTone = computed(() => {
@@ -122,7 +128,7 @@ const ariaLabel = computed(() => {
             <span
                 class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl"
                 :class="
-                    level === 'EXECUTIVE_ENTRY'
+                    level === 'MAYOR' || level === 'REGIONAL_SECRETARY'
                         ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
                         : level === 'ASSISTANT'
                           ? 'bg-indigo-600 text-white'

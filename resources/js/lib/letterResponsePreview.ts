@@ -266,7 +266,10 @@ const makeListItem = (
 export const previewLetterResponseDossiers: LetterResponseListItem[] = [
     makeListItem(previewLetterResponseDossier, '2026-09-05T14:00:00+08:00'),
     {
-        ...makeListItem(previewLetterResponseDossier, '2026-09-04T16:10:00+08:00'),
+        ...makeListItem(
+            previewLetterResponseDossier,
+            '2026-09-04T16:10:00+08:00',
+        ),
         public_id: 'response-dossier-2026-00037',
         status: 'FINALIZED',
         letter: {

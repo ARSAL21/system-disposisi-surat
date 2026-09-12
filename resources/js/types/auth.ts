@@ -9,6 +9,8 @@ export type User = {
     two_factor_enabled?: boolean;
     password_confirmed?: boolean;
     confirm_password_url?: string;
+    requires_mfa_setup?: boolean;
+    is_super_admin?: boolean;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
@@ -46,6 +48,16 @@ export type AuthCapabilities = {
     can_number_outgoing_letters?: boolean;
     can_verify_outgoing_letters?: boolean;
     can_deliver_outgoing_letters?: boolean;
+    can_view_users?: boolean;
+    can_invite_users?: boolean;
+    can_manage_user_status?: boolean;
+    can_manage_user_security?: boolean;
+    can_view_outgoing_templates?: boolean;
+    can_manage_outgoing_templates?: boolean;
+    can_view_standalone_outgoing?: boolean;
+    can_create_standalone_outgoing?: boolean;
+    can_review_standalone_outgoing?: boolean;
+    can_approve_standalone_outgoing?: boolean;
 };
 
 export type Auth = {

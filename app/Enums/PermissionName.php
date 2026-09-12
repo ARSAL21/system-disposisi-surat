@@ -36,4 +36,14 @@ enum PermissionName: string
     case NumberOutgoingLetters = 'outgoing-letters.number';
     case VerifyOutgoingLetters = 'outgoing-letters.verify';
     case DeliverOutgoingLetters = 'outgoing-letters.deliver';
+    case ViewUsers = 'users.view';
+    case InviteUsers = 'users.invite';
+    case ManageUserStatus = 'users.manage-status';
+    case ManageUserSecurity = 'users.manage-security';
+    case ViewOutgoingTemplates = 'outgoing-templates.view';
+    case ManageOutgoingTemplates = 'outgoing-templates.manage';
+    case ViewStandaloneOutgoing = 'standalone-outgoing.view';
+    case CreateStandaloneOutgoing = 'standalone-outgoing.create';
+    case ReviewStandaloneOutgoing = 'standalone-outgoing.review';
+    case ApproveStandaloneOutgoing = 'standalone-outgoing.approve';
 }

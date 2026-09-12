@@ -3,6 +3,8 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, CircleCheck, Eye, FileWarning, Hash } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
+import OutgoingCopiesPanel from '@/components/back-office/outgoing-letters/OutgoingCopiesPanel.vue';
+import OutgoingDeliveryPanel from '@/components/back-office/outgoing-letters/OutgoingDeliveryPanel.vue';
 import OutgoingDocumentPanel from '@/components/back-office/outgoing-letters/OutgoingDocumentPanel.vue';
 import OutgoingLetterActionCenter from '@/components/back-office/outgoing-letters/OutgoingLetterActionCenter.vue';
 import OutgoingLetterActionDialog from '@/components/back-office/outgoing-letters/OutgoingLetterActionDialog.vue';
@@ -14,7 +16,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { previewOutgoingLetterDetailFor } from '@/lib/outgoingLetterPreview';
-import type { OutgoingLetterDetail, OutgoingLetterDetailPageProps, OutgoingLetterUiAction } from '@/types';
+import type {
+    OutgoingLetterDetail,
+    OutgoingLetterDetailPageProps,
+    OutgoingLetterUiAction,
+} from '@/types';
 
 const props = defineProps<OutgoingLetterDetailPageProps>();
 
@@ -22,7 +28,10 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Dashboard Internal', href: '/back-office/dashboard' },
-            { title: 'Register Surat Keluar', href: '/back-office/outgoing-letters' },
+            {
+                title: 'Register Surat Keluar',
+                href: '/back-office/outgoing-letters',
+            },
             { title: 'Detail penerbitan', href: '#' },
         ],
     },
@@ -30,9 +39,17 @@ defineOptions({
 
 const previewMode = computed(() => props.preview === true);
 const page = usePage();
-const previewPublicId = computed(() => page.url.split('?')[0].split('/').filter(Boolean).at(-1) ?? '');
+const previewPublicId = computed(
+    () => page.url.split('?')[0].split('/').filter(Boolean).at(-1) ?? '',
+);
 const simulatedLetter = ref<OutgoingLetterDetail | null>(null);
-const letter = computed(() => simulatedLetter.value ?? (previewMode.value ? previewOutgoingLetterDetailFor(previewPublicId.value) : props.outgoingLetter ?? null));
+const letter = computed(
+    () =>
+        simulatedLetter.value ??
+        (previewMode.value
+            ? previewOutgoingLetterDetailFor(previewPublicId.value)
+            : (props.outgoingLetter ?? null)),
+);
 const activeAction = ref<OutgoingLetterUiAction | null>(null);
 const dialogOpen = ref(false);
 
@@ -41,7 +58,10 @@ function openAction(action: OutgoingLetterUiAction): void {
     dialogOpen.value = true;
 }
 
-function completed(action: OutgoingLetterUiAction['kind'], payload: Record<string, string | File | null>): void {
+function completed(
+    action: OutgoingLetterUiAction['kind'],
+    payload: Record<string, string | File | null>,
+): void {
     if (!previewMode.value || !letter.value) {
         toast.success('Tahap penerbitan berhasil diperbarui.');
 
@@ -53,8 +73,12 @@ function completed(action: OutgoingLetterUiAction['kind'], payload: Record<strin
 
     if (action === 'assign_number') {
         next.status = 'NUMBER_ASSIGNED';
-        next.numbering.outgoing_number = String(payload.outgoing_number || '005/1201/SETDA/2026');
-        next.numbering.letter_date = String(payload.letter_date || '2026-09-06');
+        next.numbering.outgoing_number = String(
+            payload.outgoing_number || '005/1201/SETDA/2026',
+        );
+        next.numbering.letter_date = String(
+            payload.letter_date || '2026-09-06',
+        );
         next.capabilities.can_assign_number = false;
         next.capabilities.can_withdraw = false;
         next.capabilities.can_upload_signed_document = true;
@@ -77,22 +101,36 @@ function completed(action: OutgoingLetterUiAction['kind'], payload: Record<strin
     } else if (action === 'deliver') {
         next.status = 'DELIVERED';
         next.delivery.delivered_at = now;
-        next.delivery.method = next.source === 'ONLINE' ? 'PORTAL' : 'IN_PERSON';
+        next.delivery.method =
+            next.source === 'ONLINE' ? 'PORTAL' : 'IN_PERSON';
         next.capabilities.can_deliver = false;
     } else if (action === 'withdraw') {
         next.status = 'WITHDRAWN';
-        next.withdrawal = { reason: String(payload.withdrawal_reason), withdrawn_by: 'Sekretaris Daerah', withdrawn_at: now };
+        next.withdrawal = {
+            reason: String(payload.withdrawal_reason),
+            withdrawn_by: 'Sekretaris Daerah',
+            withdrawn_at: now,
+        };
         next.capabilities.can_assign_number = false;
         next.capabilities.can_withdraw = false;
     }
 
     simulatedLetter.value = next;
-    toast.success('Simulasi tahap berhasil diperbarui. Data backend tidak berubah.');
+    toast.success(
+        'Simulasi tahap berhasil diperbarui. Data backend tidak berubah.',
+    );
 }
 
-function documentAction(action: 'preview' | 'download', url: string | null): void {
+function documentAction(
+    action: 'preview' | 'download',
+    url: string | null,
+): void {
     if (previewMode.value) {
-        toast.info(action === 'preview' ? 'Pratinjau PDF privat aktif setelah backend M8.3 terhubung.' : 'Unduhan fixture dinonaktifkan.');
+        toast.info(
+            action === 'preview'
+                ? 'Pratinjau PDF privat aktif setelah backend M8.3 terhubung.'
+                : 'Unduhan fixture dinonaktifkan.',
+        );
 
         return;
     }
@@ -101,29 +139,162 @@ function documentAction(action: 'preview' | 'download', url: string | null): voi
         window.location.assign(url);
     }
 }
+
+function deliveryCompleted(): void {
+    if (!previewMode.value || !letter.value) {
+        return;
+    }
+
+    const next = structuredClone(letter.value);
+    next.status = 'DELIVERED';
+    next.delivery = {
+        ...next.delivery,
+        method:
+            next.delivery.method ??
+            (next.source === 'ONLINE' ? 'EMAIL' : 'IN_PERSON'),
+        delivered_at: '2026-09-10T14:30:00+08:00',
+        recipient_name: next.delivery.recipient_name ?? 'Pemilik surat',
+        note: next.delivery.note ?? 'Pengiriman dicatat pada mode pratinjau.',
+    };
+    next.capabilities.can_deliver = false;
+    next.capabilities.can_create_correction = true;
+    simulatedLetter.value = next;
+}
 </script>
 
 <template>
-    <Head :title="letter ? `Surat Keluar · ${letter.numbering.outgoing_number ?? 'Belum bernomor'}` : 'Detail Surat Keluar'" />
+    <Head
+        :title="
+            letter
+                ? `Surat Keluar · ${letter.numbering.outgoing_number ?? 'Belum bernomor'}`
+                : 'Detail Surat Keluar'
+        "
+    />
     <main class="flex flex-1 flex-col bg-muted/15 p-4 sm:p-6 lg:p-8">
-        <div v-if="letter" class="mx-auto flex w-full max-w-[100rem] flex-col gap-5">
+        <div
+            v-if="letter"
+            class="mx-auto flex w-full max-w-[100rem] flex-col gap-5"
+        >
             <header class="rounded-3xl border bg-card p-5 shadow-sm sm:p-7">
-                <Button as-child variant="ghost" size="sm" class="-ml-3 rounded-xl"><Link :href="letter.routes.index"><ArrowLeft class="size-4" /> Kembali ke register</Link></Button>
-                <div class="mt-5 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                    <div class="min-w-0 max-w-4xl"><div class="flex flex-wrap items-center gap-2"><OutgoingLetterStatusBadge :status="letter.status" /><Badge variant="outline" class="rounded-full">{{ letter.source === 'ONLINE' ? 'Online' : 'Manual' }}</Badge></div><h1 class="mt-3 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{{ letter.subject }}</h1><p class="mt-2 flex items-center gap-2 font-mono text-sm text-muted-foreground"><Hash class="size-4" />{{ letter.numbering.outgoing_number ?? 'Nomor resmi belum diberikan' }}</p></div>
-                    <Button v-if="previewMode && letter.source === 'ONLINE'" type="button" variant="outline" class="min-h-11 rounded-xl" @click="toast.info('Gunakan akun publik lalu buka /public/previews/response-tracker untuk memeriksa tampilan pemohon.')"><Eye class="size-4" /> Cara cek tampilan pemohon</Button>
+                <Button
+                    as-child
+                    variant="ghost"
+                    size="sm"
+                    class="-ml-3 rounded-xl"
+                    ><Link :href="letter.routes.index"
+                        ><ArrowLeft class="size-4" /> Kembali ke register</Link
+                    ></Button
+                >
+                <div
+                    class="mt-5 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"
+                >
+                    <div class="max-w-4xl min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <OutgoingLetterStatusBadge
+                                :status="letter.status"
+                            /><Badge variant="outline" class="rounded-full">{{
+                                letter.origin === 'RESPONSE'
+                                    ? letter.source === 'ONLINE'
+                                        ? 'Balasan online'
+                                        : 'Balasan manual'
+                                    : 'Surat keluar mandiri'
+                            }}</Badge>
+                        </div>
+                        <h1
+                            class="mt-3 text-2xl leading-tight font-semibold tracking-tight sm:text-3xl"
+                        >
+                            {{ letter.subject }}
+                        </h1>
+                        <p
+                            class="mt-2 flex items-center gap-2 font-mono text-sm text-muted-foreground"
+                        >
+                            <Hash class="size-4" />{{
+                                letter.numbering.outgoing_number ??
+                                'Nomor resmi belum diberikan'
+                            }}
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            v-if="
+                                letter.origin === 'STANDALONE' &&
+                                letter.capabilities.can_select_sekda_approval &&
+                                letter.routes.sekda_approval
+                            "
+                            as-child
+                            class="min-h-11 rounded-xl"
+                            ><Link :href="letter.routes.sekda_approval"
+                                >Buka pengesahan Sekda</Link
+                            ></Button
+                        ><Button
+                            v-if="
+                                previewMode &&
+                                letter.origin === 'RESPONSE' &&
+                                letter.source === 'ONLINE'
+                            "
+                            type="button"
+                            variant="outline"
+                            class="min-h-11 rounded-xl"
+                            @click="
+                                toast.info(
+                                    'Gunakan akun publik lalu buka /public/previews/response-tracker untuk memeriksa tampilan pemohon.',
+                                )
+                            "
+                            ><Eye class="size-4" /> Cara cek tampilan
+                            pemohon</Button
+                        >
+                    </div>
                 </div>
             </header>
 
             <OutgoingPublicationRail :status="letter.status" />
             <OutgoingLetterOverview :letter="letter" />
-            <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
-                <div class="min-w-0 space-y-5"><OutgoingDocumentPanel :letter="letter" :preview="previewMode" @document="documentAction" /><OutgoingLetterHistory :entries="letter.history" /></div>
-                <aside class="space-y-5 xl:sticky xl:top-6"><OutgoingLetterActionCenter :letter="letter" @action="openAction" /><Alert><CircleCheck class="size-4" /><AlertTitle>Boundary penerbitan</AlertTitle><AlertDescription>Persetujuan pada layar ini adalah verifikasi administratif, bukan TTE tersertifikasi.</AlertDescription></Alert></aside>
+            <div
+                class="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]"
+            >
+                <div class="min-w-0 space-y-5">
+                    <OutgoingDocumentPanel
+                        :letter="letter"
+                        :preview="previewMode"
+                        @document="documentAction"
+                    /><OutgoingDeliveryPanel
+                        :letter="letter"
+                        :preview="previewMode"
+                        @delivered="deliveryCompleted"
+                    /><OutgoingCopiesPanel
+                        :letter="letter"
+                    /><OutgoingLetterHistory :entries="letter.history" />
+                </div>
+                <aside class="space-y-5 xl:sticky xl:top-6">
+                    <OutgoingLetterActionCenter
+                        :letter="letter"
+                        @action="openAction"
+                    /><Alert
+                        ><CircleCheck class="size-4" /><AlertTitle
+                            >Boundary penerbitan</AlertTitle
+                        ><AlertDescription
+                            >Persetujuan pada layar ini adalah verifikasi
+                            administratif, bukan TTE
+                            tersertifikasi.</AlertDescription
+                        ></Alert
+                    >
+                </aside>
             </div>
         </div>
-        <Alert v-else variant="destructive"><FileWarning class="size-4" /><AlertTitle>Surat keluar tidak tersedia</AlertTitle><AlertDescription>Backend tidak mengirimkan resource surat keluar dan fixture hanya aktif pada route pratinjau.</AlertDescription></Alert>
+        <Alert v-else variant="destructive"
+            ><FileWarning class="size-4" /><AlertTitle
+                >Surat keluar tidak tersedia</AlertTitle
+            ><AlertDescription
+                >Backend tidak mengirimkan resource surat keluar dan fixture
+                hanya aktif pada route pratinjau.</AlertDescription
+            ></Alert
+        >
     </main>
 
-    <OutgoingLetterActionDialog v-model:open="dialogOpen" :action="activeAction" :preview="previewMode" @completed="completed" />
+    <OutgoingLetterActionDialog
+        v-model:open="dialogOpen"
+        :action="activeAction"
+        :preview="previewMode"
+        @completed="completed"
+    />
 </template>

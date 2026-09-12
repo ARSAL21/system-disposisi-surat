@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Authorization\AuthorizationCatalog;
 use App\Enums\AccountType;
+use App\Listeners\RecordUserLoginEvent;
 use App\Models\AuditLog;
 use App\Models\Disposition;
 use App\Models\DispositionRecipient;
@@ -12,7 +13,10 @@ use App\Models\InstructionLabel;
 use App\Models\LetterResponseDossier;
 use App\Models\LetterRoute;
 use App\Models\OutgoingLetter;
+use App\Models\OutgoingLetterTemplate;
+use App\Models\StandaloneOutgoingDraft;
 use App\Models\User;
+use App\Models\UserInvitation;
 use App\Policies\AuditLogPolicy;
 use App\Policies\DispositionPolicy;
 use App\Policies\DispositionRecipientPolicy;
@@ -21,13 +25,17 @@ use App\Policies\InstructionLabelPolicy;
 use App\Policies\LetterResponseDossierPolicy;
 use App\Policies\LetterRoutePolicy;
 use App\Policies\OutgoingLetterPolicy;
+use App\Policies\OutgoingLetterTemplatePolicy;
 use App\Policies\RolePolicy;
+use App\Policies\StandaloneOutgoingDraftPolicy;
 use App\Policies\UserPolicy;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +62,11 @@ class AppServiceProvider extends ServiceProvider
         $this->configureAuthorizationPolicies();
         $this->configureAuthorizationRouteBindings();
         $this->configureRateLimiting();
+
+        Event::listen(
+            Login::class,
+            RecordUserLoginEvent::class,
+        );
     }
 
     private function configureAuthorizationPolicies(): void
@@ -66,6 +79,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(LetterRoute::class, LetterRoutePolicy::class);
         Gate::policy(LetterResponseDossier::class, LetterResponseDossierPolicy::class);
         Gate::policy(OutgoingLetter::class, OutgoingLetterPolicy::class);
+        Gate::policy(OutgoingLetterTemplate::class, OutgoingLetterTemplatePolicy::class);
+        Gate::policy(StandaloneOutgoingDraft::class, StandaloneOutgoingDraftPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
     }
@@ -80,6 +95,14 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('user', fn (string $value): User => User::query()
             ->whereKey($value)
             ->where('account_type', AccountType::InternalAccount->value)
+            ->firstOrFail());
+
+        Route::bind('managedUser', fn (string $value): User => User::query()
+            ->whereKey($value)
+            ->firstOrFail());
+
+        Route::bind('userInvitation', fn (string $value): UserInvitation => UserInvitation::query()
+            ->whereKey($value)
             ->firstOrFail());
     }
 
@@ -137,6 +160,14 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(120)->by('private-document-access:ip:'.$request->ip()),
         ]);
 
+        RateLimiter::for('outgoing-letter-verification', fn (Request $request): array => [
+            Limit::perMinute(60)->by('outgoing-letter-verification:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('outgoing-delivery-link', fn (Request $request): array => [
+            Limit::perMinute(30)->by('outgoing-delivery-link:ip:'.$request->ip()),
+        ]);
+
         RateLimiter::for('document-version-upload', fn (Request $request): array => [
             Limit::perHour(10)->by('document-version-upload:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perHour(30)->by('document-version-upload:ip:'.$request->ip()),
@@ -185,6 +216,40 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('outgoing-letter-upload', fn (Request $request): array => [
             Limit::perHour(20)->by('outgoing-letter-upload:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perHour(60)->by('outgoing-letter-upload:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('outgoing-template-upload', fn (Request $request): array => [
+            Limit::perHour(10)->by('outgoing-template-upload:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perHour(30)->by('outgoing-template-upload:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('standalone-outgoing-upload', fn (Request $request): array => [
+            Limit::perHour(20)->by('standalone-outgoing-upload:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perHour(60)->by('standalone-outgoing-upload:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('standalone-outgoing-mutation', fn (Request $request): array => [
+            Limit::perMinute(60)->by('standalone-outgoing-mutation:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(120)->by('standalone-outgoing-mutation:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('user-invitation-create', fn (Request $request): array => [
+            Limit::perHour(10)->by('user-invitation-create:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perHour(30)->by('user-invitation-create:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('user-invitation-accept', fn (Request $request): array => [
+            Limit::perMinute(10)->by('user-invitation-accept:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('user-security-mutation', fn (Request $request): array => [
+            Limit::perMinute(30)->by('user-security-mutation:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(60)->by('user-security-mutation:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('user-status-mutation', fn (Request $request): array => [
+            Limit::perMinute(30)->by('user-status-mutation:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(60)->by('user-status-mutation:ip:'.$request->ip()),
         ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\BackOffice\Routing;
 
+use App\Enums\InitialLetterRoutePath;
 use App\Models\IncomingLetter;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -26,16 +27,16 @@ class StoreLetterRouteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'target_position_id' => [
+            'route_path' => [
                 'required',
-                'integer',
-                Rule::exists('positions', 'id'),
+                'string',
+                Rule::enum(InitialLetterRoutePath::class),
             ],
         ];
     }
 
-    public function targetPositionId(): int
+    public function routePath(): InitialLetterRoutePath
     {
-        return (int) $this->validated('target_position_id');
+        return InitialLetterRoutePath::from((string) $this->validated('route_path'));
     }
 }

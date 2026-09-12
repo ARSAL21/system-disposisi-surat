@@ -118,7 +118,7 @@ function nodeBorderTone(id: string, status?: string): string {
         >
             <div class="min-w-0">
                 <p
-                    class="flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-300 uppercase tracking-[0.14em]"
+                    class="flex items-center gap-2 text-xs font-semibold tracking-[0.14em] text-indigo-600 uppercase dark:text-indigo-300"
                 >
                     <Network class="size-4" /> Pohon tanggung jawab balasan
                 </p>
@@ -126,10 +126,15 @@ function nodeBorderTone(id: string, status?: string): string {
                     id="response-tree-heading"
                     class="mt-1 text-lg font-semibold tracking-tight"
                 >
-                    {{ dossier.letter.agenda_number }} · Struktur Mandat & Kontribusi
+                    {{ dossier.letter.agenda_number }} · Struktur Mandat &
+                    Kontribusi
                 </h2>
-                <p class="mt-1 max-w-2xl text-xs text-muted-foreground leading-5">
-                    Alur vertikal: Pimpinan menetapkan mandat, Asisten mengoordinasikan telaah, dan Kepala Bagian menyusun bahan teknis.
+                <p
+                    class="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground"
+                >
+                    Alur vertikal: Pimpinan menetapkan mandat, Asisten
+                    mengoordinasikan telaah, dan Kepala Bagian menyusun bahan
+                    teknis.
                 </p>
             </div>
 
@@ -140,7 +145,8 @@ function nodeBorderTone(id: string, status?: string): string {
                     aria-label="Keterangan status"
                 >
                     <span class="inline-flex items-center gap-1">
-                        <CircleDotDashed class="size-3 text-amber-500" /> Menunggu
+                        <CircleDotDashed class="size-3 text-amber-500" />
+                        Menunggu
                     </span>
                     <span class="inline-flex items-center gap-1">
                         <Play class="size-3 text-sky-500" /> Dikerjakan
@@ -150,7 +156,8 @@ function nodeBorderTone(id: string, status?: string): string {
                     </span>
                 </div>
                 <Badge variant="outline" class="rounded-full">
-                    {{ dossier.assistants.length }} Asisten · {{ dossier.progress.total }} cabang
+                    {{ dossier.assistants.length }} Asisten ·
+                    {{ dossier.progress.total }} cabang
                 </Badge>
             </div>
         </header>
@@ -170,8 +177,15 @@ function nodeBorderTone(id: string, status?: string): string {
                 >
                     <button
                         type="button"
-                        class="group w-full rounded-2xl border p-4 text-left shadow-xs transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-indigo-500/35"
-                        :class="nodeBorderTone('executive', dossier.status === 'OPEN' ? 'IN_PROGRESS' : 'COMPLETED')"
+                        class="group w-full rounded-2xl border p-4 text-left shadow-xs transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-indigo-500/35 focus-visible:outline-none"
+                        :class="
+                            nodeBorderTone(
+                                'executive',
+                                dossier.status === 'OPEN'
+                                    ? 'IN_PROGRESS'
+                                    : 'COMPLETED',
+                            )
+                        "
                         @click="selectExecutive"
                     >
                         <div class="flex items-start gap-3">
@@ -181,47 +195,78 @@ function nodeBorderTone(id: string, status?: string): string {
                                 <Landmark class="size-4" />
                             </span>
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-start justify-between gap-2">
+                                <div
+                                    class="flex items-start justify-between gap-2"
+                                >
                                     <p
                                         class="text-[10px] font-bold tracking-[0.13em] text-muted-foreground uppercase"
                                     >
                                         Pimpinan
                                     </p>
                                     <ResponseStatusBadge
-                                        :status="dossier.status === 'OPEN' ? 'IN_PROGRESS' : 'COMPLETED'"
+                                        :status="
+                                            dossier.status === 'OPEN'
+                                                ? 'IN_PROGRESS'
+                                                : 'COMPLETED'
+                                        "
                                     />
                                 </div>
-                                <h3 class="mt-1 text-sm font-semibold text-foreground leading-5">
+                                <h3
+                                    class="mt-1 text-sm leading-5 font-semibold text-foreground"
+                                >
                                     {{ dossier.executive.position_name }}
                                 </h3>
-                                <p class="mt-0.5 truncate text-xs text-muted-foreground">
-                                    {{ dossier.executive.official_name ?? 'Pejabat penerima' }}
+                                <p
+                                    class="mt-0.5 truncate text-xs text-muted-foreground"
+                                >
+                                    {{
+                                        dossier.executive.official_name ??
+                                        'Pejabat penerima'
+                                    }}
                                 </p>
                             </div>
                         </div>
 
                         <!-- Executive Progress Bar -->
                         <div class="mt-3.5 border-t pt-3">
-                            <div class="flex items-center justify-between gap-3 text-[11px]">
-                                <span class="text-muted-foreground">Progres seluruh cabang</span>
-                                <strong class="font-semibold text-indigo-700 dark:text-indigo-300 tabular-nums">
-                                    {{ dossier.progress.completed }}/{{ dossier.progress.total }} cabang ({{ dossier.progress.percent }}%)
+                            <div
+                                class="flex items-center justify-between gap-3 text-[11px]"
+                            >
+                                <span class="text-muted-foreground"
+                                    >Progres seluruh cabang</span
+                                >
+                                <strong
+                                    class="font-semibold text-indigo-700 tabular-nums dark:text-indigo-300"
+                                >
+                                    {{ dossier.progress.completed }}/{{
+                                        dossier.progress.total
+                                    }}
+                                    cabang ({{ dossier.progress.percent }}%)
                                 </strong>
                             </div>
-                            <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                            <div
+                                class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted"
+                            >
                                 <div
                                     class="h-full rounded-full bg-indigo-600 transition-all duration-300"
-                                    :style="{ width: `${dossier.progress.percent}%` }"
+                                    :style="{
+                                        width: `${dossier.progress.percent}%`,
+                                    }"
                                 />
                             </div>
                         </div>
 
                         <!-- Timing & Sub-action -->
-                        <div class="mt-3 flex items-center justify-between border-t pt-2.5 text-[11px] text-muted-foreground">
+                        <div
+                            class="mt-3 flex items-center justify-between border-t pt-2.5 text-[11px] text-muted-foreground"
+                        >
                             <span class="inline-flex items-center gap-1">
-                                <Clock3 class="size-3" /> Dibuka: {{ formatDate(dossier.opened_at) }}
+                                <Clock3 class="size-3" /> Dibuka:
+                                {{ formatDate(dossier.opened_at) }}
                             </span>
-                            <span class="font-medium text-indigo-600 dark:text-indigo-300">
+                            <span
+                                class="font-medium text-indigo-600 dark:text-indigo-300"
+                            >
                                 Mandat substantif &rarr;
                             </span>
                         </div>
@@ -284,8 +329,13 @@ function nodeBorderTone(id: string, status?: string): string {
                             <!-- Assistant Node Card -->
                             <button
                                 type="button"
-                                class="group w-full rounded-xl border p-3.5 text-left shadow-xs transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-indigo-500/35"
-                                :class="nodeBorderTone(assistant.public_id, assistant.status)"
+                                class="group w-full rounded-xl border p-3.5 text-left shadow-xs transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-indigo-500/35 focus-visible:outline-none"
+                                :class="
+                                    nodeBorderTone(
+                                        assistant.public_id,
+                                        assistant.status,
+                                    )
+                                "
                                 @click="selectAssistant(assistant)"
                             >
                                 <div class="flex items-start gap-3">
@@ -295,42 +345,76 @@ function nodeBorderTone(id: string, status?: string): string {
                                         <UserRound class="size-4" />
                                     </span>
                                     <div class="min-w-0 flex-1">
-                                        <div class="flex items-start justify-between gap-2">
+                                        <div
+                                            class="flex items-start justify-between gap-2"
+                                        >
                                             <p
                                                 class="text-[10px] font-bold tracking-[0.13em] text-muted-foreground uppercase"
                                             >
                                                 Asisten
                                             </p>
-                                            <ResponseStatusBadge :status="assistant.status" />
+                                            <ResponseStatusBadge
+                                                :status="assistant.status"
+                                            />
                                         </div>
-                                        <h3 class="mt-1 text-sm font-semibold text-foreground leading-5">
+                                        <h3
+                                            class="mt-1 text-sm leading-5 font-semibold text-foreground"
+                                        >
                                             {{ assistant.position_name }}
                                         </h3>
-                                        <p class="mt-0.5 truncate text-xs text-muted-foreground">
-                                            {{ assistant.official_name ?? assistant.unit_name }}
+                                        <p
+                                            class="mt-0.5 truncate text-xs text-muted-foreground"
+                                        >
+                                            {{
+                                                assistant.official_name ??
+                                                assistant.unit_name
+                                            }}
                                         </p>
                                     </div>
                                 </div>
 
                                 <!-- Assistant Progress Bar -->
                                 <div class="mt-3 border-t pt-2.5">
-                                    <div class="flex items-center justify-between gap-2 text-[11px]">
-                                        <span class="text-muted-foreground">Progres Bagian</span>
-                                        <span class="font-semibold text-indigo-700 dark:text-indigo-300 tabular-nums">
-                                            {{ assistant.child_progress.completed }}/{{ assistant.child_progress.total }} ({{ assistant.child_progress.percent }}%)
+                                    <div
+                                        class="flex items-center justify-between gap-2 text-[11px]"
+                                    >
+                                        <span class="text-muted-foreground"
+                                            >Progres Bagian</span
+                                        >
+                                        <span
+                                            class="font-semibold text-indigo-700 tabular-nums dark:text-indigo-300"
+                                        >
+                                            {{
+                                                assistant.child_progress
+                                                    .completed
+                                            }}/{{
+                                                assistant.child_progress.total
+                                            }}
+                                            ({{
+                                                assistant.child_progress
+                                                    .percent
+                                            }}%)
                                         </span>
                                     </div>
-                                    <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                                    <div
+                                        class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted"
+                                    >
                                         <div
                                             class="h-full rounded-full bg-indigo-500 transition-all duration-300"
-                                            :style="{ width: `${assistant.child_progress.percent}%` }"
+                                            :style="{
+                                                width: `${assistant.child_progress.percent}%`,
+                                            }"
                                         />
                                     </div>
                                 </div>
 
                                 <!-- Timings -->
-                                <div class="mt-2.5 flex items-center justify-between border-t pt-2 text-[10px] text-muted-foreground">
-                                    <span class="inline-flex items-center gap-1">
+                                <div
+                                    class="mt-2.5 flex items-center justify-between border-t pt-2 text-[10px] text-muted-foreground"
+                                >
+                                    <span
+                                        class="inline-flex items-center gap-1"
+                                    >
                                         <Clock3 class="size-3" /> Diteruskan
                                     </span>
                                     <span class="font-medium text-foreground">
@@ -340,24 +424,43 @@ function nodeBorderTone(id: string, status?: string): string {
                             </button>
 
                             <!-- Assistant Proposal CTA or Preview -->
-                            <div v-if="assistant.proposal" class="mt-3 rounded-xl border border-amber-200/90 bg-amber-50/70 p-3 dark:border-amber-900/80 dark:bg-amber-950/20">
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200">
-                                        <Send class="size-3.5 text-amber-600" /> Usulan Balasan · v{{ assistant.proposal.current_version?.version_number }}
+                            <div
+                                v-if="assistant.proposal"
+                                class="mt-3 rounded-xl border border-amber-200/90 bg-amber-50/70 p-3 dark:border-amber-900/80 dark:bg-amber-950/20"
+                            >
+                                <div
+                                    class="flex items-center justify-between gap-2"
+                                >
+                                    <span
+                                        class="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200"
+                                    >
+                                        <Send class="size-3.5 text-amber-600" />
+                                        Usulan Balasan · v{{
+                                            assistant.proposal.current_version
+                                                ?.version_number
+                                        }}
                                     </span>
-                                    <Badge variant="outline" class="border-amber-300 bg-amber-100/60 text-[10px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                                    <Badge
+                                        variant="outline"
+                                        class="border-amber-300 bg-amber-100/60 text-[10px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                                    >
                                         Siap ditelaah
                                     </Badge>
                                 </div>
-                                <p class="mt-1 truncate text-xs text-amber-900/80 dark:text-amber-100/70">
-                                    {{ assistant.proposal.current_version?.original_filename }}
+                                <p
+                                    class="mt-1 truncate text-xs text-amber-900/80 dark:text-amber-100/70"
+                                >
+                                    {{
+                                        assistant.proposal.current_version
+                                            ?.original_filename
+                                    }}
                                 </p>
                                 <div class="mt-2.5 flex flex-wrap gap-2">
                                     <Button
                                         type="button"
                                         size="sm"
                                         variant="outline"
-                                        class="h-7 rounded-lg text-xs bg-background"
+                                        class="h-7 rounded-lg bg-background text-xs"
                                         @click="selectAssistant(assistant)"
                                     >
                                         Tinjau di Inspektor &rarr;
@@ -365,19 +468,30 @@ function nodeBorderTone(id: string, status?: string): string {
                                 </div>
                             </div>
 
-                            <div v-else-if="assistant.can_submit_proposal && assistant.routes?.proposal_store" class="mt-3">
+                            <div
+                                v-else-if="
+                                    assistant.can_submit_proposal &&
+                                    assistant.routes?.proposal_store
+                                "
+                                class="mt-3"
+                            >
                                 <Button
                                     type="button"
                                     size="sm"
                                     class="w-full rounded-xl text-xs shadow-xs"
-                                    @click="emit('action', {
-                                        kind: 'upload',
-                                        route: assistant.routes.proposal_store,
-                                        title: 'Buat proposal Asisten',
-                                        description: 'Unggah usulan balasan setelah seluruh bahan teknis dipelajari.',
-                                    })"
+                                    @click="
+                                        emit('action', {
+                                            kind: 'upload',
+                                            route: assistant.routes
+                                                .proposal_store,
+                                            title: 'Buat proposal Asisten',
+                                            description:
+                                                'Unggah usulan balasan setelah seluruh bahan teknis dipelajari.',
+                                        })
+                                    "
                                 >
-                                    <Send class="mr-1.5 size-3.5" /> Buat proposal balasan
+                                    <Send class="mr-1.5 size-3.5" /> Buat
+                                    proposal balasan
                                 </Button>
                             </div>
                         </div>
@@ -419,8 +533,13 @@ function nodeBorderTone(id: string, status?: string): string {
                                 <!-- Section Node Card -->
                                 <button
                                     type="button"
-                                    class="group w-full rounded-xl border p-3.5 text-left shadow-xs transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-indigo-500/35"
-                                    :class="nodeBorderTone(section.public_id, section.status)"
+                                    class="group w-full rounded-xl border p-3.5 text-left shadow-xs transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-indigo-500/35 focus-visible:outline-none"
+                                    :class="
+                                        nodeBorderTone(
+                                            section.public_id,
+                                            section.status,
+                                        )
+                                    "
                                     @click="selectSection(section)"
                                 >
                                     <div class="flex items-start gap-3">
@@ -430,30 +549,53 @@ function nodeBorderTone(id: string, status?: string): string {
                                             <UserRound class="size-3.5" />
                                         </span>
                                         <div class="min-w-0 flex-1">
-                                            <div class="flex items-start justify-between gap-2">
+                                            <div
+                                                class="flex items-start justify-between gap-2"
+                                            >
                                                 <p
                                                     class="text-[10px] font-bold tracking-[0.13em] text-muted-foreground uppercase"
                                                 >
                                                     Kepala Bagian
                                                 </p>
-                                                <ResponseStatusBadge :status="section.status" />
+                                                <ResponseStatusBadge
+                                                    :status="section.status"
+                                                />
                                             </div>
-                                            <h4 class="mt-1 text-xs font-semibold text-foreground leading-4">
+                                            <h4
+                                                class="mt-1 text-xs leading-4 font-semibold text-foreground"
+                                            >
                                                 {{ section.position_name }}
                                             </h4>
-                                            <p class="mt-0.5 truncate text-[11px] text-muted-foreground">
-                                                {{ section.official_name ?? section.unit_name }}
+                                            <p
+                                                class="mt-0.5 truncate text-[11px] text-muted-foreground"
+                                            >
+                                                {{
+                                                    section.official_name ??
+                                                    section.unit_name
+                                                }}
                                             </p>
                                         </div>
                                     </div>
 
                                     <!-- Section Timing -->
-                                    <div class="mt-2.5 flex items-center justify-between border-t pt-2 text-[10px] text-muted-foreground">
-                                        <span class="inline-flex items-center gap-1">
+                                    <div
+                                        class="mt-2.5 flex items-center justify-between border-t pt-2 text-[10px] text-muted-foreground"
+                                    >
+                                        <span
+                                            class="inline-flex items-center gap-1"
+                                        >
                                             <Clock3 class="size-3" /> Aktivitas
                                         </span>
-                                        <span class="font-medium text-foreground">
-                                            {{ formatDate(section.completed_at ?? section.started_at ?? section.received_at) }}
+                                        <span
+                                            class="font-medium text-foreground"
+                                        >
+                                            {{
+                                                formatDate(
+                                                    section.completed_at ??
+                                                        section.started_at ??
+                                                        section.received_at,
+                                                )
+                                            }}
                                         </span>
                                     </div>
 
@@ -462,19 +604,33 @@ function nodeBorderTone(id: string, status?: string): string {
                                         v-if="section.material"
                                         class="mt-2 flex items-center gap-1.5 rounded-lg border border-indigo-200/80 bg-indigo-50/60 px-2 py-1 text-[11px] text-indigo-700 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-300"
                                     >
-                                        <FileText class="size-3 shrink-0 text-indigo-600" />
+                                        <FileText
+                                            class="size-3 shrink-0 text-indigo-600"
+                                        />
                                         <span class="truncate font-medium">
-                                            {{ section.material.current_version?.original_filename }}
+                                            {{
+                                                section.material.current_version
+                                                    ?.original_filename
+                                            }}
                                         </span>
-                                        <Badge variant="secondary" class="ml-auto shrink-0 px-1 py-0 text-[9px] font-semibold">
-                                            v{{ section.material.current_version?.version_number }}
+                                        <Badge
+                                            variant="secondary"
+                                            class="ml-auto shrink-0 px-1 py-0 text-[9px] font-semibold"
+                                        >
+                                            v{{
+                                                section.material.current_version
+                                                    ?.version_number
+                                            }}
                                         </Badge>
                                     </div>
                                 </button>
 
                                 <!-- Upload CTA if eligible -->
                                 <div
-                                    v-if="section.can_upload_material && section.routes?.material_store"
+                                    v-if="
+                                        section.can_upload_material &&
+                                        section.routes?.material_store
+                                    "
                                     class="mt-1.5 pl-2"
                                 >
                                     <Button
@@ -482,14 +638,18 @@ function nodeBorderTone(id: string, status?: string): string {
                                         size="sm"
                                         variant="outline"
                                         class="h-7 w-full rounded-lg text-xs"
-                                        @click="emit('action', {
-                                            kind: 'upload',
-                                            route: section.routes.material_store,
-                                            title: 'Unggah bahan teknis',
-                                            description: `Tambahkan PDF hasil telaah teknis ${section.position_name}. Dokumen akan disimpan sebagai versi immutable.`,
-                                        })"
+                                        @click="
+                                            emit('action', {
+                                                kind: 'upload',
+                                                route: section.routes
+                                                    .material_store,
+                                                title: 'Unggah bahan teknis',
+                                                description: `Tambahkan PDF hasil telaah teknis ${section.position_name}. Dokumen akan disimpan sebagai versi immutable.`,
+                                            })
+                                        "
                                     >
-                                        <Upload class="mr-1.5 size-3" /> Unggah bahan teknis
+                                        <Upload class="mr-1.5 size-3" /> Unggah
+                                        bahan teknis
                                     </Button>
                                 </div>
                             </li>

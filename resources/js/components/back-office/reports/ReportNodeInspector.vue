@@ -15,8 +15,12 @@ import type { ReportNodeInspectorData } from '@/types';
 const props = defineProps<{ inspector: ReportNodeInspectorData }>();
 
 const levelLabel = computed(() => {
-    if (props.inspector.level === 'EXECUTIVE_ENTRY') {
-        return 'Pimpinan';
+    if (props.inspector.level === 'MAYOR') {
+        return 'Wali Kota';
+    }
+
+    if (props.inspector.level === 'REGIONAL_SECRETARY') {
+        return 'Sekda';
     }
 
     return props.inspector.level === 'ASSISTANT' ? 'Asisten' : 'Kepala Bagian';

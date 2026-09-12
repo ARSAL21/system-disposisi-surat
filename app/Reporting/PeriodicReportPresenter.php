@@ -13,6 +13,7 @@ use App\Models\LetterRoute;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\User;
+use App\Organization\OrganizationCatalog;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -49,6 +50,7 @@ final class PeriodicReportPresenter
             return [
                 'letter' => $this->detailLetter($letter, null),
                 'initial_route' => null,
+                'sekda_handoff' => null,
                 'branches' => [],
                 'progress' => $this->branchProgress([]),
                 'visibility_note' => 'Surat belum diarahkan kepada pimpinan.',
@@ -56,12 +58,50 @@ final class PeriodicReportPresenter
         }
 
         $firstDisposition = $route->disposition;
+        $sekdaHandoff = null;
+        $assistantCreatorPositionId = (int) $route->recipient_position_id;
+
+        if ($firstDisposition instanceof Disposition) {
+            $sekdaRecipient = $firstDisposition->recipients->first(function (DispositionRecipient $recipient): bool {
+                return $recipient->recipientPosition->positionLevel->code === OrganizationCatalog::REGIONAL_SECRETARY_LEVEL;
+            });
+
+            if ($firstDisposition->recipients->count() === 1
+                && $sekdaRecipient instanceof DispositionRecipient) {
+                if ($sekdaRecipient->received_at === null) {
+                    throw DispositionStateConflict::inconsistentGraph();
+                }
+
+                if ($sekdaRecipient->childDispositions->count() > 1) {
+                    throw DispositionStateConflict::inconsistentGraph();
+                }
+
+                $forwardedDisposition = $sekdaRecipient->childDispositions->first();
+                $assistantCreatorPositionId = (int) $sekdaRecipient->recipient_position_id;
+                $sekdaHandoff = [
+                    'reference' => 'sekda-recipient-'.$sekdaRecipient->getKey(),
+                    'recipient_position' => $this->position($sekdaRecipient->recipientPosition),
+                    'status' => $sekdaRecipient->status->value,
+                    'received_at' => $sekdaRecipient->received_at->toISOString(),
+                    'forwarded_at' => $forwardedDisposition?->created_at?->toISOString(),
+                    'instructions' => $this->instructions($firstDisposition->instructionLabels),
+                    'instruction_note' => $firstDisposition->instruction_note,
+                    'disposed_by' => $this->dispositionActor(
+                        $firstDisposition,
+                        (int) $route->recipient_position_id,
+                    ),
+                    'disposed_at' => $firstDisposition->created_at->toISOString(),
+                ];
+                $firstDisposition = $forwardedDisposition;
+            }
+        }
+
         $branches = $firstDisposition instanceof Disposition
             ? array_values($firstDisposition->recipients
                 ->map(fn (DispositionRecipient $recipient): array => $this->assistantBranch(
                     $recipient,
                     $firstDisposition,
-                    (int) $route->recipient_position_id,
+                    $assistantCreatorPositionId,
                 ))
                 ->all())
             : [];
@@ -83,6 +123,7 @@ final class PeriodicReportPresenter
                 'routed_by' => $this->routeActor($route),
                 'routed_at' => $route->routed_at->toISOString(),
             ],
+            'sekda_handoff' => $sekdaHandoff,
             'branches' => $branches,
             'progress' => $this->branchProgress($terminalBranches),
             'visibility_note' => 'Detail hanya memuat cabang dan catatan yang berada dalam cakupan jabatan aktif Anda.',

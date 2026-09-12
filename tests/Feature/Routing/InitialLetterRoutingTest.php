@@ -4,14 +4,19 @@ use App\Actions\RecordAudit;
 use App\Actions\RouteIncomingLetter;
 use App\Authorization\AuthorizationCatalog;
 use App\Enums\AuditAction;
+use App\Enums\DispositionRecipientStatus;
 use App\Enums\IncomingLetterStatus;
+use App\Enums\InitialLetterRoutePath;
 use App\Enums\LetterRouteStatus;
 use App\Enums\PermissionName;
 use App\Enums\SubmissionSource;
 use App\Enums\SubmissionStatus;
 use App\Exceptions\InitialLetterRoutingStateConflict;
 use App\Models\AuditLog;
+use App\Models\Disposition;
+use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
+use App\Models\InstructionLabel;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
 use App\Models\LetterSubmission;
@@ -58,7 +63,8 @@ function routingLevel(string $code): PositionLevel
     $level->name = str_replace('_', ' ', $code);
     $level->hierarchy_order = match ($code) {
         OrganizationCatalog::GENERAL_AFFAIRS_LEVEL => 10,
-        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL => 20,
+        OrganizationCatalog::MAYOR_LEVEL => 10,
+        OrganizationCatalog::REGIONAL_SECRETARY_LEVEL => 20,
         'ASSISTANT' => 30,
         OrganizationCatalog::SECTION_HEAD_LEVEL => 40,
         default => 90,
@@ -90,16 +96,18 @@ function routingPosition(
     string $levelCode,
     ?string $unitCode = null,
     ?string $name = null,
+    ?string $code = null,
 ): Position {
     $position = new Position;
     $position->position_level_id = routingLevel($levelCode)->getKey();
     $position->organizational_unit_id = $unitCode === null
         ? null
         : routingUnit($unitCode)->getKey();
-    $position->code = 'ROUTING-'.Str::upper(Str::random(12));
+    $position->code = $code ?? 'ROUTING-'.Str::upper(Str::random(12));
     $position->name = $name ?? match ($levelCode) {
         OrganizationCatalog::GENERAL_AFFAIRS_LEVEL => 'Staf Administrasi Surat',
-        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL => 'Sekretaris Daerah',
+        OrganizationCatalog::MAYOR_LEVEL => 'Wali Kota',
+        OrganizationCatalog::REGIONAL_SECRETARY_LEVEL => 'Sekretaris Daerah',
         OrganizationCatalog::SECTION_HEAD_LEVEL => 'Kepala Bagian Umum',
         default => 'Asisten Pemerintahan',
     };
@@ -141,10 +149,11 @@ function routingActor(
     ?string $unitCode,
     array $permissions,
     ?string $positionName = null,
+    ?string $positionCode = null,
 ): array {
     $user = User::factory()->internal()->create();
     routingGrant($user, ...$permissions);
-    $position = routingPosition($levelCode, $unitCode, $positionName);
+    $position = routingPosition($levelCode, $unitCode, $positionName, $positionCode);
     $assignment = routingAssignment($user, $position);
 
     return compact('user', 'position', 'assignment');
@@ -154,10 +163,23 @@ function routingActor(
 function routingExecutive(string $positionName = 'Sekretaris Daerah'): array
 {
     return routingActor(
-        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+        OrganizationCatalog::REGIONAL_SECRETARY_LEVEL,
         null,
         [],
         $positionName,
+        OrganizationCatalog::REGIONAL_SECRETARY_POSITION,
+    );
+}
+
+/** @return array{user: User, position: Position, assignment: PositionAssignment} */
+function routingMayor(string $positionName = 'Wali Kota'): array
+{
+    return routingActor(
+        OrganizationCatalog::MAYOR_LEVEL,
+        null,
+        [],
+        $positionName,
+        OrganizationCatalog::MAYOR_POSITION,
     );
 }
 
@@ -323,7 +345,7 @@ test('routing permission and business position boundaries return 403 or 404', fu
 
     $this->actingAs($otherHead['user'])
         ->post(route('back-office.letter-routing.store', $letter), [
-            'target_position_id' => routingExecutive()['position']->getKey(),
+            'route_path' => InitialLetterRoutePath::DirectToSekda->value,
         ])
         ->assertNotFound();
 
@@ -361,7 +383,7 @@ test('general affairs routing query filters at the database and keeps summary un
     app(RouteIncomingLetter::class)->execute(
         $head['user'],
         $routed['letter'],
-        $executive['position']->getKey(),
+        InitialLetterRoutePath::DirectToSekda,
     );
     $staff = routingActor(
         OrganizationCatalog::GENERAL_AFFAIRS_LEVEL,
@@ -403,7 +425,7 @@ test('general affairs head creates one initial route with an atomic audit and hi
             PermissionName::ViewLetterActivities,
         ],
     );
-    $executive = routingExecutive('Wali Kota');
+    $executive = routingMayor();
     $correction = routingCorrection(
         $fixture['letter'],
         $fixture['document'],
@@ -413,7 +435,7 @@ test('general affairs head creates one initial route with an atomic audit and hi
 
     $this->actingAs($head['user'])
         ->post(route('back-office.letter-routing.store', $fixture['letter']), [
-            'target_position_id' => $executive['position']->getKey(),
+            'route_path' => InitialLetterRoutePath::ViaMayor->value,
         ])
         ->assertRedirect(route('back-office.letter-routing.show', $fixture['letter']));
 
@@ -481,35 +503,33 @@ test('routing rejects staff, unavailable targets, and invalid request input with
         OrganizationCatalog::GENERAL_AFFAIRS_UNIT,
         [PermissionName::ViewLetterRouting, PermissionName::CreateLetterRouting],
     );
-    $vacantExecutive = routingPosition(
-        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+    routingPosition(
+        OrganizationCatalog::REGIONAL_SECRETARY_LEVEL,
         null,
-        'Wali Kota tanpa pejabat aktif',
+        'Sekretaris Daerah tanpa pejabat aktif',
+        OrganizationCatalog::REGIONAL_SECRETARY_POSITION,
     );
-    $assistant = routingPosition('ASSISTANT');
 
     $this->actingAs($staff['user'])
         ->post(route('back-office.letter-routing.store', $fixture['letter']), [
-            'target_position_id' => $vacantExecutive->getKey(),
+            'route_path' => InitialLetterRoutePath::DirectToSekda->value,
         ])
         ->assertForbidden();
 
-    foreach ([$vacantExecutive, $assistant] as $target) {
-        $this->actingAs($head['user'])
-            ->from(route('back-office.letter-routing.show', $fixture['letter']))
-            ->post(route('back-office.letter-routing.store', $fixture['letter']), [
-                'target_position_id' => $target->getKey(),
-            ])
-            ->assertSessionHasErrors('target_position_id');
-    }
+    $this->actingAs($head['user'])
+        ->from(route('back-office.letter-routing.show', $fixture['letter']))
+        ->post(route('back-office.letter-routing.store', $fixture['letter']), [
+            'route_path' => InitialLetterRoutePath::DirectToSekda->value,
+        ])
+        ->assertSessionHasErrors('route_path');
 
     $this->actingAs($head['user'])
         ->withHeader('Accept', 'application/json')
         ->postJson(route('back-office.letter-routing.store', $fixture['letter']), [
-            'target_position_id' => 'bukan-id',
+            'route_path' => 'bukan-route',
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors('target_position_id');
+        ->assertJsonValidationErrors('route_path');
 
     expect($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::Registered)
         ->and(LetterRoute::query()->count())->toBe(0)
@@ -531,23 +551,23 @@ test('routing action rechecks state and prevents rerouting even with stale autho
     $executive = routingExecutive();
     $action = app(RouteIncomingLetter::class);
 
-    $action->execute($head['user'], $first['letter'], $executive['position']->getKey());
+    $action->execute($head['user'], $first['letter'], InitialLetterRoutePath::DirectToSekda);
 
     expect(fn () => $action->execute(
         $head['user'],
         $first['letter'],
-        $executive['position']->getKey(),
+        InitialLetterRoutePath::DirectToSekda,
     ))->toThrow(InitialLetterRoutingStateConflict::class)
         ->and(fn () => $action->execute(
             $head['user'],
             $second['letter'],
-            $executive['position']->getKey(),
+            InitialLetterRoutePath::DirectToSekda,
         ))->toThrow(InitialLetterRoutingStateConflict::class)
         ->and(LetterRoute::query()->count())->toBe(1);
 
     $this->actingAs($head['user'])
         ->post(route('back-office.letter-routing.store', $first['letter']), [
-            'target_position_id' => $executive['position']->getKey(),
+            'route_path' => InitialLetterRoutePath::DirectToSekda->value,
         ])
         ->assertNotFound();
 });
@@ -570,7 +590,7 @@ test('routing database state rolls back when the atomic audit cannot be written'
     expect(fn () => app(RouteIncomingLetter::class)->execute(
         $head['user'],
         $fixture['letter'],
-        $executive['position']->getKey(),
+        InitialLetterRoutePath::DirectToSekda,
     ))->toThrow(RuntimeException::class, 'Simulated audit failure.');
 
     expect($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::Registered)
@@ -586,11 +606,11 @@ test('letter route history is immutable except for its single pending to complet
         [PermissionName::CreateLetterRouting],
     );
     $executive = routingExecutive();
-    $otherExecutive = routingExecutive('Wali Kota');
+    $otherExecutive = routingMayor();
     $route = app(RouteIncomingLetter::class)->execute(
         $head['user'],
         $fixture['letter'],
-        $executive['position']->getKey(),
+        InitialLetterRoutePath::DirectToSekda,
     );
 
     expect(fn () => $route->forceFill([
@@ -615,15 +635,23 @@ test('executive inbox is scoped to the active recipient position and streams the
         OrganizationCatalog::GENERAL_AFFAIRS_UNIT,
         [PermissionName::CreateLetterRouting],
     );
-    $recipient = routingExecutive('Wali Kota');
-    $otherExecutive = routingExecutive('Sekretaris Daerah');
+    $recipient = routingMayor();
+    $otherExecutive = routingExecutive();
     routingGrant($recipient['user'], PermissionName::ViewExecutiveInbox);
     routingGrant($otherExecutive['user'], PermissionName::ViewExecutiveInbox);
     $route = app(RouteIncomingLetter::class)->execute(
         $head['user'],
         $fixture['letter'],
-        $recipient['position']->getKey(),
+        InitialLetterRoutePath::ViaMayor,
     );
+
+    $this->actingAs($recipient['user'])
+        ->get(route('back-office.executive.inbox.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('inbox.data.0.entry_type', 'DIRECT_ROUTE')
+            ->where('inbox.data.0.source_label', 'Langsung dari Bagian Umum')
+            ->where('summary.pending', 1));
 
     $this->actingAs($recipient['user'])
         ->get(route('back-office.executive.inbox.index'))
@@ -689,6 +717,101 @@ test('executive inbox permission does not bypass executive position context', fu
         ->assertForbidden();
 });
 
+test('via mayor routing keeps Wali Kota formal and hands substantive disposition to Sekda', function (): void {
+    $fixture = routingLetter();
+    $head = routingActor(
+        OrganizationCatalog::SECTION_HEAD_LEVEL,
+        OrganizationCatalog::GENERAL_AFFAIRS_UNIT,
+        [PermissionName::CreateLetterRouting],
+    );
+    $mayor = routingMayor();
+    $sekda = routingExecutive();
+    $assistant = routingActor('ASSISTANT', null, []);
+    routingGrant($mayor['user'], PermissionName::ViewExecutiveInbox, PermissionName::CreateDispositions);
+    routingGrant($sekda['user'], PermissionName::ViewExecutiveInbox, PermissionName::CreateDispositions);
+    routingGrant($mayor['user'], PermissionName::ViewReports);
+
+    $label = new InstructionLabel;
+    $label->code = 'TELAAH';
+    $label->name = 'Telaah dan tindak lanjuti';
+    $label->description = 'Uji alur Wali Kota menuju Sekda.';
+    $label->sort_order = 1;
+    $label->is_active = true;
+    $label->save();
+
+    $route = app(RouteIncomingLetter::class)->execute(
+        $head['user'],
+        $fixture['letter'],
+        InitialLetterRoutePath::ViaMayor,
+    );
+
+    $this->actingAs($mayor['user'])
+        ->post(route('back-office.executive.inbox.dispositions.store', $route), [
+            'recipient_position_ids' => [$assistant['position']->getKey()],
+            'instruction_label_ids' => [$label->getKey()],
+        ])
+        ->assertNotFound();
+
+    $this->actingAs($mayor['user'])
+        ->post(route('back-office.executive.inbox.forward-to-sekda.store', $route), [
+            'instruction_label_ids' => [$label->getKey()],
+            'instruction_note' => 'Mohon Sekda menelaah dan menetapkan Asisten yang menangani.',
+        ])
+        ->assertRedirect(route('back-office.executive.inbox.show', $route));
+
+    $sekdaRecipient = DispositionRecipient::query()
+        ->where('recipient_position_id', $sekda['position']->getKey())
+        ->firstOrFail();
+
+    expect($route->refresh()->status)->toBe(LetterRouteStatus::Completed)
+        ->and($fixture['letter']->refresh()->status)->toBe(IncomingLetterStatus::InProgress)
+        ->and($sekdaRecipient->status)->toBe(DispositionRecipientStatus::Pending);
+
+    $this->actingAs($sekda['user'])
+        ->get(route('back-office.executive.inbox.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('inbox.data.0.entry_type', 'MAYOR_DISPOSITION')
+            ->where('inbox.data.0.source_label', 'Arahan Wali Kota')
+            ->where('summary.pending', 1));
+
+    $this->actingAs($sekda['user'])
+        ->post(route('back-office.executive.inbox.recipient.dispositions.store', $sekdaRecipient), [
+            'recipient_position_ids' => [$assistant['position']->getKey()],
+            'instruction_label_ids' => [$label->getKey()],
+            'instruction_note' => 'Teruskan koordinasi kepada Asisten terkait.',
+        ])
+        ->assertRedirect(route('back-office.executive.inbox.recipient.show', $sekdaRecipient));
+
+    expect($sekdaRecipient->refresh()->status)->toBe(DispositionRecipientStatus::Completed)
+        ->and(Disposition::query()->where('parent_recipient_id', $sekdaRecipient->getKey())->exists())->toBeTrue();
+
+    foreach ([$mayor['user'], $sekda['user']] as $executiveUser) {
+        $this->actingAs($executiveUser)
+            ->get(route('back-office.executive.inbox.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.awaiting_forwarding', 1)
+                ->where('summary.in_progress', 0));
+    }
+
+    $this->actingAs($mayor['user'])
+        ->get(route('back-office.reports.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('organizationGraph.executives.0.level', OrganizationCatalog::MAYOR_LEVEL)
+            ->where('organizationGraph.executives.0.children.0.level', OrganizationCatalog::REGIONAL_SECRETARY_LEVEL)
+            ->where('organizationGraph.executives.0.children.0.children.0.level', OrganizationCatalog::ASSISTANT_LEVEL));
+
+    $this->actingAs($mayor['user'])
+        ->get(route('back-office.reports.show', ['incomingLetter' => $fixture['letter']]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('report.initial_route.target_position.code', OrganizationCatalog::MAYOR_POSITION)
+            ->where('report.sekda_handoff.recipient_position.code', OrganizationCatalog::REGIONAL_SECRETARY_POSITION)
+            ->where('report.branches.0.recipient_position.code', $assistant['position']->code));
+});
+
 test('routing and inbox list filters reject malformed server input', function (): void {
     $staff = routingActor(
         OrganizationCatalog::GENERAL_AFFAIRS_LEVEL,
@@ -728,7 +851,7 @@ test('initial routing mutation is rate limited per authenticated user', function
     for ($attempt = 1; $attempt <= 30; $attempt++) {
         $this->actingAs($head['user'])
             ->post(route('back-office.letter-routing.store', $fixture['letter']), [])
-            ->assertSessionHasErrors('target_position_id');
+            ->assertSessionHasErrors('route_path');
     }
 
     $this->actingAs($head['user'])

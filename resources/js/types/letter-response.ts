@@ -1,14 +1,9 @@
-export type LetterResponseRole =
-    | 'EXECUTIVE'
-    | 'ASSISTANT'
-    | 'SECTION_HEAD';
+export type LetterResponseRole = 'EXECUTIVE' | 'ASSISTANT' | 'SECTION_HEAD';
 
 export type LetterResponseSource = 'ONLINE' | 'MANUAL';
 
 export type LetterResponseDocumentKind =
-    | 'TECHNICAL_MATERIAL'
-    | 'ASSISTANT_PROPOSAL'
-    | 'EXECUTIVE_CONSOLIDATION';
+    'TECHNICAL_MATERIAL' | 'ASSISTANT_PROPOSAL' | 'EXECUTIVE_CONSOLIDATION';
 
 export type LetterResponseStatus =
     | 'PENDING'
@@ -62,7 +57,10 @@ export type LetterResponseSectionBranch = {
     position_name: string;
     unit_name: string;
     official_name: string | null;
-    status: Extract<LetterResponseStatus, 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'>;
+    status: Extract<
+        LetterResponseStatus,
+        'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
+    >;
     received_at: string;
     started_at: string | null;
     completed_at: string | null;
@@ -97,7 +95,13 @@ export type LetterResponseMandate = {
     version_number: number;
     signatory_name: string;
     signatory_position: string;
-    status: 'AUTHORIZED' | 'NUMBER_ASSIGNED' | 'SIGNED_DOCUMENT_UPLOADED' | 'ADMIN_VERIFIED' | 'DELIVERED' | 'WITHDRAWN';
+    status:
+        | 'AUTHORIZED'
+        | 'NUMBER_ASSIGNED'
+        | 'SIGNED_DOCUMENT_UPLOADED'
+        | 'ADMIN_VERIFIED'
+        | 'DELIVERED'
+        | 'WITHDRAWN';
     created_at: string;
 };
 

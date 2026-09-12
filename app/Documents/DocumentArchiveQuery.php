@@ -98,7 +98,7 @@ final class DocumentArchiveQuery
                 ->where('document_archive_levels.is_active', true)
                 ->where(function (QueryBuilder $authority): void {
                     $authority
-                        ->where('document_archive_levels.code', OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL)
+                        ->whereIn('document_archive_levels.code', OrganizationCatalog::executiveLevelCodes())
                         ->orWhere(function (QueryBuilder $generalAffairs): void {
                             $generalAffairs
                                 ->whereIn('document_archive_levels.code', [

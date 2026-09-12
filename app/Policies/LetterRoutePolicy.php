@@ -54,12 +54,30 @@ class LetterRoutePolicy
             return Response::deny('You do not have permission to create dispositions.');
         }
 
-        return $this->dispositionPositionAssignmentResolver->hasExecutiveAssignmentForPosition(
+        return $this->dispositionPositionAssignmentResolver->hasRegionalSecretaryAssignmentForPosition(
             $user,
             $letterRoute->recipient_position_id,
         )
                 ? Response::allow()
                 : Response::denyAsNotFound();
+    }
+
+    public function forwardToSekda(User $user, LetterRoute $letterRoute): Response
+    {
+        if (! $user->isInternalAccount() || ! $user->is_active || ! $user->hasVerifiedEmail()) {
+            return Response::denyAsNotFound();
+        }
+
+        if (! $user->can(PermissionName::CreateDispositions->value)) {
+            return Response::deny('You do not have permission to create dispositions.');
+        }
+
+        return $this->dispositionPositionAssignmentResolver->hasMayorAssignmentForPosition(
+            $user,
+            $letterRoute->recipient_position_id,
+        )
+            ? Response::allow()
+            : Response::denyAsNotFound();
     }
 
     private function authorizeInboxViewing(User $user): Response

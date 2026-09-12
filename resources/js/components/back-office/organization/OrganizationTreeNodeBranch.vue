@@ -27,7 +27,8 @@ const emit = defineEmits<{
 
 function getLevelBadgeClass(code: string): string {
     switch (code) {
-        case 'EXECUTIVE_ENTRY':
+        case 'MAYOR':
+        case 'REGIONAL_SECRETARY':
             return 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-300 dark:border-amber-400/20';
         case 'ASSISTANT':
             return 'bg-indigo-500/10 text-indigo-700 border-indigo-500/20 dark:bg-indigo-400/10 dark:text-indigo-300 dark:border-indigo-400/20';
@@ -42,7 +43,8 @@ function getLevelBadgeClass(code: string): string {
 
 function getLevelIcon(code: string) {
     switch (code) {
-        case 'EXECUTIVE_ENTRY':
+        case 'MAYOR':
+        case 'REGIONAL_SECRETARY':
             return Crown;
         case 'ASSISTANT':
             return GitFork;

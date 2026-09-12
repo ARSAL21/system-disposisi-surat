@@ -3,7 +3,9 @@ import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import type { LetterResponseStatus } from '@/types';
 
-const props = defineProps<{ status: LetterResponseStatus | 'OPEN' | 'FINALIZED' }>();
+const props = defineProps<{
+    status: LetterResponseStatus | 'OPEN' | 'FINALIZED';
+}>();
 
 const statusCopy: Record<string, string> = {
     PENDING: 'Menunggu',
@@ -29,7 +31,16 @@ const variant = computed(() =>
 );
 
 const toneClass = computed(() => {
-    if (['COMPLETED', 'AUTHORIZED', 'FINALIZED', 'FULFILLED', 'DELIVERED', 'ADMIN_VERIFIED'].includes(props.status)) {
+    if (
+        [
+            'COMPLETED',
+            'AUTHORIZED',
+            'FINALIZED',
+            'FULFILLED',
+            'DELIVERED',
+            'ADMIN_VERIFIED',
+        ].includes(props.status)
+    ) {
         return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300';
     }
 
@@ -42,7 +53,10 @@ const toneClass = computed(() => {
 </script>
 
 <template>
-    <Badge :variant="variant" :class="['gap-1.5 rounded-full px-2.5', toneClass]">
+    <Badge
+        :variant="variant"
+        :class="['gap-1.5 rounded-full px-2.5', toneClass]"
+    >
         <span class="size-1.5 rounded-full bg-current" aria-hidden="true" />
         {{ statusCopy[status] ?? status }}
     </Badge>

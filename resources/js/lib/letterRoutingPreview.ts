@@ -2,6 +2,7 @@ import type {
     ExecutiveBranchProgress,
     ExecutiveInboxItem,
     ExecutiveInboxSummary,
+    InitialRouteOption,
     ExecutivePositionOption,
     LetterRoutingItem,
     LetterRoutingSummary,
@@ -29,6 +30,25 @@ export const previewExecutivePositions: ExecutivePositionOption[] = [
         code: 'SEKDA',
         name: 'Sekretaris Daerah',
         holder_name: 'Ir. Nurhayati Rahman, M.Si.',
+        is_available: true,
+    },
+];
+
+export const previewInitialRouteOptions: InitialRouteOption[] = [
+    {
+        path: 'DIRECT_TO_SEKDA',
+        label: 'Langsung ke Sekda',
+        description:
+            'Sekda menerima surat dan membuat disposisi kepada Asisten.',
+        target_position: previewExecutivePositions[1],
+        is_available: true,
+    },
+    {
+        path: 'VIA_MAYOR',
+        label: 'Melalui Wali Kota',
+        description:
+            'Wali Kota memberi arahan formal kepada Sekda sebelum disposisi diteruskan kepada Asisten.',
+        target_position: previewExecutivePositions[0],
         is_available: true,
     },
 ];
@@ -158,7 +178,9 @@ export const previewLetterRoutingSummary: LetterRoutingSummary = {
 
 export const previewExecutiveInboxItems: ExecutiveInboxItem[] = [
     {
-        route_id: 503,
+        entry_type: 'DIRECT_ROUTE',
+        entry_id: 503,
+        source_label: 'Langsung dari Bagian Umum',
         letter: previewLetterRoutingItems[2],
         received_in_inbox_at: '2026-08-30T11:05:00+08:00',
         branch_progress: {
@@ -174,7 +196,9 @@ export const previewExecutiveInboxItems: ExecutiveInboxItem[] = [
         },
     },
     {
-        route_id: 504,
+        entry_type: 'DIRECT_ROUTE',
+        entry_id: 504,
+        source_label: 'Langsung dari Bagian Umum',
         letter: previewLetterRoutingItems[3],
         received_in_inbox_at: '2026-08-29T10:02:00+08:00',
         branch_progress: previewExecutiveBranchProgress,

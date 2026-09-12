@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\OutgoingLetterOrigin;
 use App\Enums\OutgoingLetterStatus;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LogicException;
@@ -15,9 +17,12 @@ use LogicException;
 /**
  * @property int $id
  * @property string $public_id
+ * @property OutgoingLetterOrigin $origin
  * @property int|null $incoming_letter_id
  * @property int|null $letter_response_dossier_id
- * @property int $source_document_version_id
+ * @property int|null $standalone_outgoing_draft_id
+ * @property int|null $source_document_version_id
+ * @property int|null $corrects_outgoing_letter_id
  * @property int $signatory_position_id
  * @property string $subject
  * @property OutgoingLetterStatus $status
@@ -32,7 +37,8 @@ use LogicException;
  * @property CarbonInterface $authorized_at
  * @property-read IncomingLetter|null $incomingLetter
  * @property-read LetterResponseDossier|null $dossier
- * @property-read LetterResponseDocumentVersion $sourceDocumentVersion
+ * @property-read StandaloneOutgoingDraft|null $standaloneDraft
+ * @property-read LetterResponseDocumentVersion|null $sourceDocumentVersion
  * @property-read Position $signatoryPosition
  * @property-read User $authorizedBy
  * @property-read PositionAssignment $authorizedByPositionAssignment
@@ -49,6 +55,7 @@ class OutgoingLetter extends Model
     {
         return [
             'status' => OutgoingLetterStatus::class,
+            'origin' => OutgoingLetterOrigin::class,
             'authorized_at' => 'datetime',
             'agenda_year' => 'integer',
             'letter_date' => 'date',
@@ -63,15 +70,51 @@ class OutgoingLetter extends Model
             $letter->public_id ??= (string) Str::ulid();
             $attributes = $letter->getAttributes();
 
-            if (($attributes['status'] ?? null) !== OutgoingLetterStatus::Authorized->value
-                || ($attributes['authorized_at'] ?? null) === null) {
-                throw new LogicException('M8.2 outgoing letters must start as AUTHORIZED mandates.');
+            $origin = OutgoingLetterOrigin::tryFrom((string) ($attributes['origin'] ?? OutgoingLetterOrigin::Response->value));
+            if ($origin === OutgoingLetterOrigin::Response
+                && (($attributes['status'] ?? null) !== OutgoingLetterStatus::Authorized->value
+                    || ($attributes['authorized_at'] ?? null) === null)) {
+                throw new LogicException('Mandat balasan harus dimulai sebagai AUTHORIZED.');
+            }
+
+            if ($origin === OutgoingLetterOrigin::Standalone
+                && (($attributes['status'] ?? null) !== OutgoingLetterStatus::NumberAssigned->value
+                    || ($attributes['standalone_outgoing_draft_id'] ?? null) === null
+                    || ($attributes['outgoing_number'] ?? null) === null
+                    || ($attributes['agenda_year'] ?? null) === null
+                    || ($attributes['letter_date'] ?? null) === null
+                    || ($attributes['numbered_by_user_id'] ?? null) === null
+                    || ($attributes['numbered_by_position_assignment_id'] ?? null) === null
+                    || ($attributes['numbered_at'] ?? null) === null)) {
+                throw new LogicException('Surat mandiri harus dibuat bersama nomor surat resmi.');
             }
         });
         static::updating(function (OutgoingLetter $letter): void {
             $from = OutgoingLetterStatus::tryFrom((string) $letter->getRawOriginal('status'));
             $to = $letter->status;
             $dirty = array_keys($letter->getDirty());
+
+            if ($letter->origin === OutgoingLetterOrigin::Standalone) {
+                $allowed = match ([$from, $to]) {
+                    [OutgoingLetterStatus::NumberAssigned, OutgoingLetterStatus::SekdaReview],
+                    [OutgoingLetterStatus::SekdaReview, OutgoingLetterStatus::AwaitingManualSignature],
+                    [OutgoingLetterStatus::SekdaReview, OutgoingLetterStatus::ReadyForDelivery],
+                    [OutgoingLetterStatus::SekdaReview, OutgoingLetterStatus::RevisionRequired],
+                    [OutgoingLetterStatus::AwaitingManualSignature, OutgoingLetterStatus::ManualScanReview],
+                    [OutgoingLetterStatus::ManualScanReview, OutgoingLetterStatus::ReadyForDelivery],
+                    [OutgoingLetterStatus::ManualScanReview, OutgoingLetterStatus::RevisionRequired],
+                    [OutgoingLetterStatus::ReadyForDelivery, OutgoingLetterStatus::Delivered],
+                    [OutgoingLetterStatus::RevisionRequired, OutgoingLetterStatus::SekdaReview] => ['status', 'updated_at'],
+                    default => [],
+                };
+
+                if ($allowed === [] || array_diff($dirty, $allowed) !== []) {
+                    throw new LogicException('Invalid standalone outgoing letter lifecycle transition.');
+                }
+
+                return;
+            }
+
             $allowed = match ([$from, $to]) {
                 [OutgoingLetterStatus::Authorized, OutgoingLetterStatus::NumberAssigned] => [
                     'status', 'outgoing_number', 'agenda_year', 'letter_date', 'numbered_by_user_id',
@@ -129,6 +172,25 @@ class OutgoingLetter extends Model
         return $this->belongsTo(LetterResponseDossier::class, 'letter_response_dossier_id');
     }
 
+    /** @return BelongsTo<StandaloneOutgoingDraft, $this> */
+    public function standaloneDraft(): BelongsTo
+    {
+        return $this->belongsTo(StandaloneOutgoingDraft::class, 'standalone_outgoing_draft_id');
+    }
+
+    /** @return HasManyThrough<StandaloneOutgoingDocumentVersion, StandaloneOutgoingDraft, $this> */
+    public function standaloneDocuments(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            StandaloneOutgoingDocumentVersion::class,
+            StandaloneOutgoingDraft::class,
+            'id',
+            'standalone_outgoing_draft_id',
+            'standalone_outgoing_draft_id',
+            'id',
+        );
+    }
+
     /** @return BelongsTo<LetterResponseDocumentVersion, $this> */
     public function sourceDocumentVersion(): BelongsTo
     {
@@ -183,6 +245,12 @@ class OutgoingLetter extends Model
         return $this->belongsTo(self::class, 'corrects_outgoing_letter_id');
     }
 
+    /** @return HasMany<StandaloneOutgoingDraft, $this> */
+    public function correctionDrafts(): HasMany
+    {
+        return $this->hasMany(StandaloneOutgoingDraft::class, 'corrects_outgoing_letter_id');
+    }
+
     /** @return HasMany<OutgoingLetterDocumentVersion, $this> */
     public function documentVersions(): HasMany
     {
@@ -205,5 +273,17 @@ class OutgoingLetter extends Model
     public function delivery(): HasOne
     {
         return $this->hasOne(OutgoingLetterDelivery::class);
+    }
+
+    /** @return HasOne<OutgoingLetterElectronicApproval, $this> */
+    public function electronicApproval(): HasOne
+    {
+        return $this->hasOne(OutgoingLetterElectronicApproval::class)->latestOfMany('approved_at');
+    }
+
+    /** @return HasMany<StandaloneOutgoingSekdaDecision, $this> */
+    public function sekdaDecisions(): HasMany
+    {
+        return $this->hasMany(StandaloneOutgoingSekdaDecision::class)->orderBy('created_at')->orderBy('id');
     }
 }

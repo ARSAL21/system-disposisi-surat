@@ -50,10 +50,15 @@ defineProps<{ submission: ApprovalSubmission; preview?: boolean }>();
                     </span>
                     <span class="flex items-center gap-2 tabular-nums">
                         <Clock3 class="size-4" aria-hidden="true" />
-                        {{ submission.source === 'MANUAL' ? 'Diterima' : 'Diajukan' }}
+                        {{
+                            submission.source === 'MANUAL'
+                                ? 'Diterima'
+                                : 'Diajukan'
+                        }}
                         {{
                             formatSubmissionDateTime(
-                                submission.received_at ?? submission.submitted_at,
+                                submission.received_at ??
+                                    submission.submitted_at,
                             )
                         }}
                     </span>

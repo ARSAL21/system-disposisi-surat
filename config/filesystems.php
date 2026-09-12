@@ -70,6 +70,30 @@ return [
             'report' => true,
         ],
 
+        'outgoing-letter-templates' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/outgoing-letter-templates'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+        ],
+
+        'standalone-outgoing-documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/standalone-outgoing'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+        ],
+
+        'standalone-outgoing-final-documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/standalone-outgoing-final'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

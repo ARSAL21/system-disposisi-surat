@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\LetterResponses\LetterResponseScopeQuery;
 use App\Models\User;
 use App\OutgoingLetters\OutgoingLetterScopeQuery;
@@ -13,6 +14,8 @@ use App\Services\IncomingRegisterPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\IntakePositionAssignmentResolver;
 use App\Services\LetterRoutingPositionAssignmentResolver;
+use App\Services\StandaloneOutgoingPositionAssignmentResolver;
+use App\StandaloneOutgoing\StandaloneOutgoingScopeQuery;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -81,6 +84,8 @@ class HandleInertiaRequests extends Middleware
             'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
             'password_confirmed' => (time() - (int) request()->session()->get('auth.password_confirmed_at', 0)) < (int) config('auth.password_timeout', 10800),
             'confirm_password_url' => $user->isInternalAccount() ? route('back-office.password.confirm.store') : route('password.confirm.store'),
+            'requires_mfa_setup' => $user->hasRole(RoleName::SuperAdmin->value) && ! $user->hasEnabledTwoFactorAuthentication(),
+            'is_super_admin' => $user->hasRole(RoleName::SuperAdmin->value),
             'created_at' => $user->created_at?->toISOString(),
             'updated_at' => $user->updated_at?->toISOString(),
         ];
@@ -126,6 +131,16 @@ class HandleInertiaRequests extends Middleware
                 'can_number_outgoing_letters' => false,
                 'can_verify_outgoing_letters' => false,
                 'can_deliver_outgoing_letters' => false,
+                'can_view_users' => false,
+                'can_invite_users' => false,
+                'can_manage_user_status' => false,
+                'can_manage_user_security' => false,
+                'can_view_outgoing_templates' => false,
+                'can_manage_outgoing_templates' => false,
+                'can_view_standalone_outgoing' => false,
+                'can_create_standalone_outgoing' => false,
+                'can_review_standalone_outgoing' => false,
+                'can_approve_standalone_outgoing' => false,
             ];
         }
 
@@ -161,7 +176,7 @@ class HandleInertiaRequests extends Middleware
             && $dispositionResolver->hasInboxAssignment($user);
         $hasDispositionCreatePermission = $user->can(PermissionName::CreateDispositions->value);
         $canCreateDisposition = $hasDispositionCreatePermission
-            && $dispositionResolver->hasExecutiveAssignment($user);
+            && $dispositionResolver->hasRegionalSecretaryAssignment($user);
         $hasDispositionProcessPermission = $user->can(PermissionName::ViewDispositions->value)
             && $user->can(PermissionName::ProcessDispositions->value);
         $canProcessDisposition = $hasDispositionProcessPermission
@@ -169,6 +184,8 @@ class HandleInertiaRequests extends Middleware
         $hasReportPosition = app(ReportScopeResolver::class)->resolve($user) !== null;
         $hasLetterResponsePosition = app(LetterResponseScopeQuery::class)->hasBusinessScope($user);
         $hasOutgoingLetterPosition = app(OutgoingLetterScopeQuery::class)->hasBusinessScope($user);
+        $hasStandaloneOutgoingPosition = app(StandaloneOutgoingScopeQuery::class)->hasBusinessScope($user);
+        $hasStandaloneOutgoingApprovalPosition = app(StandaloneOutgoingPositionAssignmentResolver::class)->hasSekdaAssignment($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -214,6 +231,22 @@ class HandleInertiaRequests extends Middleware
                 && $user->can(PermissionName::VerifyOutgoingLetters->value),
             'can_deliver_outgoing_letters' => $hasOutgoingLetterPosition
                 && $user->can(PermissionName::DeliverOutgoingLetters->value),
+            'can_view_users' => $user->can(PermissionName::ViewUsers->value),
+            'can_invite_users' => $user->can(PermissionName::InviteUsers->value),
+            'can_manage_user_status' => $user->can(PermissionName::ManageUserStatus->value),
+            'can_manage_user_security' => $user->can(PermissionName::ManageUserSecurity->value),
+            'can_view_outgoing_templates' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::ViewOutgoingTemplates->value),
+            'can_manage_outgoing_templates' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::ManageOutgoingTemplates->value),
+            'can_view_standalone_outgoing' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::ViewStandaloneOutgoing->value),
+            'can_create_standalone_outgoing' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::CreateStandaloneOutgoing->value),
+            'can_review_standalone_outgoing' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::ReviewStandaloneOutgoing->value),
+            'can_approve_standalone_outgoing' => $hasStandaloneOutgoingApprovalPosition
+                && $user->can(PermissionName::ApproveStandaloneOutgoing->value),
         ];
     }
 }

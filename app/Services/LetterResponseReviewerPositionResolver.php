@@ -4,12 +4,15 @@ namespace App\Services;
 
 use App\Enums\LetterResponseDocumentKind;
 use App\Exceptions\LetterResponseStateConflict;
+use App\LetterResponses\LetterResponseSekdaPositionResolver;
 use App\Models\DispositionRecipient;
 use App\Models\LetterResponseDocument;
 use App\Models\LetterResponseDossier;
 
 final class LetterResponseReviewerPositionResolver
 {
+    public function __construct(private readonly LetterResponseSekdaPositionResolver $sekdaPositionResolver) {}
+
     public function resolve(LetterResponseDossier $dossier, LetterResponseDocument $document): int
     {
         if ((int) $document->letter_response_dossier_id !== (int) $dossier->getKey()) {
@@ -17,11 +20,7 @@ final class LetterResponseReviewerPositionResolver
         }
 
         if ($document->kind === LetterResponseDocumentKind::AssistantProposal) {
-            $positionId = (int) $dossier->incomingLetter->routes()->orderBy('id')->value('recipient_position_id');
-
-            if ($positionId > 0) {
-                return $positionId;
-            }
+            return $this->sekdaPositionResolver->lockPositionId($dossier->incomingLetter);
         }
 
         if ($document->kind === LetterResponseDocumentKind::TechnicalMaterial) {

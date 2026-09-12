@@ -21,6 +21,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { useAppearance } from '@/composables/useAppearance';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
+import { useTwoFactorWalkthrough } from '@/composables/useTwoFactorWalkthrough';
 import { confirm } from '@/routes/two-factor';
 import type { TwoFactorConfigContent } from '@/types';
 
@@ -33,6 +34,9 @@ const { resolvedAppearance } = useAppearance();
 
 const props = defineProps<Props>();
 const isOpen = defineModel<boolean>('isOpen');
+
+const { isTourOpen, pauseTourForModal, resumeTourFromModal, stopTour } =
+    useTwoFactorWalkthrough();
 
 const { copy, copied } = useClipboard();
 const { qrCodeSvg, manualSetupKey, clearSetupData, fetchSetupData, errors } =
@@ -82,6 +86,13 @@ const handleModalNextStep = () => {
 
     clearSetupData();
     isOpen.value = false;
+    resumeTourFromModal();
+};
+
+const handleConfirmSuccess = () => {
+    isOpen.value = false;
+    resumeTourFromModal();
+    stopTour();
 };
 
 const resetModalState = () => {
@@ -95,12 +106,15 @@ const resetModalState = () => {
 
 watch(
     () => isOpen.value,
-    async (isOpen) => {
-        if (!isOpen) {
+    async (open) => {
+        if (!open) {
             resetModalState();
+            resumeTourFromModal();
 
             return;
         }
+
+        pauseTourForModal();
 
         if (!qrCodeSvg.value) {
             await fetchSetupData();
@@ -146,6 +160,28 @@ watch(
                 <DialogDescription class="text-center">
                     {{ modalConfig.description }}
                 </DialogDescription>
+
+                <!-- Walkthrough Step 3 Guidance Banner if tour is active -->
+                <div
+                    v-if="isTourOpen"
+                    class="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-xs text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
+                >
+                    <div
+                        class="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#0284c7] text-[10px] font-bold text-white shadow-xs"
+                    >
+                        3
+                    </div>
+                    <div class="text-left leading-tight">
+                        <span class="font-bold">Langkah 3 dari 3:</span>
+                        <span class="ml-1 text-sky-800 dark:text-sky-300">
+                            {{
+                                showVerificationStep
+                                    ? 'Masukkan 6 digit kode dari aplikasi Authenticator di ponsel Anda untuk verifikasi.'
+                                    : 'Buka aplikasi Google / Microsoft Authenticator di ponsel, lalu pindai QR code berikut.'
+                            }}
+                        </span>
+                    </div>
+                </div>
             </DialogHeader>
 
             <div
@@ -242,7 +278,7 @@ watch(
                         error-bag="confirmTwoFactorAuthentication"
                         reset-on-error
                         @finish="code = ''"
-                        @success="isOpen = false"
+                        @success="handleConfirmSuccess"
                         v-slot="{ errors, processing }"
                     >
                         <input type="hidden" name="code" :value="code" />

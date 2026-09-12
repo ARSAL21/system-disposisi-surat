@@ -17,6 +17,7 @@ use App\Models\LetterRoute;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\User;
+use App\Organization\OrganizationCatalog;
 use App\Services\AssistantDispositionTargetResolver;
 use App\Services\DispositionPositionAssignmentResolver;
 use App\Services\DocumentStorageGuard;
@@ -69,6 +70,10 @@ class CreateInitialDisposition
                     throw DispositionStateConflict::staleSource();
                 }
 
+                if (! $this->routeTargetsRegionalSecretary($lockedRoute)) {
+                    throw DispositionStateConflict::staleSource();
+                }
+
                 $lockedLetter = IncomingLetter::query()
                     ->whereKey($lockedRoute->incoming_letter_id)
                     ->lockForUpdate()
@@ -98,7 +103,7 @@ class CreateInitialDisposition
 
                 $this->storageGuard->validateOfficialLetterDocument($lockedLetter, $currentDocument);
                 $actorAssignment = $this->positionAssignmentResolver
-                    ->lockExecutiveAssignmentForPosition($lockedActor, $lockedRoute->recipient_position_id);
+                    ->lockRegionalSecretaryAssignmentForPosition($lockedActor, $lockedRoute->recipient_position_id);
                 $recipientTargets = $this->targetResolver
                     ->lockAvailablePositions(
                         $recipientPositionIds,
@@ -234,5 +239,14 @@ class CreateInitialDisposition
 
         return str_contains($message, 'dispositions_source_route_id_unique')
             || str_contains($message, 'dispositions.source_route_id');
+    }
+
+    private function routeTargetsRegionalSecretary(LetterRoute $route): bool
+    {
+        return $route->recipientPosition()
+            ->whereHas('positionLevel', fn ($level) => $level
+                ->where('code', OrganizationCatalog::REGIONAL_SECRETARY_LEVEL)
+                ->where('is_active', true))
+            ->exists();
     }
 }

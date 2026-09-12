@@ -29,66 +29,64 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import type { ExecutivePositionOption } from '@/types';
+import type { InitialRouteOption, InitialRoutePath } from '@/types';
 
 const props = defineProps<{
-    positions: ExecutivePositionOption[];
+    options: InitialRouteOption[];
     canRoute: boolean;
     processing?: boolean;
     errors?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
-    confirm: [targetPositionId: number];
+    confirm: [routePath: InitialRoutePath];
 }>();
 
-const selectedPositionId = ref<number | null>(null);
+const selectedRoutePath = ref<InitialRoutePath | null>(null);
 const confirmationOpen = ref(false);
-const availablePositions = computed(() =>
-    props.positions.filter((position) => position.is_available),
+const availableOptions = computed(() =>
+    props.options.filter((option) => option.is_available),
 );
-const selectedPosition = computed(
+const selectedOption = computed(
     () =>
-        props.positions.find(
-            (position) => position.id === selectedPositionId.value,
+        props.options.find(
+            (option) => option.path === selectedRoutePath.value,
         ) ?? null,
 );
 
 watch(
-    () => props.positions,
-    (positions) => {
+    () => props.options,
+    (options) => {
         if (
-            selectedPositionId.value !== null &&
-            !positions.some(
-                (position) =>
-                    position.id === selectedPositionId.value &&
-                    position.is_available,
+            selectedRoutePath.value !== null &&
+            !options.some(
+                (option) =>
+                    option.path === selectedRoutePath.value &&
+                    option.is_available,
             )
         ) {
-            selectedPositionId.value = null;
+            selectedRoutePath.value = null;
         }
     },
 );
 
 function updateTarget(value: unknown): void {
-    const targetId = Number(value);
-    selectedPositionId.value = Number.isInteger(targetId) ? targetId : null;
+    selectedRoutePath.value =
+        value === 'DIRECT_TO_SEKDA' || value === 'VIA_MAYOR' ? value : null;
 }
 
 function openConfirmation(): void {
-    if (!selectedPosition.value || !props.canRoute) {
-        return;
+    if (selectedOption.value && props.canRoute) {
+        confirmationOpen.value = true;
     }
-
-    confirmationOpen.value = true;
 }
 
 function confirmRouting(): void {
-    if (!selectedPosition.value || props.processing) {
+    if (!selectedOption.value || props.processing) {
         return;
     }
 
-    emit('confirm', selectedPosition.value.id);
+    emit('confirm', selectedOption.value.path);
 }
 </script>
 
@@ -102,10 +100,10 @@ function confirmRouting(): void {
                     <RouteIcon class="size-5" aria-hidden="true" />
                 </span>
                 <div>
-                    <CardTitle>Tentukan tujuan pimpinan</CardTitle>
+                    <CardTitle>Tentukan jalur pimpinan</CardTitle>
                     <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                        Pilih tepat satu jabatan eksekutif yang sedang memiliki
-                        pejabat aktif.
+                        Pilih jalur surat. Sistem selalu menentukan jabatan
+                        tujuan resmi dari jalur tersebut.
                     </p>
                 </div>
             </div>
@@ -115,72 +113,70 @@ function confirmRouting(): void {
             <Alert v-if="!canRoute">
                 <Info class="size-4" aria-hidden="true" />
                 <AlertTitle>Akses baca-saja</AlertTitle>
-                <AlertDescription>
-                    Anda dapat memeriksa surat, tetapi hanya Kepala Bagian Umum
-                    yang dapat mengirim routing awal.
-                </AlertDescription>
+                <AlertDescription
+                    >Hanya Kepala Bagian Umum yang dapat mengirim routing
+                    awal.</AlertDescription
+                >
             </Alert>
 
             <Alert
-                v-else-if="availablePositions.length === 0"
+                v-else-if="availableOptions.length === 0"
                 variant="destructive"
             >
                 <ShieldAlert class="size-4" aria-hidden="true" />
-                <AlertTitle>Tidak ada tujuan yang dapat dipilih</AlertTitle>
-                <AlertDescription>
-                    Wali Kota dan Sekretaris Daerah belum memiliki Position
-                    Assignment aktif. Routing harus menunggu penugasan jabatan.
-                </AlertDescription>
+                <AlertTitle>Jalur belum tersedia</AlertTitle>
+                <AlertDescription
+                    >Periksa penugasan aktif Wali Kota dan Sekda sebelum
+                    melakukan routing.</AlertDescription
+                >
             </Alert>
 
             <div class="space-y-2">
-                <Label for="routing-target">
-                    Tujuan routing <span aria-hidden="true">*</span>
-                </Label>
+                <Label for="routing-path"
+                    >Jalur routing <span aria-hidden="true">*</span></Label
+                >
                 <Select
-                    :model-value="
-                        selectedPositionId === null
-                            ? undefined
-                            : String(selectedPositionId)
-                    "
+                    :model-value="selectedRoutePath ?? undefined"
                     :disabled="!canRoute || processing"
                     @update:model-value="updateTarget"
                 >
                     <SelectTrigger
-                        id="routing-target"
+                        id="routing-path"
                         class="min-h-11 w-full"
-                        :aria-invalid="Boolean(errors?.target_position_id)"
+                        :aria-invalid="Boolean(errors?.route_path)"
                     >
-                        <SelectValue
-                            placeholder="Pilih Wali Kota atau Sekretaris Daerah"
-                        />
+                        <SelectValue placeholder="Pilih jalur surat" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem
-                            v-for="position in positions"
-                            :key="position.id"
-                            :value="String(position.id)"
-                            :disabled="!position.is_available"
+                            v-for="option in options"
+                            :key="option.path"
+                            :value="option.path"
+                            :disabled="!option.is_available"
                         >
-                            {{ position.name }}
-                            <template v-if="position.holder_name">
-                                · {{ position.holder_name }}
-                            </template>
+                            {{ option.label }}
+                            <template
+                                v-if="option.target_position?.holder_name"
+                            >
+                                ·
+                                {{
+                                    option.target_position.holder_name
+                                }}</template
+                            >
                             <template v-else> · Jabatan kosong</template>
                         </SelectItem>
                     </SelectContent>
                 </Select>
                 <p class="text-xs leading-5 text-muted-foreground">
-                    Pilihan didasarkan pada Position Assignment aktif, bukan
-                    Role pengguna.
+                    Wali Kota hanya memberi arahan formal kepada Sekda;
+                    disposisi kepada Asisten selalu dibuat oleh Sekda.
                 </p>
-                <InputError :message="errors?.target_position_id" />
+                <InputError :message="errors?.route_path" />
             </div>
 
             <div
-                v-if="selectedPosition"
+                v-if="selectedOption"
                 class="flex items-start gap-3 rounded-2xl border border-violet-200 bg-violet-50/65 p-4 dark:border-violet-900 dark:bg-violet-950/25"
-                aria-live="polite"
             >
                 <Crown
                     class="mt-0.5 size-5 shrink-0 text-violet-700 dark:text-violet-300"
@@ -188,13 +184,11 @@ function confirmRouting(): void {
                 />
                 <div>
                     <p class="text-xs text-muted-foreground">
-                        Pimpinan yang akan menerima
+                        Jalur yang dipilih
                     </p>
-                    <p class="mt-1 font-semibold">
-                        {{ selectedPosition.name }}
-                    </p>
+                    <p class="mt-1 font-semibold">{{ selectedOption.label }}</p>
                     <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                        {{ selectedPosition.holder_name }}
+                        {{ selectedOption.description }}
                     </p>
                 </div>
             </div>
@@ -207,10 +201,9 @@ function confirmRouting(): void {
                     aria-hidden="true"
                 />
                 <p class="leading-6 text-muted-foreground">
-                    Setelah dikirim, status surat berubah menjadi
-                    <strong class="text-foreground">ROUTED</strong> dan dokumen
-                    tidak dapat dikoreksi. M5 tidak menyediakan ubah tujuan,
-                    tarik kembali, atau hapus routing.
+                    Setelah dikirim, status surat menjadi
+                    <strong class="text-foreground">ROUTED</strong>. Tujuan dan
+                    jalur tidak dapat diubah atau dihapus.
                 </p>
             </div>
 
@@ -219,9 +212,9 @@ function confirmRouting(): void {
                 class="min-h-11 w-full"
                 :disabled="
                     !canRoute ||
-                    !selectedPosition ||
+                    !selectedOption ||
                     processing ||
-                    availablePositions.length === 0
+                    availableOptions.length === 0
                 "
                 @click="openConfirmation"
             >
@@ -237,14 +230,15 @@ function confirmRouting(): void {
     >
         <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
             <DialogHeader>
-                <DialogTitle>Kirim routing kepada pimpinan?</DialogTitle>
-                <DialogDescription class="leading-6">
-                    Periksa kembali tujuan sebelum menyimpan route permanen.
-                </DialogDescription>
+                <DialogTitle>Kirim routing surat?</DialogTitle>
+                <DialogDescription class="leading-6"
+                    >Periksa kembali jalur sebelum menyimpan routing
+                    permanen.</DialogDescription
+                >
             </DialogHeader>
 
             <div
-                v-if="selectedPosition"
+                v-if="selectedOption"
                 class="flex items-start gap-3 rounded-2xl border border-violet-200 bg-violet-50/70 p-4 dark:border-violet-900 dark:bg-violet-950/25"
             >
                 <Crown
@@ -253,25 +247,12 @@ function confirmRouting(): void {
                 />
                 <div>
                     <p class="text-sm font-semibold">
-                        {{ selectedPosition.name }}
+                        {{ selectedOption.label }}
                     </p>
                     <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                        {{ selectedPosition.holder_name }}
+                        {{ selectedOption.description }}
                     </p>
                 </div>
-            </div>
-
-            <div
-                class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/75 p-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-100"
-            >
-                <ShieldAlert
-                    class="mt-0.5 size-5 shrink-0"
-                    aria-hidden="true"
-                />
-                <p class="leading-6">
-                    Tindakan ini tidak dapat dibatalkan. Pimpinan terpilih akan
-                    menerima surat pada inbox dan menunggu disposisi pertama.
-                </p>
             </div>
 
             <DialogFooter class="gap-2 sm:gap-0">
@@ -281,13 +262,12 @@ function confirmRouting(): void {
                     class="min-h-11"
                     :disabled="processing"
                     @click="confirmationOpen = false"
+                    >Periksa kembali</Button
                 >
-                    Periksa kembali
-                </Button>
                 <Button
                     type="button"
                     class="min-h-11"
-                    :disabled="processing || !selectedPosition"
+                    :disabled="processing || !selectedOption"
                     @click="confirmRouting"
                 >
                     <Spinner v-if="processing" />

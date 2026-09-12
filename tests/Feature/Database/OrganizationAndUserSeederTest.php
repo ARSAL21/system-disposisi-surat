@@ -46,7 +46,7 @@ test('operational bootstrap seeder creates the exact organization accounts and c
 
     $this->seed(OrganizationAndUserSeeder::class);
 
-    expect(PositionLevel::query()->count())->toBe(4)
+    expect(PositionLevel::query()->count())->toBe(6)
         ->and(OrganizationalUnit::query()->count())->toBe(13)
         ->and(Position::query()->count())->toBe(14)
         ->and(InstructionLabel::query()->count())->toBe(7)
@@ -69,8 +69,8 @@ test('operational bootstrap seeder creates the exact organization accounts and c
     }
 
     $expectedAccounts = [
-        'wali.kota@internal.test' => [RoleName::ExecutiveLeader, 'WALI_KOTA'],
-        'sekda@internal.test' => [RoleName::ExecutiveLeader, 'SEKDA'],
+        'wali.kota@internal.test' => [RoleName::Mayor, 'WALI_KOTA'],
+        'sekda@internal.test' => [RoleName::RegionalSecretary, 'SEKDA'],
         'asisten.1@internal.test' => [RoleName::Assistant, 'ASISTEN-I'],
         'asisten.2@internal.test' => [RoleName::Assistant, 'ASISTEN-II'],
         'asisten.3@internal.test' => [RoleName::Assistant, 'ASISTEN-III'],

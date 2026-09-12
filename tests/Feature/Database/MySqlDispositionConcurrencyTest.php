@@ -13,12 +13,14 @@ use App\Models\Disposition;
 use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
 use App\Models\InstructionLabel;
+use App\Models\LetterDocument;
 use App\Models\LetterRoute;
 use App\Models\LetterSubmission;
 use App\Models\OutgoingLetter;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\SenderOrganization;
+use App\Models\SubmissionDocument;
 use App\Models\User;
 use Database\Seeders\OrganizationAndUserSeeder;
 use Illuminate\Support\Facades\Artisan;
@@ -204,6 +206,70 @@ function mysqlConcurrencyAssignment(User $user, Position $position): PositionAss
 }
 
 /**
+ * @return array{
+ *     actor: User,
+ *     parent_recipient: DispositionRecipient,
+ *     target_position: Position,
+ *     instruction_label: InstructionLabel
+ * }
+ */
+function mysqlConcurrencyForwardingGraph(): array
+{
+    $graph = mysqlConcurrencyDispositionGraph();
+    $letter = $graph['letter'];
+    $initialDisposition = Disposition::query()
+        ->where('incoming_letter_id', $letter->getKey())
+        ->whereNotNull('source_route_id')
+        ->firstOrFail();
+    $assistantPosition = mysqlConcurrencyPosition('ASISTEN-II');
+    $assistantRecipient = mysqlConcurrencyPendingRecipient(
+        $initialDisposition,
+        $assistantPosition,
+        $letter->received_at->copy()->addHours(2),
+    );
+    $submission = LetterSubmission::query()
+        ->findOrFail($letter->letter_submission_id);
+    $registrar = mysqlConcurrencyUser('kabag.umum@internal.test');
+    $hash = hash('sha256', (string) Str::ulid());
+
+    $submissionDocument = new SubmissionDocument;
+    $submissionDocument->letter_submission_id = $submission->getKey();
+    $submissionDocument->storage_disk = 'submission-documents';
+    $submissionDocument->storage_path = $submission->public_id.'/'.Str::uuid().'.pdf';
+    $submissionDocument->original_filename = 'surat-konkurensi.pdf';
+    $submissionDocument->mime_type = 'application/pdf';
+    $submissionDocument->size_bytes = 1;
+    $submissionDocument->sha256 = $hash;
+    $submissionDocument->uploaded_by_user_id = $registrar->getKey();
+    $submissionDocument->save();
+
+    $letterDocument = new LetterDocument;
+    $letterDocument->incoming_letter_id = $letter->getKey();
+    $letterDocument->source_submission_document_id = $submissionDocument->getKey();
+    $letterDocument->version_number = 1;
+    $letterDocument->replaces_document_id = null;
+    $letterDocument->storage_disk = $submissionDocument->storage_disk;
+    $letterDocument->storage_path = $submissionDocument->storage_path;
+    $letterDocument->original_filename = $submissionDocument->original_filename;
+    $letterDocument->mime_type = $submissionDocument->mime_type;
+    $letterDocument->size_bytes = $submissionDocument->size_bytes;
+    $letterDocument->sha256 = $submissionDocument->sha256;
+    $letterDocument->correction_reason = null;
+    $letterDocument->uploaded_by_user_id = $registrar->getKey();
+    $letterDocument->created_at = now();
+    $letterDocument->save();
+
+    return [
+        'actor' => mysqlConcurrencyUser('asisten.2@internal.test'),
+        'parent_recipient' => $assistantRecipient,
+        'target_position' => mysqlConcurrencyPosition('KABAG_EKONOMI'),
+        'instruction_label' => InstructionLabel::query()
+            ->where('code', 'FOLLOW_UP')
+            ->firstOrFail(),
+    ];
+}
+
+/**
  * @return array{0: array{status: int}, 1: array{status: int}}
  */
 function mysqlConcurrencyRace(
@@ -279,6 +345,93 @@ function mysqlConcurrencyWorker(
         (string) $actor->getKey(),
         (string) $branch->getKey(),
         (string) $letter->getKey(),
+        $signalPath,
+        $releasePath,
+    ], base_path(), mysqlConcurrencyProcessEnvironment(), null, 30);
+    $process->start();
+
+    return $process;
+}
+
+/**
+ * @return array{0: array{status: int}, 1: array{status: int}}
+ */
+function mysqlForwardingRace(
+    User $actor,
+    DispositionRecipient $parentRecipient,
+    Position $targetPosition,
+    InstructionLabel $instructionLabel,
+): array {
+    $directory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'disposition-forwarding-concurrency-'.Str::uuid();
+
+    if (! File::makeDirectory($directory, 0700, true)) {
+        throw new RuntimeException('Unable to create the forwarding concurrency signal directory.');
+    }
+
+    $lockedSignal = $directory.DIRECTORY_SEPARATOR.'holding-worker-locked';
+    $waitingSignal = $directory.DIRECTORY_SEPARATOR.'waiting-worker-attempting';
+    $releaseSignal = $directory.DIRECTORY_SEPARATOR.'release-holding-worker';
+    $holdingProcess = mysqlForwardingWorker(
+        'hold',
+        $actor,
+        $parentRecipient,
+        $targetPosition,
+        $instructionLabel,
+        $lockedSignal,
+        $releaseSignal,
+    );
+    $waitingProcess = null;
+
+    try {
+        mysqlConcurrencyWaitForSignal($lockedSignal, $holdingProcess);
+
+        $waitingProcess = mysqlForwardingWorker(
+            'normal',
+            $actor,
+            $parentRecipient,
+            $targetPosition,
+            $instructionLabel,
+            $waitingSignal,
+            $releaseSignal,
+        );
+        mysqlConcurrencyWaitForSignal($waitingSignal, $waitingProcess);
+        usleep(250_000);
+        file_put_contents($releaseSignal, 'release', LOCK_EX);
+
+        return [
+            mysqlConcurrencyWorkerResult($holdingProcess),
+            mysqlConcurrencyWorkerResult($waitingProcess),
+        ];
+    } finally {
+        if ($holdingProcess->isRunning()) {
+            $holdingProcess->stop();
+        }
+
+        if ($waitingProcess?->isRunning()) {
+            $waitingProcess->stop();
+        }
+
+        File::deleteDirectory($directory);
+    }
+}
+
+function mysqlForwardingWorker(
+    string $mode,
+    User $actor,
+    DispositionRecipient $parentRecipient,
+    Position $targetPosition,
+    InstructionLabel $instructionLabel,
+    string $signalPath,
+    string $releasePath,
+): Process {
+    $process = new Process([
+        PHP_BINARY,
+        base_path('tests/Support/RunDispositionForwardingWorker.php'),
+        $mode,
+        (string) $actor->getKey(),
+        (string) $parentRecipient->getKey(),
+        (string) $targetPosition->getKey(),
+        (string) $instructionLabel->getKey(),
         $signalPath,
         $releasePath,
     ], base_path(), mysqlConcurrencyProcessEnvironment(), null, 30);
@@ -508,6 +661,37 @@ test('two contending completions of one branch yield one success and one conflic
             ->where('subject_type', 'incoming_letter')
             ->where('subject_id', $graph['letter']->getKey())
             ->count())->toBe(0);
+})->group('mysql-concurrency');
+
+test('two concurrent forwards from one assistant recipient create one branch set', function (): void {
+    $graph = mysqlConcurrencyForwardingGraph();
+    $results = mysqlForwardingRace(
+        $graph['actor'],
+        $graph['parent_recipient'],
+        $graph['target_position'],
+        $graph['instruction_label'],
+    );
+    $statuses = array_column($results, 'status');
+    sort($statuses);
+    $parentRecipient = $graph['parent_recipient']->refresh();
+    $forwardedDisposition = Disposition::query()
+        ->where('parent_recipient_id', $parentRecipient->getKey())
+        ->firstOrFail();
+
+    expect($statuses)->toBe([200, 409])
+        ->and($parentRecipient->status)->toBe(DispositionRecipientStatus::Completed)
+        ->and(Disposition::query()
+            ->where('parent_recipient_id', $parentRecipient->getKey())
+            ->count())->toBe(1)
+        ->and(DispositionRecipient::query()
+            ->where('disposition_id', $forwardedDisposition->getKey())
+            ->where('recipient_position_id', $graph['target_position']->getKey())
+            ->count())->toBe(1)
+        ->and(AuditLog::query()
+            ->where('action', AuditAction::DispositionCreated->value)
+            ->where('subject_type', 'disposition')
+            ->where('subject_id', $forwardedDisposition->getKey())
+            ->count())->toBe(1);
 })->group('mysql-concurrency');
 
 test('two competing outgoing number assignments retain one unique registration', function (): void {

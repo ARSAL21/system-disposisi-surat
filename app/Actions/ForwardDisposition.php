@@ -12,6 +12,7 @@ use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
 use App\Models\InstructionLabel;
 use App\Models\LetterDocument;
+use App\Models\OrganizationalUnit;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\User;
@@ -99,11 +100,15 @@ class ForwardDisposition
             $this->storageGuard->validateOfficialLetterDocument($lockedLetter, $currentDocument);
             $actorAssignment = $this->positionAssignmentResolver
                 ->lockAssistantAssignmentForPosition($lockedActor, $lockedParentRecipient->recipient_position_id);
+            [$assistantPosition, $assistantUnit] = $this->targetResolver
+                ->lockAssistantScope($actorAssignment);
             $recipientTargets = $this->targetResolver
                 ->lockAvailablePositions(
                     $recipientPositionIds,
                     (int) $lockedActor->getKey(),
                     (int) $lockedLetter->getKey(),
+                    $assistantPosition,
+                    $assistantUnit,
                 );
             $instructionLabels = $this->lockActiveInstructionLabels($instructionLabelIds);
             $now = Date::now();
@@ -153,6 +158,11 @@ class ForwardDisposition
                         ->values()
                         ->all(),
                     'document_version_number' => $currentDocument->version_number,
+                    'hierarchy' => $this->hierarchyAuditSnapshot(
+                        $assistantPosition,
+                        $assistantUnit,
+                        $recipientTargets,
+                    ),
                 ],
                 actorPositionAssignment: $actorAssignment,
             );
@@ -162,7 +172,7 @@ class ForwardDisposition
     }
 
     /**
-     * @param  SupportCollection<int, array{Position, PositionAssignment}>  $recipientTargets
+     * @param  SupportCollection<int, array{0: Position, 1: PositionAssignment, 2: OrganizationalUnit}>  $recipientTargets
      * @return Collection<int, DispositionRecipient>
      */
     private function createRecipients(
@@ -189,6 +199,39 @@ class ForwardDisposition
         }
 
         return $recipients;
+    }
+
+    /**
+     * @param  SupportCollection<int, array{0: Position, 1: PositionAssignment, 2: OrganizationalUnit}>  $recipientTargets
+     * @return array<string, mixed>
+     */
+    private function hierarchyAuditSnapshot(
+        Position $assistantPosition,
+        OrganizationalUnit $assistantUnit,
+        SupportCollection $recipientTargets,
+    ): array {
+        return [
+            'rule' => 'DIRECT_CHILD_UNIT',
+            'source_assistant' => [
+                'position_id' => (int) $assistantPosition->getKey(),
+                'position_code' => $assistantPosition->code,
+                'position_name' => $assistantPosition->name,
+                'organizational_unit_id' => (int) $assistantUnit->getKey(),
+                'organizational_unit_code' => $assistantUnit->code,
+                'organizational_unit_name' => $assistantUnit->name,
+            ],
+            'recipients' => $recipientTargets
+                ->map(static fn (array $target): array => [
+                    'position_id' => (int) $target[0]->getKey(),
+                    'position_code' => $target[0]->code,
+                    'position_name' => $target[0]->name,
+                    'organizational_unit_id' => (int) $target[2]->getKey(),
+                    'organizational_unit_code' => $target[2]->code,
+                    'organizational_unit_name' => $target[2]->name,
+                ])
+                ->values()
+                ->all(),
+        ];
     }
 
     /**

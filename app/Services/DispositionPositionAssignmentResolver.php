@@ -29,6 +29,31 @@ class DispositionPositionAssignmentResolver
         );
     }
 
+    public function hasMayorAssignmentForPosition(User $user, int $positionId): bool
+    {
+        return $this->mayorQuery($user)->where('position_id', $positionId)->exists();
+    }
+
+    public function lockMayorAssignmentForPosition(User $user, int $positionId): PositionAssignment
+    {
+        return $this->lockExactlyOne($this->mayorQuery($user)->where('position_id', $positionId));
+    }
+
+    public function hasRegionalSecretaryAssignmentForPosition(User $user, int $positionId): bool
+    {
+        return $this->regionalSecretaryQuery($user)->where('position_id', $positionId)->exists();
+    }
+
+    public function hasRegionalSecretaryAssignment(User $user): bool
+    {
+        return $this->regionalSecretaryQuery($user)->exists();
+    }
+
+    public function lockRegionalSecretaryAssignmentForPosition(User $user, int $positionId): PositionAssignment
+    {
+        return $this->lockExactlyOne($this->regionalSecretaryQuery($user)->where('position_id', $positionId));
+    }
+
     public function hasInboxAssignment(User $user): bool
     {
         return $this->inboxQuery($user)->exists();
@@ -122,8 +147,25 @@ class DispositionPositionAssignmentResolver
             ->whereHas('position', fn (Builder $position): Builder => $position
                 ->where('is_active', true)
                 ->whereHas('positionLevel', fn (Builder $level): Builder => $level
-                    ->where('code', OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL)
+                    ->whereIn('code', [
+                        OrganizationCatalog::MAYOR_LEVEL,
+                        OrganizationCatalog::REGIONAL_SECRETARY_LEVEL,
+                    ])
                     ->where('is_active', true)));
+    }
+
+    /** @return Builder<PositionAssignment> */
+    private function mayorQuery(User $user): Builder
+    {
+        return $this->positionLevelQuery($user, OrganizationCatalog::MAYOR_LEVEL)
+            ->whereHas('position', fn (Builder $position): Builder => $position
+                ->where('code', OrganizationCatalog::MAYOR_POSITION));
+    }
+
+    /** @return Builder<PositionAssignment> */
+    private function regionalSecretaryQuery(User $user): Builder
+    {
+        return $this->positionLevelQuery($user, OrganizationCatalog::REGIONAL_SECRETARY_LEVEL);
     }
 
     /** @return Builder<PositionAssignment> */

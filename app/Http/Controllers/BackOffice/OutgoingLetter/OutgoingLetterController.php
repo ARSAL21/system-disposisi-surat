@@ -29,6 +29,7 @@ final class OutgoingLetterController extends Controller
                 'search' => (string) ($filters['search'] ?? ''),
                 'status' => (string) ($filters['status'] ?? ''),
                 'source' => (string) ($filters['source'] ?? ''),
+                'origin' => (string) ($filters['origin'] ?? ''),
                 'year' => isset($filters['year']) ? (string) $filters['year'] : '',
             ],
             'routes' => ['index' => route('back-office.outgoing-letters.index')],

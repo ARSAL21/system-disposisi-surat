@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { useTwoFactorWalkthrough } from '@/composables/useTwoFactorWalkthrough';
 import { store as defaultConfirmStore } from '@/routes/password/confirm';
 
 export type Props = {
@@ -44,6 +45,8 @@ const emit = defineEmits<{
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
+const { isTourOpen, pauseTourForModal, resumeTourFromModal } =
+    useTwoFactorWalkthrough();
 
 const resolvedUrl = computed(() => {
     if (props.confirmPasswordUrl) {
@@ -67,17 +70,21 @@ watch(
     () => props.isOpen,
     (open) => {
         if (open) {
+            pauseTourForModal();
             form.reset('password');
             form.clearErrors();
             nextTick(() => {
                 passwordInputRef.value?.focus();
             });
+        } else {
+            resumeTourFromModal();
         }
     },
 );
 
 const handleClose = () => {
     emit('update:isOpen', false);
+    resumeTourFromModal();
     form.reset('password');
     form.clearErrors();
 };
@@ -128,6 +135,25 @@ const submit = () => {
                     {{ description }}
                 </DialogDescription>
             </DialogHeader>
+
+            <!-- Walkthrough Step 1 Guidance Banner if tour is active -->
+            <div
+                v-if="isTourOpen"
+                class="flex items-center gap-2.5 rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-xs text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
+            >
+                <div
+                    class="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#0284c7] text-[10px] font-bold text-white shadow-xs"
+                >
+                    1
+                </div>
+                <div class="leading-tight">
+                    <span class="font-bold">Langkah 1 dari 3:</span>
+                    <span class="ml-1 text-sky-800 dark:text-sky-300">
+                        Masukkan kata sandi akun untuk verifikasi keamanan
+                        sebelum mengaktifkan 2FA.
+                    </span>
+                </div>
+            </div>
 
             <!-- Optional Passkey Verification for supported devices -->
             <div class="pt-1">

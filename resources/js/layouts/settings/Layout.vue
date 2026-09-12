@@ -9,12 +9,13 @@ import {
     Sparkles,
     User,
 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import ConfirmPasswordModal from '@/components/ConfirmPasswordModal.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { useInitials } from '@/composables/useInitials';
+import { useTwoFactorWalkthrough } from '@/composables/useTwoFactorWalkthrough';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
@@ -59,7 +60,18 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 const isInternal = computed(() => user.value.account_type === 'INTERNAL');
 const isConfirmPasswordOpen = ref(false);
 
+const { pauseTourForModal, resumeTourFromModal } = useTwoFactorWalkthrough();
+
+watch(isConfirmPasswordOpen, (open) => {
+    if (open) {
+        pauseTourForModal();
+    } else {
+        resumeTourFromModal();
+    }
+});
+
 const handlePasswordConfirmed = () => {
+    resumeTourFromModal();
     router.visit(toUrl(editSecurity()) || '/settings/security', {
         preserveScroll: true,
     });
@@ -166,6 +178,7 @@ const handlePasswordConfirmed = () => {
                 <!-- If tab is Security and password is NOT confirmed in session, render as a button that directly opens modal without triggering Link navigation -->
                 <button
                     v-if="item.id === 'security' && !user?.password_confirmed"
+                    id="tab-security"
                     type="button"
                     @click="isConfirmPasswordOpen = true"
                     :class="[
@@ -220,6 +233,7 @@ const handlePasswordConfirmed = () => {
                 <!-- Otherwise, render standard Inertia Link for confirmed/other tabs -->
                 <Link
                     v-else
+                    :id="item.id === 'security' ? 'tab-security' : undefined"
                     :href="item.href"
                     :class="[
                         'group relative flex cursor-pointer items-center gap-3.5 rounded-xl p-3.5 text-left transition-all duration-200',

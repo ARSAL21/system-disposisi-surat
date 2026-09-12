@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\AuditAction;
 use App\Enums\IncomingLetterStatus;
+use App\Enums\InitialLetterRoutePath;
 use App\Enums\LetterRouteStatus;
 use App\Exceptions\DocumentStorageConflict;
 use App\Exceptions\InitialLetterRoutingStateConflict;
@@ -30,10 +31,10 @@ class RouteIncomingLetter
     public function execute(
         User $actor,
         IncomingLetter $incomingLetter,
-        int $targetPositionId,
+        InitialLetterRoutePath $routePath,
     ): LetterRoute {
         try {
-            return DB::transaction(function () use ($actor, $incomingLetter, $targetPositionId): LetterRoute {
+            return DB::transaction(function () use ($actor, $incomingLetter, $routePath): LetterRoute {
                 $lockedLetter = IncomingLetter::query()
                     ->whereKey($incomingLetter->getKey())
                     ->lockForUpdate()
@@ -65,7 +66,7 @@ class RouteIncomingLetter
                 $actorAssignment = $this->positionAssignmentResolver
                     ->lockRoutingCreatingAssignment($actor);
                 [$targetPosition, $targetAssignment] = $this->targetResolver
-                    ->lockAvailablePosition($targetPositionId);
+                    ->lockAvailablePosition($routePath);
                 $routedAt = Date::now();
 
                 $letterRoute = new LetterRoute;
@@ -99,6 +100,7 @@ class RouteIncomingLetter
                         'incoming_letter_id' => $lockedLetter->getKey(),
                         'recipient_position_assignment_id' => $targetAssignment->getKey(),
                         'document_version_number' => $currentDocument->version_number,
+                        'route_path' => $routePath->value,
                     ],
                     actorPositionAssignment: $actorAssignment,
                 );
