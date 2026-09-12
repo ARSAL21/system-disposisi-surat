@@ -72,6 +72,7 @@ onUnmounted(() => clearTwoFactorAuthData());
 
         <div
             v-if="!twoFactorEnabled"
+            id="two-factor-setup-card"
             class="space-y-5 rounded-2xl border border-indigo-100/80 bg-gradient-to-br from-indigo-50/40 via-white to-neutral-50/40 p-5 sm:p-6 dark:border-indigo-900/30 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20"
         >
             <div
@@ -99,6 +100,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                 <div>
                     <Button
                         v-if="hasSetupData"
+                        id="two-factor-action-button"
                         @click="showSetupModal = true"
                         class="gap-2 bg-indigo-600 font-medium text-white shadow-xs hover:bg-indigo-700"
                     >
@@ -112,6 +114,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                         #default="{ processing }"
                     >
                         <Button
+                            id="two-factor-action-button"
                             type="submit"
                             :disabled="processing"
                             class="gap-2 bg-indigo-600 font-medium text-white shadow-xs hover:bg-indigo-700"
