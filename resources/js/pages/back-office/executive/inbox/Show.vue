@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import ExecutiveBranchProgressCard from '@/components/back-office/dispositions/ExecutiveBranchProgressCard.vue';
 import FirstDispositionPanel from '@/components/back-office/dispositions/FirstDispositionPanel.vue';
 import FirstDispositionReceiptCard from '@/components/back-office/dispositions/FirstDispositionReceiptCard.vue';
+import MayorForwardToSekdaPanel from '@/components/back-office/dispositions/MayorForwardToSekdaPanel.vue';
 import InitialRouteReceiptCard from '@/components/back-office/routing/InitialRouteReceiptCard.vue';
 import RoutingDetailHeader from '@/components/back-office/routing/RoutingDetailHeader.vue';
 import RoutingLetterOverviewCard from '@/components/back-office/routing/RoutingLetterOverviewCard.vue';
@@ -63,7 +64,7 @@ const previewRouteId = computed(() => {
 const baseRoute = computed(() =>
     previewMode.value
         ? (previewExecutiveInboxItems.find(
-              (route) => route.route_id === previewRouteId.value,
+              (route) => route.entry_id === previewRouteId.value,
           ) ?? previewExecutiveInboxItems[0])
         : (props.route ?? null),
 );
@@ -225,6 +226,36 @@ function createDisposition(payload: CreateFirstDispositionPayload): void {
     });
 }
 
+function forwardToSekda(payload: {
+    instruction_label_ids: number[];
+    instruction_note: string;
+}): void {
+    errors.value = {};
+    successNotice.value = '';
+
+    if (!props.routes?.forward_to_sekda) {
+        errors.value = {
+            workflow:
+                'Endpoint arahan kepada Sekda belum tersedia. Muat ulang halaman ini.',
+        };
+
+        return;
+    }
+
+    router.post(props.routes.forward_to_sekda, payload, {
+        preserveScroll: true,
+        onStart: () => {
+            processing.value = true;
+        },
+        onError: (responseErrors) => {
+            errors.value = responseErrors;
+        },
+        onFinish: () => {
+            processing.value = false;
+        },
+    });
+}
+
 onBeforeUnmount(() => {
     if (previewTimer) {
         clearTimeout(previewTimer);
@@ -299,13 +330,30 @@ onBeforeUnmount(() => {
                 <div class="space-y-6 lg:col-span-5">
                     <!-- 1. Disposition Panel (Active form if not yet disposed) -->
                     <FirstDispositionPanel
-                        v-if="!activeDisposition"
+                        v-if="
+                            !activeDisposition &&
+                            !props.capabilities?.can_forward_to_sekda
+                        "
                         :positions="assistantPositions"
                         :instruction-labels="instructionLabels"
                         :can-create="canCreateDisposition"
                         :processing="processing"
                         :errors="errors"
                         @confirm="createDisposition"
+                    />
+
+                    <MayorForwardToSekdaPanel
+                        v-if="
+                            !activeDisposition &&
+                            props.capabilities?.can_forward_to_sekda
+                        "
+                        :instruction-labels="instructionLabels"
+                        :can-forward="
+                            props.capabilities?.can_forward_to_sekda === true
+                        "
+                        :processing="processing"
+                        :errors="errors"
+                        @confirm="forwardToSekda"
                     />
 
                     <!-- 2. First Disposition Receipt (If already created) -->

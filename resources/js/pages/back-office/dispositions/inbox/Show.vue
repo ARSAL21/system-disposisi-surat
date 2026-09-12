@@ -83,9 +83,38 @@ const isSectionHeadRecipient = computed(
         activeDisposition.value?.recipient_position.level_code ===
         'SECTION_HEAD',
 );
+const previewSectionHeadScope = computed(() => {
+    const assistantName = activeDisposition.value?.recipient_position.name;
+
+    if (!assistantName) {
+        return [];
+    }
+
+    const scopeByAssistant: Record<string, string[]> = {
+        'Asisten Pemerintahan dan Kesejahteraan Rakyat': [
+            'Bagian Pemerintahan',
+            'Bagian Hukum',
+            'Bagian Kesejahteraan Rakyat',
+        ],
+        'Asisten Perekonomian dan Pembangunan': [
+            'Bagian Perekonomian',
+            'Bagian Pembangunan',
+        ],
+        'Asisten Administrasi Umum': [
+            'Bagian Umum',
+            'Bagian Organisasi',
+            'Bagian Protokol dan Komunikasi Pimpinan',
+        ],
+    };
+    const allowedUnits = scopeByAssistant[assistantName] ?? [];
+
+    return previewSectionHeadPositions.filter((position) =>
+        allowedUnits.includes(position.unit_name ?? ''),
+    );
+});
 const sectionHeadPositions = computed(() =>
     previewMode.value
-        ? previewSectionHeadPositions
+        ? previewSectionHeadScope.value
         : (props.sectionHeadPositions ?? []),
 );
 const instructionLabels = computed(() =>
@@ -375,6 +404,12 @@ onBeforeUnmount(() => {
                 <ForwardDispositionPanel
                     v-else
                     :positions="sectionHeadPositions"
+                    :scope-position-name="
+                        activeDisposition.recipient_position.name
+                    "
+                    :scope-unit-name="
+                        activeDisposition.recipient_position.unit_name
+                    "
                     :instruction-labels="instructionLabels"
                     :can-forward="canForward"
                     :processing="processing"

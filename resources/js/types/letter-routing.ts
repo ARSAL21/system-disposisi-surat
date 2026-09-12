@@ -29,6 +29,16 @@ export type ExecutivePositionOption = {
     is_available: boolean;
 };
 
+export type InitialRoutePath = 'DIRECT_TO_SEKDA' | 'VIA_MAYOR';
+
+export type InitialRouteOption = {
+    path: InitialRoutePath;
+    label: string;
+    description: string;
+    target_position: ExecutivePositionOption | null;
+    is_available: boolean;
+};
+
 export type RoutingActor = {
     name: string;
     position: string;
@@ -100,7 +110,9 @@ export type LetterRoutingRoutes = {
 };
 
 export type ExecutiveInboxItem = {
-    route_id: number;
+    entry_type: 'DIRECT_ROUTE' | 'MAYOR_DISPOSITION';
+    entry_id: number;
+    source_label: string;
     letter: LetterRoutingItem;
     received_in_inbox_at: string;
     branch_progress: ExecutiveBranchProgress;
