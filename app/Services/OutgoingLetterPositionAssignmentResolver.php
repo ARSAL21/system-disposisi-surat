@@ -10,6 +10,19 @@ use Illuminate\Database\Eloquent\Builder;
 
 final class OutgoingLetterPositionAssignmentResolver
 {
+    public function hasGeneralAffairsOfficer(User $user): bool
+    {
+        return $this->active($user)
+            ->whereHas('position', fn (Builder $position): Builder => $position
+                ->whereHas('positionLevel', fn (Builder $level): Builder => $level
+                    ->where('code', OrganizationCatalog::GENERAL_AFFAIRS_LEVEL)
+                    ->where('is_active', true))
+                ->whereHas('organizationalUnit', fn (Builder $unit): Builder => $unit
+                    ->where('code', OrganizationCatalog::GENERAL_AFFAIRS_UNIT)
+                    ->where('is_active', true)))
+            ->exists();
+    }
+
     public function lockGeneralAffairsOfficer(User $user): PositionAssignment
     {
         return $this->lockOne($this->active($user)
