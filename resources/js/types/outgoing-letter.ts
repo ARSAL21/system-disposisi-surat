@@ -4,21 +4,25 @@ export type OutgoingLetterStatus =
     | 'SIGNED_DOCUMENT_UPLOADED'
     | 'ADMIN_VERIFIED'
     | 'DELIVERED'
-    | 'WITHDRAWN';
+    | 'WITHDRAWN'
+    | 'SEKDA_REVIEW'
+    | 'AWAITING_MANUAL_SIGNATURE'
+    | 'MANUAL_SCAN_REVIEW'
+    | 'READY_FOR_DELIVERY'
+    | 'REVISION_REQUIRED';
+
+export type OutgoingLetterOrigin = 'RESPONSE' | 'STANDALONE';
 
 export type OutgoingLetterSource = 'ONLINE' | 'MANUAL';
 
 export type OutgoingDeliveryMethod =
-    | 'PORTAL'
-    | 'IN_PERSON'
-    | 'POSTAL'
-    | 'COURIER'
-    | 'OTHER';
+    'EMAIL' | 'PORTAL' | 'IN_PERSON' | 'POSTAL' | 'COURIER' | 'OTHER';
 
 export type OutgoingLetterFilters = {
     search: string;
     status: '' | OutgoingLetterStatus;
     source: '' | OutgoingLetterSource;
+    origin: '' | OutgoingLetterOrigin;
     year: string;
 };
 
@@ -34,9 +38,11 @@ export type OutgoingLetterListItem = {
     public_id: string;
     subject: string;
     status: OutgoingLetterStatus;
-    source: OutgoingLetterSource;
-    incoming_agenda_number: string;
-    sender_organization_name: string;
+    origin: OutgoingLetterOrigin;
+    source: OutgoingLetterSource | null;
+    incoming_agenda_number: string | null;
+    sender_organization_name: string | null;
+    originating_unit_name: string | null;
     outgoing_number: string | null;
     letter_date: string | null;
     signatory_position: string;
@@ -46,7 +52,32 @@ export type OutgoingLetterListItem = {
     next_action_label: string | null;
     links: {
         detail: string;
+        sekda_approval: string | null;
     };
+};
+
+export type StandaloneNumberQueueItem = {
+    public_id: string;
+    draft_public_id: string;
+    subject: string;
+    recipient_name: string;
+    recipient_organization: string | null;
+    originating_unit_name: string;
+    current_version_number: number;
+    sha256_fingerprint: string;
+    approved_at: string;
+    assign_number_url: string | null;
+};
+
+export type SekdaApprovalQueueItem = {
+    public_id: string;
+    subject: string;
+    outgoing_number: string;
+    letter_date: string;
+    originating_unit_name: string;
+    recipient_name: string;
+    sha256_fingerprint: string;
+    approval_url: string | null;
 };
 
 export type OutgoingLetterPagination = {
@@ -91,7 +122,8 @@ export type OutgoingLetterDetail = {
     public_id: string;
     subject: string;
     status: OutgoingLetterStatus;
-    source: OutgoingLetterSource;
+    origin: OutgoingLetterOrigin;
+    source: OutgoingLetterSource | null;
     incoming_letter: {
         reference: string;
         agenda_number: string;
@@ -99,7 +131,19 @@ export type OutgoingLetterDetail = {
         sender_organization_name: string;
         received_at: string;
         dossier_url: string | null;
-    };
+    } | null;
+    standalone_draft: {
+        public_id: string;
+        originating_unit_name: string;
+        recipient_name: string;
+        recipient_organization: string | null;
+        recipient_position: string | null;
+        copy_recipients: string[];
+        template_name: string;
+        template_version_number: number;
+        concept_version_number: number;
+        concept_sha256_fingerprint: string;
+    } | null;
     mandate: {
         source_document_title: string;
         source_version_number: number;
@@ -127,12 +171,27 @@ export type OutgoingLetterDetail = {
     };
     delivery: {
         method: OutgoingDeliveryMethod | null;
+        recipient_email?: string | null;
         recipient_name: string | null;
         delivered_by: string | null;
         delivered_at: string | null;
         tracking_number: string | null;
         note: string | null;
+        email?: {
+            status: 'NOT_SENT' | 'SENT' | 'EXPIRED' | 'REVOKED';
+            sent_at: string | null;
+            expires_at: string | null;
+            download_url_status: string;
+            resend_url: string | null;
+            revoke_url: string | null;
+        } | null;
     };
+    internal_copies?: Array<{
+        name: string;
+        position: string;
+        notified_at: string | null;
+        acknowledged: boolean;
+    }>;
     withdrawal: {
         reason: string;
         withdrawn_by: string;
@@ -146,6 +205,13 @@ export type OutgoingLetterDetail = {
         can_request_document_revision: boolean;
         can_deliver: boolean;
         can_withdraw: boolean;
+        can_select_sekda_approval: boolean;
+        can_upload_manual_scan: boolean;
+        can_review_manual_scan: boolean;
+        can_return_for_revision: boolean;
+        can_create_correction?: boolean;
+        can_resend_delivery_email?: boolean;
+        can_revoke_delivery_email?: boolean;
     };
     routes: {
         index: string;
@@ -155,6 +221,78 @@ export type OutgoingLetterDetail = {
         request_document_revision: string | null;
         deliver: string | null;
         withdraw: string | null;
+        sekda_approval: string | null;
+        approve_qr: string | null;
+        choose_manual_signature: string | null;
+        upload_manual_scan: string | null;
+        review_manual_scan: string | null;
+        return_for_revision: string | null;
+        create_correction?: string | null;
+        resend_delivery_email?: string | null;
+        revoke_delivery_email?: string | null;
+    };
+};
+
+export type SekdaApprovalDetail = {
+    public_id: string;
+    subject: string;
+    status: Extract<
+        OutgoingLetterStatus,
+        | 'SEKDA_REVIEW'
+        | 'AWAITING_MANUAL_SIGNATURE'
+        | 'MANUAL_SCAN_REVIEW'
+        | 'READY_FOR_DELIVERY'
+        | 'REVISION_REQUIRED'
+    >;
+    outgoing_number: string;
+    letter_date: string;
+    originating_unit_name: string;
+    recipient: {
+        name: string;
+        organization: string | null;
+        position: string | null;
+    };
+    copy_recipients: string[];
+    current_document: {
+        version_number: number;
+        sha256_fingerprint: string;
+        preview_url: string | null;
+        download_url: string | null;
+    } | null;
+    qr_placement: {
+        page_label: string;
+        x_ratio: number;
+        y_ratio: number;
+        width_ratio: number;
+        height_ratio: number;
+    };
+    manual_scan: {
+        version_number: number;
+        sha256_fingerprint: string;
+        uploaded_at: string;
+        uploaded_by: string;
+        preview_url: string | null;
+    } | null;
+    review: {
+        decision: 'VERIFIED' | 'RETURNED';
+        note: string | null;
+        reviewed_by: string;
+        reviewed_at: string;
+    } | null;
+    capabilities: {
+        can_approve_qr: boolean;
+        can_choose_manual_signature: boolean;
+        can_upload_manual_scan: boolean;
+        can_review_manual_scan: boolean;
+        can_return_for_revision: boolean;
+    };
+    routes: {
+        index: string;
+        approve_qr: string | null;
+        choose_manual_signature: string | null;
+        upload_manual_scan: string | null;
+        review_manual_scan: string | null;
+        return_for_revision: string | null;
     };
 };
 
@@ -164,9 +302,12 @@ export type OutgoingRegisterPageProps = {
         pagination: OutgoingLetterPagination;
     };
     summary?: OutgoingLetterSummary;
+    numbering_queue?: StandaloneNumberQueueItem[];
+    sekda_approval_queue?: SekdaApprovalQueueItem[];
     filters?: OutgoingLetterFilters;
     routes?: {
         index: string;
+        sekda_approval_index?: string;
     };
     preview?: boolean;
 };
@@ -176,18 +317,22 @@ export type OutgoingLetterDetailPageProps = {
     preview?: boolean;
 };
 
+export type SekdaApprovalPageProps = {
+    approval?: SekdaApprovalDetail;
+    preview?: boolean;
+};
+
 export type OutgoingLetterUiAction =
     | { kind: 'assign_number'; route: string }
     | { kind: 'upload_signed_document'; route: string }
     | { kind: 'verify'; route: string }
     | { kind: 'request_document_revision'; route: string }
     | { kind: 'deliver'; route: string; source: OutgoingLetterSource }
-    | { kind: 'withdraw'; route: string };
+    | { kind: 'withdraw'; route: string }
+    | { kind: 'create_correction'; route: string };
 
 export type PublicResponseStatus =
-    | 'IN_PROCESS'
-    | 'PREPARING_RESPONSE'
-    | 'RESPONSE_AVAILABLE';
+    'IN_PROCESS' | 'PREPARING_RESPONSE' | 'RESPONSE_AVAILABLE';
 
 export type PublicOfficialResponse = {
     public_id: string;

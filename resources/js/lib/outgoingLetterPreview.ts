@@ -5,12 +5,14 @@ import type {
     OutgoingLetterSummary,
     PublicResponseTracker,
     LetterSubmission,
+    SekdaApprovalDetail,
 } from '@/types';
 
 export const previewOutgoingFilters: OutgoingLetterFilters = {
     search: '',
     status: '',
     source: '',
+    origin: '',
     year: '2026',
 };
 
@@ -22,14 +24,47 @@ export const previewOutgoingSummary: OutgoingLetterSummary = {
     delivered_this_month: 9,
 };
 
+export const previewStandaloneNumberingQueue = [
+    {
+        public_id: '01KSTANDALONENUMBER000000001',
+        draft_public_id: '01KSTANDALONEDRAFT000000001',
+        subject: 'Undangan koordinasi persiapan Festival Pesona Buton',
+        recipient_name: 'Ketua Panitia Festival Pesona Buton',
+        recipient_organization: 'Panitia Festival Pesona Buton',
+        originating_unit_name: 'Bagian Perekonomian dan Pembangunan',
+        current_version_number: 2,
+        sha256_fingerprint:
+            'e89f66a7c9452af4ab6ce14ec17d353c2a9d4e7e34e8513b7b0c2375d216a6b5',
+        approved_at: '2026-09-08T10:14:00+08:00',
+        assign_number_url: '#standalone-assign-number',
+    },
+];
+
+export const previewSekdaApprovalQueue = [
+    {
+        public_id: '01KSTANDALONEOUTGOING00000001',
+        subject: 'Undangan koordinasi persiapan Festival Pesona Buton',
+        outgoing_number: '005/1201/SETDA/2026',
+        letter_date: '2026-09-09',
+        originating_unit_name: 'Bagian Perekonomian dan Pembangunan',
+        recipient_name: 'Ketua Panitia Festival Pesona Buton',
+        sha256_fingerprint:
+            'e89f66a7c9452af4ab6ce14ec17d353c2a9d4e7e34e8513b7b0c2375d216a6b5',
+        approval_url:
+            '/back-office/previews/outgoing-letters/approvals/01KSTANDALONEOUTGOING00000001',
+    },
+];
+
 export const previewOutgoingLetters: OutgoingLetterListItem[] = [
     {
         public_id: '01KOUTGOING000000000000001',
         subject: 'Balasan permohonan penataan aset daerah',
         status: 'AUTHORIZED',
+        origin: 'RESPONSE',
         source: 'ONLINE',
         incoming_agenda_number: '500.12/41/UM/2026',
         sender_organization_name: 'Forum Masyarakat Kelurahan Wameo',
+        originating_unit_name: null,
         outgoing_number: null,
         letter_date: null,
         signatory_position: 'Sekretaris Daerah',
@@ -39,15 +74,18 @@ export const previewOutgoingLetters: OutgoingLetterListItem[] = [
         next_action_label: 'Berikan nomor surat',
         links: {
             detail: '/back-office/previews/outgoing-letters/01KOUTGOING000000000000001',
+            sekda_approval: null,
         },
     },
     {
         public_id: '01KOUTGOING000000000000002',
         subject: 'Jawaban fasilitasi kegiatan ekonomi kreatif',
         status: 'NUMBER_ASSIGNED',
+        origin: 'RESPONSE',
         source: 'MANUAL',
         incoming_agenda_number: '500.12/37/UM/2026',
         sender_organization_name: 'Komunitas Kreatif Baubau',
+        originating_unit_name: null,
         outgoing_number: '500.12/1189/SETDA/2026',
         letter_date: '2026-09-05',
         signatory_position: 'Asisten Perekonomian dan Pembangunan',
@@ -57,15 +95,18 @@ export const previewOutgoingLetters: OutgoingLetterListItem[] = [
         next_action_label: 'Unggah PDF bertanda tangan',
         links: {
             detail: '/back-office/previews/outgoing-letters/01KOUTGOING000000000000002',
+            sekda_approval: null,
         },
     },
     {
         public_id: '01KOUTGOING000000000000003',
         subject: 'Tanggapan atas permohonan audiensi kelembagaan',
         status: 'SIGNED_DOCUMENT_UPLOADED',
+        origin: 'RESPONSE',
         source: 'ONLINE',
         incoming_agenda_number: '005/52/UM/2026',
         sender_organization_name: 'Lembaga Adat Wolio',
+        originating_unit_name: null,
         outgoing_number: '005/1193/SETDA/2026',
         letter_date: '2026-09-05',
         signatory_position: 'Sekretaris Daerah',
@@ -75,15 +116,18 @@ export const previewOutgoingLetters: OutgoingLetterListItem[] = [
         next_action_label: 'Verifikasi administrasi',
         links: {
             detail: '/back-office/previews/outgoing-letters/01KOUTGOING000000000000003',
+            sekda_approval: null,
         },
     },
     {
         public_id: '01KOUTGOING000000000000004',
         subject: 'Pemberitahuan hasil koordinasi penataan kawasan',
         status: 'ADMIN_VERIFIED',
+        origin: 'RESPONSE',
         source: 'MANUAL',
         incoming_agenda_number: '600.1/29/UM/2026',
         sender_organization_name: 'Kelompok Warga Bataraguru',
+        originating_unit_name: null,
         outgoing_number: '600.1/1195/SETDA/2026',
         letter_date: '2026-09-06',
         signatory_position: 'Asisten Administrasi Umum',
@@ -93,15 +137,18 @@ export const previewOutgoingLetters: OutgoingLetterListItem[] = [
         next_action_label: 'Catat pengiriman',
         links: {
             detail: '/back-office/previews/outgoing-letters/01KOUTGOING000000000000004',
+            sekda_approval: null,
         },
     },
     {
         public_id: '01KOUTGOING000000000000005',
         subject: 'Balasan permohonan data program pembangunan',
         status: 'DELIVERED',
+        origin: 'RESPONSE',
         source: 'ONLINE',
         incoming_agenda_number: '050/33/UM/2026',
         sender_organization_name: 'Universitas Dayanu Ikhsanuddin',
+        originating_unit_name: null,
         outgoing_number: '050/1178/SETDA/2026',
         letter_date: '2026-09-02',
         signatory_position: 'Sekretaris Daerah',
@@ -111,6 +158,7 @@ export const previewOutgoingLetters: OutgoingLetterListItem[] = [
         next_action_label: null,
         links: {
             detail: '/back-office/previews/outgoing-letters/01KOUTGOING000000000000005',
+            sekda_approval: null,
         },
     },
 ];
@@ -119,6 +167,7 @@ export const previewOutgoingLetterDetail: OutgoingLetterDetail = {
     public_id: '01KOUTGOING000000000000003',
     subject: 'Tanggapan atas permohonan audiensi kelembagaan',
     status: 'SIGNED_DOCUMENT_UPLOADED',
+    origin: 'RESPONSE',
     source: 'ONLINE',
     incoming_letter: {
         reference: 'INCOMING-2026-00052',
@@ -129,6 +178,7 @@ export const previewOutgoingLetterDetail: OutgoingLetterDetail = {
         dossier_url:
             '/back-office/previews/letter-responses/response-dossier-2026-001',
     },
+    standalone_draft: null,
     mandate: {
         source_document_title: 'Konsolidasi akhir Sekretaris Daerah',
         source_version_number: 2,
@@ -162,7 +212,10 @@ export const previewOutgoingLetterDetail: OutgoingLetterDetail = {
                 'Dokumen telah diberi nomor dan ditandatangani Sekretaris Daerah.',
             review_status: 'PENDING',
             review_note: null,
-            links: { preview: '#preview-final-pdf', download: '#download-final-pdf' },
+            links: {
+                preview: '#preview-final-pdf',
+                download: '#download-final-pdf',
+            },
         },
     ],
     verification: {
@@ -173,12 +226,35 @@ export const previewOutgoingLetterDetail: OutgoingLetterDetail = {
     },
     delivery: {
         method: null,
+        recipient_email: 'ilham@example.test',
         recipient_name: null,
         delivered_by: null,
         delivered_at: null,
         tracking_number: null,
         note: null,
+        email: {
+            status: 'NOT_SENT',
+            sent_at: null,
+            expires_at: null,
+            download_url_status: 'Belum dibuat',
+            resend_url: '#resend-email-link',
+            revoke_url: '#revoke-email-link',
+        },
     },
+    internal_copies: [
+        {
+            name: 'Sekretaris Daerah',
+            position: 'Sekretaris Daerah',
+            notified_at: null,
+            acknowledged: false,
+        },
+        {
+            name: 'Kabag Umum',
+            position: 'Kepala Bagian Umum',
+            notified_at: null,
+            acknowledged: false,
+        },
+    ],
     withdrawal: null,
     history: [
         {
@@ -218,6 +294,10 @@ export const previewOutgoingLetterDetail: OutgoingLetterDetail = {
         can_request_document_revision: true,
         can_deliver: false,
         can_withdraw: false,
+        can_select_sekda_approval: false,
+        can_upload_manual_scan: false,
+        can_review_manual_scan: false,
+        can_return_for_revision: false,
     },
     routes: {
         index: '/back-office/previews/outgoing-letters',
@@ -227,12 +307,25 @@ export const previewOutgoingLetterDetail: OutgoingLetterDetail = {
         request_document_revision: '#return-document',
         deliver: '#deliver-letter',
         withdraw: '#withdraw-mandate',
+        sekda_approval: null,
+        approve_qr: null,
+        choose_manual_signature: null,
+        upload_manual_scan: null,
+        review_manual_scan: null,
+        return_for_revision: null,
+        create_correction: null,
+        resend_delivery_email: null,
+        revoke_delivery_email: null,
     },
 };
 
-export function previewOutgoingLetterDetailFor(publicId: string): OutgoingLetterDetail {
+export function previewOutgoingLetterDetailFor(
+    publicId: string,
+): OutgoingLetterDetail {
     const detail = structuredClone(previewOutgoingLetterDetail);
-    const listItem = previewOutgoingLetters.find((letter) => letter.public_id === publicId);
+    const listItem = previewOutgoingLetters.find(
+        (letter) => letter.public_id === publicId,
+    );
 
     if (!listItem) {
         return detail;
@@ -242,8 +335,14 @@ export function previewOutgoingLetterDetailFor(publicId: string): OutgoingLetter
     detail.subject = listItem.subject;
     detail.status = listItem.status;
     detail.source = listItem.source;
-    detail.incoming_letter.agenda_number = listItem.incoming_agenda_number;
-    detail.incoming_letter.sender_organization_name = listItem.sender_organization_name;
+
+    if (detail.incoming_letter) {
+        detail.incoming_letter.agenda_number =
+            listItem.incoming_agenda_number ?? '';
+        detail.incoming_letter.sender_organization_name =
+            listItem.sender_organization_name ?? '';
+    }
+
     detail.numbering.outgoing_number = listItem.outgoing_number;
     detail.numbering.letter_date = listItem.letter_date;
     detail.signatory.position_name = listItem.signatory_position;
@@ -255,10 +354,20 @@ export function previewOutgoingLetterDetailFor(publicId: string): OutgoingLetter
         can_request_document_revision: false,
         can_deliver: false,
         can_withdraw: false,
+        can_select_sekda_approval: false,
+        can_upload_manual_scan: false,
+        can_review_manual_scan: false,
+        can_return_for_revision: false,
     };
 
     if (listItem.status === 'AUTHORIZED') {
-        detail.numbering = { outgoing_number: null, agenda_year: null, letter_date: null, numbered_by: null, numbered_at: null };
+        detail.numbering = {
+            outgoing_number: null,
+            agenda_year: null,
+            letter_date: null,
+            numbered_by: null,
+            numbered_at: null,
+        };
         detail.documents = [];
         detail.history = detail.history.slice(0, 1);
         detail.capabilities.can_assign_number = true;
@@ -288,13 +397,28 @@ export function previewOutgoingLetterDetailFor(publicId: string): OutgoingLetter
             note: 'Dokumen final sesuai register.',
         };
         detail.delivery = {
-            method: 'PORTAL',
+            method: 'EMAIL',
+            recipient_email: 'ilham@example.test',
             recipient_name: 'Pemilik pengajuan online',
             delivered_by: 'Nur Aisyah, S.A.P.',
             delivered_at: '2026-09-03T10:42:00+08:00',
             tracking_number: null,
-            note: 'Dipublikasikan melalui portal pemohon.',
+            note: 'Tautan unduh aman dikirim melalui email tanpa lampiran PDF.',
+            email: {
+                status: 'SENT',
+                sent_at: '2026-09-03T10:42:00+08:00',
+                expires_at: '2026-09-10T10:42:00+08:00',
+                download_url_status: 'Tautan aktif',
+                resend_url: '#resend-email-link',
+                revoke_url: '#revoke-email-link',
+            },
         };
+        detail.capabilities.can_create_correction = true;
+        detail.capabilities.can_resend_delivery_email = true;
+        detail.capabilities.can_revoke_delivery_email = true;
+        detail.routes.create_correction = '#create-correction';
+        detail.routes.resend_delivery_email = '#resend-email-link';
+        detail.routes.revoke_delivery_email = '#revoke-email-link';
     }
 
     return detail;
@@ -315,6 +439,52 @@ export const previewPublicResponseTracker: PublicResponseTracker = {
             download_url: '#download-official-response',
         },
     ],
+};
+
+export const previewSekdaApproval: SekdaApprovalDetail = {
+    public_id: '01KSTANDALONEOUTGOING00000001',
+    subject: 'Undangan koordinasi persiapan Festival Pesona Buton',
+    status: 'SEKDA_REVIEW',
+    outgoing_number: '005/1201/SETDA/2026',
+    letter_date: '2026-09-09',
+    originating_unit_name: 'Bagian Perekonomian dan Pembangunan',
+    recipient: {
+        name: 'Ketua Panitia Festival Pesona Buton',
+        organization: 'Panitia Festival Pesona Buton',
+        position: 'Ketua Panitia',
+    },
+    copy_recipients: ['Asisten Perekonomian dan Pembangunan', 'Kabag Umum'],
+    current_document: {
+        version_number: 2,
+        sha256_fingerprint:
+            'e89f66a7c9452af4ab6ce14ec17d353c2a9d4e7e34e8513b7b0c2375d216a6b5',
+        preview_url: '#preview-standalone-numbered-pdf',
+        download_url: '#download-standalone-numbered-pdf',
+    },
+    qr_placement: {
+        page_label: 'Halaman terakhir',
+        x_ratio: 0.67,
+        y_ratio: 0.72,
+        width_ratio: 0.2,
+        height_ratio: 0.14,
+    },
+    manual_scan: null,
+    review: null,
+    capabilities: {
+        can_approve_qr: true,
+        can_choose_manual_signature: true,
+        can_upload_manual_scan: false,
+        can_review_manual_scan: false,
+        can_return_for_revision: true,
+    },
+    routes: {
+        index: '/back-office/previews/outgoing-letters',
+        approve_qr: '#approve-with-qr',
+        choose_manual_signature: '#choose-manual-signature',
+        upload_manual_scan: '#upload-manual-scan',
+        review_manual_scan: '#review-manual-scan',
+        return_for_revision: '#return-for-revision',
+    },
 };
 
 export const previewPublicSubmission: LetterSubmission = {
