@@ -14,6 +14,8 @@ use App\Services\IncomingRegisterPositionAssignmentResolver;
 use App\Services\IntakeApprovalPositionAssignmentResolver;
 use App\Services\IntakePositionAssignmentResolver;
 use App\Services\LetterRoutingPositionAssignmentResolver;
+use App\Services\StandaloneOutgoingPositionAssignmentResolver;
+use App\StandaloneOutgoing\StandaloneOutgoingScopeQuery;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -133,6 +135,12 @@ class HandleInertiaRequests extends Middleware
                 'can_invite_users' => false,
                 'can_manage_user_status' => false,
                 'can_manage_user_security' => false,
+                'can_view_outgoing_templates' => false,
+                'can_manage_outgoing_templates' => false,
+                'can_view_standalone_outgoing' => false,
+                'can_create_standalone_outgoing' => false,
+                'can_review_standalone_outgoing' => false,
+                'can_approve_standalone_outgoing' => false,
             ];
         }
 
@@ -168,7 +176,7 @@ class HandleInertiaRequests extends Middleware
             && $dispositionResolver->hasInboxAssignment($user);
         $hasDispositionCreatePermission = $user->can(PermissionName::CreateDispositions->value);
         $canCreateDisposition = $hasDispositionCreatePermission
-            && $dispositionResolver->hasExecutiveAssignment($user);
+            && $dispositionResolver->hasRegionalSecretaryAssignment($user);
         $hasDispositionProcessPermission = $user->can(PermissionName::ViewDispositions->value)
             && $user->can(PermissionName::ProcessDispositions->value);
         $canProcessDisposition = $hasDispositionProcessPermission
@@ -176,6 +184,8 @@ class HandleInertiaRequests extends Middleware
         $hasReportPosition = app(ReportScopeResolver::class)->resolve($user) !== null;
         $hasLetterResponsePosition = app(LetterResponseScopeQuery::class)->hasBusinessScope($user);
         $hasOutgoingLetterPosition = app(OutgoingLetterScopeQuery::class)->hasBusinessScope($user);
+        $hasStandaloneOutgoingPosition = app(StandaloneOutgoingScopeQuery::class)->hasBusinessScope($user);
+        $hasStandaloneOutgoingApprovalPosition = app(StandaloneOutgoingPositionAssignmentResolver::class)->hasSekdaAssignment($user);
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -225,6 +235,18 @@ class HandleInertiaRequests extends Middleware
             'can_invite_users' => $user->can(PermissionName::InviteUsers->value),
             'can_manage_user_status' => $user->can(PermissionName::ManageUserStatus->value),
             'can_manage_user_security' => $user->can(PermissionName::ManageUserSecurity->value),
+            'can_view_outgoing_templates' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::ViewOutgoingTemplates->value),
+            'can_manage_outgoing_templates' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::ManageOutgoingTemplates->value),
+            'can_view_standalone_outgoing' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::ViewStandaloneOutgoing->value),
+            'can_create_standalone_outgoing' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::CreateStandaloneOutgoing->value),
+            'can_review_standalone_outgoing' => $hasStandaloneOutgoingPosition
+                && $user->can(PermissionName::ReviewStandaloneOutgoing->value),
+            'can_approve_standalone_outgoing' => $hasStandaloneOutgoingApprovalPosition
+                && $user->can(PermissionName::ApproveStandaloneOutgoing->value),
         ];
     }
 }
