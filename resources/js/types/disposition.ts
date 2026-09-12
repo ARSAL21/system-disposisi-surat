@@ -13,7 +13,7 @@ export type DispositionPositionOption = {
     id: number;
     code: string;
     name: string;
-    level_code: 'ASSISTANT' | 'SECTION_HEAD';
+    level_code: 'REGIONAL_SECRETARY' | 'ASSISTANT' | 'SECTION_HEAD';
     unit_name: string | null;
     holder_name: string | null;
     is_available: boolean;
@@ -47,11 +47,13 @@ export type FirstDispositionReceipt = {
 
 export type FirstDispositionCapabilities = {
     can_create_disposition: boolean;
+    can_forward_to_sekda?: boolean;
 };
 
 export type FirstDispositionRoutes = {
     index: string;
     store: string;
+    forward_to_sekda?: string;
 };
 
 export type CreateFirstDispositionPayload = {
