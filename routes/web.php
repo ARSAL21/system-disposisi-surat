@@ -18,8 +18,6 @@ use App\Http\Controllers\BackOffice\Disposition\StartDispositionBranchController
 use App\Http\Controllers\BackOffice\Disposition\StoreDispositionFollowUpController;
 use App\Http\Controllers\BackOffice\Disposition\StoreForwardDispositionController;
 use App\Http\Controllers\BackOffice\Disposition\StoreInitialDispositionController;
-use App\Http\Controllers\BackOffice\Disposition\StoreMayorDispositionController;
-use App\Http\Controllers\BackOffice\Disposition\StoreSekdaDispositionController;
 use App\Http\Controllers\BackOffice\Documents\DocumentArchiveController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentFileController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentHistoryController;
@@ -48,23 +46,12 @@ use App\Http\Controllers\BackOffice\Organization\OrganizationalUnitController;
 use App\Http\Controllers\BackOffice\Organization\OrganizationStructureController;
 use App\Http\Controllers\BackOffice\Organization\PositionAssignmentController;
 use App\Http\Controllers\BackOffice\Organization\PositionController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\ApproveStandaloneOutgoingWithQrController;
 use App\Http\Controllers\BackOffice\OutgoingLetter\AssignOutgoingLetterNumberController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\ChooseStandaloneOutgoingManualSignatureController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\CreateStandaloneOutgoingCorrectionController;
 use App\Http\Controllers\BackOffice\OutgoingLetter\DeliverOutgoingLetterController;
 use App\Http\Controllers\BackOffice\OutgoingLetter\OutgoingLetterController;
 use App\Http\Controllers\BackOffice\OutgoingLetter\OutgoingLetterDocumentFileController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\ResendStandaloneOutgoingDeliveryEmailController;
 use App\Http\Controllers\BackOffice\OutgoingLetter\ReturnOutgoingLetterDocumentController as ReturnOutgoingFinalDocumentController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\ReturnStandaloneOutgoingForRevisionController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\ReviewStandaloneOutgoingManualSignatureScanController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\RevokeStandaloneOutgoingDeliveryEmailController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\StandaloneOutgoingSekdaApprovalController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\StandaloneOutgoingSourceDocumentFileController;
 use App\Http\Controllers\BackOffice\OutgoingLetter\StoreSignedOutgoingLetterDocumentController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\StoreStandaloneOutgoingManualSignatureScanController;
-use App\Http\Controllers\BackOffice\OutgoingLetter\SubmitStandaloneOutgoingForSekdaReviewController;
 use App\Http\Controllers\BackOffice\OutgoingLetter\VerifyOutgoingLetterController;
 use App\Http\Controllers\BackOffice\OutgoingLetter\WithdrawOutgoingLetterController;
 use App\Http\Controllers\BackOffice\Reporting\PeriodicReportController;
@@ -74,11 +61,6 @@ use App\Http\Controllers\BackOffice\Routing\ExecutiveInboxDocumentController;
 use App\Http\Controllers\BackOffice\Routing\LetterRoutingController;
 use App\Http\Controllers\BackOffice\Routing\LetterRoutingDocumentController;
 use App\Http\Controllers\BackOffice\Routing\StoreLetterRouteController;
-use App\Http\Controllers\BackOffice\StandaloneOutgoing\AssignStandaloneOutgoingNumberController;
-use App\Http\Controllers\BackOffice\StandaloneOutgoing\OutgoingLetterTemplateController;
-use App\Http\Controllers\BackOffice\StandaloneOutgoing\OutgoingLetterTemplateFileController;
-use App\Http\Controllers\BackOffice\StandaloneOutgoing\StandaloneOutgoingDocumentFileController;
-use App\Http\Controllers\BackOffice\StandaloneOutgoing\StandaloneOutgoingDraftController;
 use App\Http\Controllers\BackOffice\UserManagement\UserController;
 use App\Http\Controllers\BackOffice\UserManagement\UserInvitationController;
 use App\Http\Controllers\BackOffice\UserManagement\UserSecurityController;
@@ -87,8 +69,6 @@ use App\Http\Controllers\BackOffice\Workflow\ActivateWorkflowMutationController;
 use App\Http\Controllers\BackOffice\Workflow\InstructionLabelController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Public\AccountInvitationController;
-use App\Http\Controllers\Public\OutgoingLetterDeliveryLinkController;
-use App\Http\Controllers\Public\OutgoingLetterVerificationController;
 use App\Http\Controllers\PublicSubmission\LetterSubmissionController;
 use App\Http\Controllers\PublicSubmission\OfficialResponseDocumentController;
 use App\Http\Controllers\PublicSubmission\PublicDashboardController;
@@ -108,12 +88,6 @@ Route::get('account-invitations/{publicId}', [AccountInvitationController::class
 Route::post('account-invitations/{publicId}', [AccountInvitationController::class, 'accept'])
     ->middleware('throttle:user-invitation-accept')
     ->name('account-invitations.accept');
-Route::get('cek-keaslian-surat/{token}', OutgoingLetterVerificationController::class)
-    ->middleware('throttle:outgoing-letter-verification')
-    ->name('public.outgoing-letter-verifications.show');
-Route::get('surat-keluar/unduh/{token}', OutgoingLetterDeliveryLinkController::class)
-    ->middleware('throttle:outgoing-delivery-link')
-    ->name('public.outgoing-letter-delivery-links.download');
 
 Route::prefix('back-office')
     ->name('back-office.')
@@ -260,8 +234,6 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.letter-responses.show');
                     Route::inertia('previews/outgoing-letters', 'back-office/outgoing-letters/Index', ['preview' => true])
                         ->name('previews.outgoing-letters.index');
-                    Route::inertia('previews/outgoing-letters/approvals/{outgoingLetter}', 'back-office/outgoing-letters/SekdaApproval', ['preview' => true])
-                        ->name('previews.outgoing-letters.approvals.show');
                     Route::inertia('previews/outgoing-letters/{outgoingLetter}', 'back-office/outgoing-letters/Show', ['preview' => true])
                         ->name('previews.outgoing-letters.show');
                     Route::inertia('previews/users', 'back-office/users/Index', ['preview' => true])
@@ -363,29 +335,6 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         'throttle:disposition-create',
                     ])
                     ->name('executive.inbox.dispositions.store');
-
-                Route::post('executive/inbox/routes/{letterRoute}/forward-to-sekda', StoreMayorDispositionController::class)
-                    ->middleware([
-                        'can:'.PermissionName::CreateDispositions->value,
-                        'throttle:disposition-create',
-                    ])
-                    ->name('executive.inbox.forward-to-sekda.store');
-
-                Route::get('executive/inbox/recipients/{dispositionRecipient}', [ExecutiveInboxController::class, 'showRecipient'])
-                    ->middleware('can:'.PermissionName::ViewExecutiveInbox->value)
-                    ->name('executive.inbox.recipient.show');
-                Route::get('executive/inbox/recipients/{dispositionRecipient}/document/preview', [DispositionInboxDocumentController::class, 'executivePreview'])
-                    ->middleware('throttle:private-document-access')
-                    ->name('executive.inbox.recipient.document.preview');
-                Route::get('executive/inbox/recipients/{dispositionRecipient}/document/download', [DispositionInboxDocumentController::class, 'executiveDownload'])
-                    ->middleware('throttle:private-document-access')
-                    ->name('executive.inbox.recipient.document.download');
-                Route::post('executive/inbox/recipients/{dispositionRecipient}/dispositions', StoreSekdaDispositionController::class)
-                    ->middleware([
-                        'can:'.PermissionName::CreateDispositions->value,
-                        'throttle:disposition-create',
-                    ])
-                    ->name('executive.inbox.recipient.dispositions.store');
 
                 Route::prefix('dispositions/inbox')
                     ->name('dispositions.inbox.')
@@ -502,9 +451,6 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         Route::get('/', [OutgoingLetterController::class, 'index'])
                             ->middleware('can:'.PermissionName::ViewOutgoingRegister->value)
                             ->name('index');
-                        Route::get('approvals/{outgoingLetter}', StandaloneOutgoingSekdaApprovalController::class)
-                            ->middleware('can:'.PermissionName::ViewOutgoingRegister->value)
-                            ->name('standalone.approvals.show');
                         Route::get('{outgoingLetter}', [OutgoingLetterController::class, 'show'])
                             ->middleware('can:'.PermissionName::ViewOutgoingRegister->value)
                             ->name('show');
@@ -530,49 +476,19 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                             ])
                             ->name('return-document');
                         Route::post('{outgoingLetter}/deliver', DeliverOutgoingLetterController::class)
-                            ->middleware('throttle:outgoing-letter-mutation')
+                            ->middleware([
+                                'can:'.PermissionName::DeliverOutgoingLetters->value,
+                                'throttle:outgoing-letter-mutation',
+                            ])
                             ->name('deliver');
-                        Route::post('{outgoingLetter}/standalone/corrections', CreateStandaloneOutgoingCorrectionController::class)
-                            ->middleware('throttle:outgoing-letter-mutation')
-                            ->name('standalone.corrections.store');
-                        Route::post('{outgoingLetter}/standalone/delivery-link/resend', ResendStandaloneOutgoingDeliveryEmailController::class)
-                            ->middleware('throttle:outgoing-letter-mutation')
-                            ->name('standalone.delivery-link.resend');
-                        Route::post('{outgoingLetter}/standalone/delivery-link/revoke', RevokeStandaloneOutgoingDeliveryEmailController::class)
-                            ->middleware('throttle:outgoing-letter-mutation')
-                            ->name('standalone.delivery-link.revoke');
                         Route::post('{outgoingLetter}/withdraw', WithdrawOutgoingLetterController::class)
                             ->middleware([
                                 'can:'.PermissionName::AuthorizeLetterResponses->value,
                                 'throttle:outgoing-letter-mutation',
                             ])
                             ->name('withdraw');
-                        Route::post('{outgoingLetter}/standalone/submit-to-sekda', SubmitStandaloneOutgoingForSekdaReviewController::class)
-                            ->middleware(['can:'.PermissionName::NumberOutgoingLetters->value, 'throttle:outgoing-letter-mutation'])
-                            ->name('standalone.submit-to-sekda');
-                        Route::post('{outgoingLetter}/standalone/approve-qr', ApproveStandaloneOutgoingWithQrController::class)
-                            ->middleware(['can:'.PermissionName::ApproveStandaloneOutgoing->value, 'throttle:outgoing-letter-mutation'])
-                            ->name('standalone.approve-qr');
-                        Route::post('{outgoingLetter}/standalone/choose-manual-signature', ChooseStandaloneOutgoingManualSignatureController::class)
-                            ->middleware(['can:'.PermissionName::ApproveStandaloneOutgoing->value, 'throttle:outgoing-letter-mutation'])
-                            ->name('standalone.choose-manual-signature');
-                        Route::post('{outgoingLetter}/standalone/manual-scan', StoreStandaloneOutgoingManualSignatureScanController::class)
-                            ->middleware('throttle:outgoing-letter-upload')
-                            ->name('standalone.manual-scan.store');
-                        Route::post('{outgoingLetter}/standalone/manual-scan/review', ReviewStandaloneOutgoingManualSignatureScanController::class)
-                            ->middleware(['can:'.PermissionName::ReviewStandaloneOutgoing->value, 'throttle:outgoing-letter-mutation'])
-                            ->name('standalone.manual-scan.review');
-                        Route::post('{outgoingLetter}/standalone/return-for-revision', ReturnStandaloneOutgoingForRevisionController::class)
-                            ->middleware('throttle:outgoing-letter-mutation')
-                            ->name('standalone.return-for-revision');
 
                         Route::scopeBindings()->group(function (): void {
-                            Route::get('{outgoingLetter}/standalone/source/{standaloneDocument}/preview', [StandaloneOutgoingSourceDocumentFileController::class, 'preview'])
-                                ->middleware(['can:'.PermissionName::ViewOutgoingRegister->value, 'throttle:private-document-access'])
-                                ->name('standalone.source.preview');
-                            Route::get('{outgoingLetter}/standalone/source/{standaloneDocument}/download', [StandaloneOutgoingSourceDocumentFileController::class, 'download'])
-                                ->middleware(['can:'.PermissionName::ViewOutgoingRegister->value, 'throttle:private-document-access'])
-                                ->name('standalone.source.download');
                             Route::get('{outgoingLetter}/documents/{outgoingLetterDocumentVersion}/preview', [OutgoingLetterDocumentFileController::class, 'preview'])
                                 ->middleware([
                                     'can:'.PermissionName::ViewOutgoingRegister->value,
@@ -582,98 +498,6 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                             Route::get('{outgoingLetter}/documents/{outgoingLetterDocumentVersion}/download', [OutgoingLetterDocumentFileController::class, 'download'])
                                 ->middleware([
                                     'can:'.PermissionName::ViewOutgoingRegister->value,
-                                    'throttle:private-document-access',
-                                ])
-                                ->name('documents.download');
-                        });
-                    });
-
-                Route::prefix('outgoing-templates')
-                    ->name('outgoing-templates.')
-                    ->group(function (): void {
-                        Route::get('/', [OutgoingLetterTemplateController::class, 'index'])
-                            ->middleware('can:'.PermissionName::ViewOutgoingTemplates->value)
-                            ->name('index');
-                        Route::post('/', [OutgoingLetterTemplateController::class, 'store'])
-                            ->middleware([
-                                'can:'.PermissionName::ManageOutgoingTemplates->value,
-                                'throttle:outgoing-template-upload',
-                            ])
-                            ->name('store');
-                        Route::post('{outgoingLetterTemplate}/versions', [OutgoingLetterTemplateController::class, 'storeVersion'])
-                            ->middleware([
-                                'can:'.PermissionName::ManageOutgoingTemplates->value,
-                                'throttle:outgoing-template-upload',
-                            ])
-                            ->name('versions.store');
-                        Route::patch('{outgoingLetterTemplate}/status', [OutgoingLetterTemplateController::class, 'updateStatus'])
-                            ->middleware([
-                                'can:'.PermissionName::ManageOutgoingTemplates->value,
-                                'throttle:standalone-outgoing-mutation',
-                            ])
-                            ->name('status.update');
-                        Route::scopeBindings()->group(function (): void {
-                            Route::get('{outgoingLetterTemplate}/versions/{outgoingLetterTemplateVersion}/download', [OutgoingLetterTemplateFileController::class, 'download'])
-                                ->middleware([
-                                    'can:'.PermissionName::ViewOutgoingTemplates->value,
-                                    'throttle:private-document-access',
-                                ])
-                                ->name('versions.download');
-                        });
-                    });
-
-                Route::prefix('standalone-outgoing')
-                    ->name('standalone-outgoing.')
-                    ->group(function (): void {
-                        Route::get('/', [StandaloneOutgoingDraftController::class, 'index'])
-                            ->middleware('can:'.PermissionName::ViewStandaloneOutgoing->value)
-                            ->name('index');
-                        Route::get('{standaloneOutgoingDraft}', [StandaloneOutgoingDraftController::class, 'show'])
-                            ->middleware('can:'.PermissionName::ViewStandaloneOutgoing->value)
-                            ->name('show');
-                        Route::post('/', [StandaloneOutgoingDraftController::class, 'store'])
-                            ->middleware([
-                                'can:'.PermissionName::CreateStandaloneOutgoing->value,
-                                'throttle:standalone-outgoing-upload',
-                            ])
-                            ->name('store');
-                        Route::put('{standaloneOutgoingDraft}', [StandaloneOutgoingDraftController::class, 'update'])
-                            ->middleware('throttle:standalone-outgoing-mutation')
-                            ->name('update');
-                        Route::post('{standaloneOutgoingDraft}/documents/versions', [StandaloneOutgoingDraftController::class, 'storeDocumentVersion'])
-                            ->middleware('throttle:standalone-outgoing-upload')
-                            ->name('documents.versions.store');
-                        Route::post('{standaloneOutgoingDraft}/submit', [StandaloneOutgoingDraftController::class, 'submit'])
-                            ->middleware('throttle:standalone-outgoing-mutation')
-                            ->name('submit');
-                        Route::post('{standaloneOutgoingDraft}/reviews/section', [StandaloneOutgoingDraftController::class, 'reviewSection'])
-                            ->middleware([
-                                'can:'.PermissionName::ReviewStandaloneOutgoing->value,
-                                'throttle:standalone-outgoing-mutation',
-                            ])
-                            ->name('review.section');
-                        Route::post('{standaloneOutgoingDraft}/reviews/assistant', [StandaloneOutgoingDraftController::class, 'reviewAssistant'])
-                            ->middleware([
-                                'can:'.PermissionName::ReviewStandaloneOutgoing->value,
-                                'throttle:standalone-outgoing-mutation',
-                            ])
-                            ->name('review.assistant');
-                        Route::post('{standaloneOutgoingDraft}/number', AssignStandaloneOutgoingNumberController::class)
-                            ->middleware([
-                                'can:'.PermissionName::NumberOutgoingLetters->value,
-                                'throttle:outgoing-letter-mutation',
-                            ])
-                            ->name('assign-number');
-                        Route::scopeBindings()->group(function (): void {
-                            Route::get('{standaloneOutgoingDraft}/documents/{documentVersion}/preview', [StandaloneOutgoingDocumentFileController::class, 'preview'])
-                                ->middleware([
-                                    'can:'.PermissionName::ViewStandaloneOutgoing->value,
-                                    'throttle:private-document-access',
-                                ])
-                                ->name('documents.preview');
-                            Route::get('{standaloneOutgoingDraft}/documents/{documentVersion}/download', [StandaloneOutgoingDocumentFileController::class, 'download'])
-                                ->middleware([
-                                    'can:'.PermissionName::ViewStandaloneOutgoing->value,
                                     'throttle:private-document-access',
                                 ])
                                 ->name('documents.download');

@@ -24,6 +24,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property string|null $phone_number
  * @property CarbonInterface|null $email_verified_at
  * @property AccountType $account_type
  * @property bool $is_active
@@ -37,8 +38,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, PositionAssignment> $positionAssignments
  * @property-read Collection<int, PositionAssignment> $activePositionAssignments
  * @property-read Collection<int, LetterRoute> $routedLetterRoutes
+ * @property-read Collection<int, UserAccountEvent> $accountEvents
+ * @property-read Collection<int, UserInvitation> $invitationsCreated
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'phone_number', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
@@ -106,5 +109,17 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function routedLetterRoutes(): HasMany
     {
         return $this->hasMany(LetterRoute::class, 'routed_by_user_id');
+    }
+
+    /** @return HasMany<UserAccountEvent, $this> */
+    public function accountEvents(): HasMany
+    {
+        return $this->hasMany(UserAccountEvent::class, 'user_id');
+    }
+
+    /** @return HasMany<UserInvitation, $this> */
+    public function invitationsCreated(): HasMany
+    {
+        return $this->hasMany(UserInvitation::class, 'invited_by_user_id');
     }
 }
