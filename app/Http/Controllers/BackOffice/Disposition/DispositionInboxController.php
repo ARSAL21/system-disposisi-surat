@@ -84,8 +84,8 @@ class DispositionInboxController extends Controller
             'disposition' => $presenter->inboxRecipient($dispositionRecipient),
             'sectionHeadPositions' => $canForward
                 ? $presenter->sectionHeadPositions($sectionHeadTargetResolver->options(
-                    (int) $user->getKey(),
-                    (int) $dispositionRecipient->disposition->incoming_letter_id,
+                    $user,
+                    $dispositionRecipient,
                 ))
                 : [],
             'instructionLabels' => $canForward

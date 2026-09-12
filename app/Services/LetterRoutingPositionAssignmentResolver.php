@@ -43,6 +43,23 @@ class LetterRoutingPositionAssignmentResolver
             ->all());
     }
 
+    /** @return list<int> */
+    public function regionalSecretaryPositionIds(User $user): array
+    {
+        return array_values($this->baseActiveQuery($user)
+            ->whereHas('position', fn (Builder $position): Builder => $position
+                ->where('is_active', true)
+                ->where('code', OrganizationCatalog::REGIONAL_SECRETARY_POSITION)
+                ->whereHas('positionLevel', fn (Builder $level): Builder => $level
+                    ->where('code', OrganizationCatalog::REGIONAL_SECRETARY_LEVEL)
+                    ->where('is_active', true)))
+            ->pluck('position_id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all());
+    }
+
     public function lockRoutingCreatingAssignment(User $user): PositionAssignment
     {
         $assignments = $this->routingCreatingQuery($user)
@@ -99,7 +116,10 @@ class LetterRoutingPositionAssignmentResolver
             ->whereHas('position', fn (Builder $position): Builder => $position
                 ->where('is_active', true)
                 ->whereHas('positionLevel', fn (Builder $level): Builder => $level
-                    ->where('code', OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL)
+                    ->whereIn('code', [
+                        OrganizationCatalog::MAYOR_LEVEL,
+                        OrganizationCatalog::REGIONAL_SECRETARY_LEVEL,
+                    ])
                     ->where('is_active', true)));
     }
 
