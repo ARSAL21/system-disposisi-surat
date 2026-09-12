@@ -1,5 +1,12 @@
 # Workflow Specification — Sistem Disposisi Surat
 
+> **Aturan aktif.** Penyebutan lama `EXECUTIVE_ENTRY` atau “Wali Kota/Sekda”
+> sebagai penerima setara pada catatan milestone historis di bawah ini telah
+> digantikan oleh hierarchy `MAYOR → REGIONAL_SECRETARY → ASSISTANT →
+> SECTION_HEAD`. Bagian Umum memilih jalur langsung ke Sekda atau melalui Wali
+> Kota; Wali Kota hanya meneruskan secara formal kepada Sekda; Sekda yang
+> mendisposisikan kepada Asisten.
+
 ## 1. Tujuan
 
 Dokumen ini mendefinisikan **state dan transition resmi** untuk submission, surat masuk, dan disposisi pada MVP.
@@ -20,7 +27,7 @@ Hal tersebut mengikuti dokumen masing-masing.
 ```text
 Bagian Umum / Tata Usaha
         ↓
-Wali Kota ATAU Sekda
+Sekda (langsung atau melalui Wali Kota)
         ↓
 Asisten I / II / III
         ↓
@@ -32,8 +39,9 @@ Selesai
 Aturan:
 
 * seluruh surat masuk dimulai dari Bagian Umum;
-* initial routing hanya ke **satu** Wali Kota atau Sekda;
-* Wali Kota/Sekda memilih **satu sampai tiga Asisten**;
+* initial routing memilih **langsung ke Sekda** atau **melalui Wali Kota**;
+* Wali Kota hanya memberi arahan formal kepada Sekda;
+* Sekda memilih **satu sampai tiga Asisten**;
 * Asisten memilih **satu atau lebih Kepala Bagian**;
 * Kepala Bagian merupakan terminal formal workflow MVP;
 * Staff belum termasuk workflow MVP;
@@ -143,14 +151,14 @@ Surat telah:
 * memiliki metadata;
 * memiliki dokumen yang valid;
 
-tetapi belum diarahkan ke Wali Kota/Sekda.
+tetapi belum diarahkan langsung kepada Sekda atau melalui Wali Kota.
 
 ### `ROUTED`
 
 Surat telah diarahkan ke:
 
 ```text
-Wali Kota ATAU Sekda
+Sekda, atau Wali Kota sebagai jalur formal menuju Sekda
 ```
 
 dan menunggu disposisi pertama.
@@ -230,7 +238,7 @@ perubahan status yang diperkenalkan oleh versioning.
 
 # 7. Initial Route State
 
-Routing Bagian Umum ke Wali Kota/Sekda menggunakan:
+Routing Bagian Umum ke Sekda (langsung atau melalui Wali Kota) menggunakan:
 
 ```text
 PENDING
@@ -239,11 +247,11 @@ COMPLETED
 
 ### `PENDING`
 
-Surat sudah diarahkan tetapi Wali Kota/Sekda belum membuat disposisi pertama.
+Surat sudah diarahkan tetapi penerima pada jalur terpilih belum melakukan tindakan berikutnya.
 
 ### `COMPLETED`
 
-Wali Kota/Sekda telah membuat disposisi yang valid kepada satu sampai tiga Asisten.
+Sekda telah membuat disposisi yang valid kepada satu sampai tiga Asisten.
 
 Transition:
 
@@ -265,7 +273,9 @@ Routing awal hanya dapat dibuat ketika seluruh invariant berikut terpenuhi:
   `SECTION_HEAD` pada unit `BAGIAN_UMUM`;
 * `incoming_letters.status = REGISTERED` dan surat belum memiliki route;
 * dokumen resmi terkini lolos storage metadata guard;
-* tujuan merupakan satu Position aktif pada level `EXECUTIVE_ENTRY` dengan
+* tujuan ditentukan server dari `route_path`: Position `SEKDA` aktif pada level
+  `REGIONAL_SECRETARY`, atau Position `WALI_KOTA` aktif pada level `MAYOR`,
+  masing-masing dengan
   tepat satu pemegang assignment aktif yang merupakan account internal aktif
   dan terverifikasi.
 
@@ -339,9 +349,11 @@ boleh terjadi jika aksi yang menyelesaikan tanggung jawab recipient dilakukan la
 
 ---
 
-# 9. Wali Kota / Sekda
+# 9. Wali Kota dan Sekda
 
-Bagian Umum hanya boleh melakukan:
+Bagian Umum memilih satu jalur routing awal: langsung kepada Sekda, atau
+melalui Wali Kota kemudian kepada Sekda. Kedua jalur tidak dapat dipilih
+bersamaan.
 
 ```text
 Bagian Umum
@@ -359,10 +371,15 @@ Sekda
 
 Tidak boleh diarahkan ke keduanya sekaligus pada MVP.
 
-Wali Kota/Sekda hanya dapat menyelesaikan initial route dengan membuat disposisi:
+Wali Kota tidak membuat disposisi kepada Asisten. Ia hanya dapat memberi arahan
+formal berlabel kepada Sekda. Arahan ini membuat satu recipient Sekda `PENDING`,
+menyelesaikan route, dan mengubah surat menjadi `IN_PROGRESS`.
+
+Sekda adalah satu-satunya pejabat yang dapat meneruskan substansi kepada
+Asisten:
 
 ```text
-Wali Kota / Sekda
+Sekda
         ↓
 satu sampai tiga Asisten
 ```
@@ -386,15 +403,24 @@ Setiap Assistant Recipient → PENDING
 
 ## 9.1 Implementasi Position-based Routing M6.1
 
-Disposisi pertama hanya dapat dibuat dari `letter_routes.status = PENDING`
-ketika surat induk masih `ROUTED`. Actor wajib memegang Position
-`EXECUTIVE_ENTRY` yang menjadi penerima route tersebut. Pilihan tujuan dibatasi
+Disposisi kepada Asisten hanya dapat dibuat oleh Position `SEKDA` aktif. Pada
+route langsung, sumbernya adalah `letter_routes.status = PENDING` ketika surat
+masih `ROUTED`. Pada jalur melalui Wali Kota, sumbernya adalah recipient Sekda
+`PENDING` dari arahan Wali Kota. Pilihan tujuan dibatasi
 server-side kepada Position aktif level `ASSISTANT` dengan tepat satu pemegang
 internal, aktif, dan terverifikasi; Position actor sendiri, Position Asisten yang
 sedang dipegang oleh user actor, Position sederajat, dan `SECTION_HEAD` tidak
 pernah menjadi tujuan sah.
 
-Satu transaksi mengunci akun actor, route, surat, dokumen resmi terkini,
+Pada disposisi berikutnya, actor wajib memegang Position `ASSISTANT` yang
+menjadi recipient sumber. Target hanya boleh Position aktif level
+`SECTION_HEAD` dengan unit aktif yang `parent_id`-nya tepat sama dengan unit
+aktif Position Asisten sumber. Scope berasal dari recipient Asisten yang sedang
+dibuka, bukan gabungan semua Position Asisten yang mungkin dipegang actor.
+Target lintas unit koordinasi ditolak sebagai resource di luar scope; nama
+jabatan atau mapping hierarchy yang di-hardcode tidak boleh digunakan.
+
+Satu transaksi mengunci akun actor, route atau recipient sumber, surat, dokumen resmi terkini,
 assignment actor, seluruh Position tujuan, assignment tujuan, akun pemegang tujuan,
 serta seluruh label instruksi aktif. Transaksi kemudian membuat satu
 `dispositions`, satu sampai tiga recipient `PENDING`, relasi label,
@@ -413,7 +439,7 @@ metadata menghasilkan `409`; rate limit menghasilkan `429`.
 
 # 10. Asisten
 
-Setiap Asisten terpilih menerima branch independen dari Wali Kota/Sekda.
+Setiap Asisten terpilih menerima branch independen dari Sekda.
 
 Asisten dapat meneruskan surat kepada:
 
@@ -847,8 +873,8 @@ Invariant MVP:
 4. Submission `REGISTERED` menghasilkan tepat satu Incoming Letter.
 5. Surat selalu dimulai dari Bagian Umum.
 6. Surat hanya memiliki satu initial route aktif.
-7. Initial route hanya menuju Wali Kota atau Sekda.
-8. Wali Kota/Sekda meneruskan ke satu sampai tiga Asisten dalam satu tindakan disposisi atomik.
+7. Initial route langsung menuju Sekda atau menuju Wali Kota untuk arahan formal kepada Sekda.
+8. Hanya Sekda meneruskan ke satu sampai tiga Asisten dalam satu tindakan disposisi atomik.
 9. Asisten meneruskan ke satu atau lebih Kepala Bagian.
 10. Satu Position Kepala Bagian hanya boleh menjadi recipient terminal satu Asisten dalam surat yang sama.
 11. Kepala Bagian adalah terminal formal MVP.
@@ -1023,3 +1049,99 @@ RESPONSE_AVAILABLE  minimal satu balasan resmi sudah terkirim
 Koreksi setelah `DELIVERED` tidak mengubah surat lama. Koreksi harus menjadi
 surat keluar baru dengan nomor baru dan referensi
 `corrects_outgoing_letter_id` ke surat sebelumnya.
+
+---
+
+# 23. Persiapan Surat Keluar Mandiri M10.1â€“M10.3
+
+Tahap ini terpisah dari mandat balasan M8. Ia menyiapkan surat keluar mandiri
+oleh unit teknis dan belum memberi nomor, tanda tangan, maupun pengiriman.
+
+```text
+DRAFT
+  -> SECTION_REVIEW
+  -> ASSISTANT_REVIEW
+  -> AWAITING_NUMBER
+
+SECTION_REVIEW   -> REVISION_REQUIRED
+ASSISTANT_REVIEW -> REVISION_REQUIRED
+REVISION_REQUIRED -> SECTION_REVIEW
+```
+
+Aturan:
+
+* hanya pemegang Position `UNIT_STAFF` aktif pada unit draft yang dapat membuat,
+  mengubah metadata, mengunggah versi PDF, dan mengajukan konsep;
+* konsep selalu masuk ke Kabag (`SECTION_HEAD`) unit yang sama terlebih dahulu;
+* hanya setelah persetujuan Kabag, Asisten pada unit induk dapat memeriksa;
+* pengembalian oleh Kabag maupun Asisten menghasilkan `REVISION_REQUIRED`;
+  upload revisi tidak mengubah keputusan lama dan pengajuan ulang selalu kembali
+  ke `SECTION_REVIEW`, sehingga tidak ada bypass Kabag;
+* persetujuan Asisten menghasilkan `AWAITING_NUMBER`; M10.4 akan memulai
+  penomoran dan tahap persetujuan/pengesahan berikutnya;
+* PDF dan DOCX versi sebelumnya immutable. Hash duplikat dalam satu seri ditolak;
+* template harus DOCX valid tanpa macro, embedded object, atau external relationship;
+* kondisi workflow basi atau hierarchy/assignment tidak sah menghasilkan `409`/`404`;
+  input tidak valid menghasilkan `422`.
+
+---
+
+# 24. Nomor dan Pengesahan Surat Keluar Mandiri M10.4-M10.5
+
+```text
+AWAITING_NUMBER
+  -> NUMBER_ASSIGNED
+  -> SEKDA_REVIEW
+       -> READY_FOR_DELIVERY       (QR disahkan Sekda)
+       -> AWAITING_MANUAL_SIGNATURE
+            -> MANUAL_SCAN_REVIEW
+                 -> READY_FOR_DELIVERY | REVISION_REQUIRED
+       -> REVISION_REQUIRED
+
+READY_FOR_DELIVERY -> DELIVERED
+REVISION_REQUIRED  -> SECTION_REVIEW
+```
+
+Penomoran dan penyerahan ke meja Sekda adalah satu operasi atomik Petugas agar
+surat bernomor tidak tersangkut pada antrean administratif. Nomor dan tanggal
+tidak dapat diubah. Sekda saja dapat memilih QR, tanda tangan fisik, atau
+mengembalikan konsep sebelum pengesahan. QR menghasilkan versi PDF final baru;
+PDF sumber dan PDF ber-QR memiliki hash terpisah. Tanda tangan fisik dilakukan
+di luar aplikasi; Staf atau Kabag unit asal mengunggah scan, lalu hanya Kabag
+unit asal yang dapat memeriksanya. Surat siap kirim dapat dikirim Staf penyusun
+atau Kabag aktif unit asal; pengiriman tidak mengubah draft maupun lifecycle M8.
+
+## 24.1 Pengiriman dan Koreksi Surat Mandiri M10.6
+
+```text
+READY_FOR_DELIVERY -> DELIVERED
+DELIVERED -> konsep koreksi baru (DRAFT) -> review normal -> nomor baru -> pengesahan -> DELIVERED
+```
+
+Aturan:
+
+* Staf hanya mengirim surat yang ia susun pada unitnya sendiri; Kabag hanya
+  mengirim surat unitnya sendiri.
+* Email menerbitkan tautan token acak yang hanya disimpan hash, berlaku tujuh
+  hari, dapat dikirim ulang atau dicabut, dan tidak pernah membawa lampiran PDF.
+* Metode selain email harus mencatat penerima dan waktu penyerahan; semua bukti
+  pengiriman append-only.
+* Setelah `DELIVERED`, nomor, dokumen final, dan bukti lama immutable.
+* Koreksi tidak membuka kembali surat lama. Ia menghasilkan draf mandiri baru
+  yang menunjuk `corrects_outgoing_letter_id`, lalu memperoleh nomor serta
+  pengesahan baru sebelum dapat menggantikannya.
+
+## 24.2 Hardening dan Release Gate M10.7
+
+Tidak ada status atau transisi baru. Untuk setiap mutasi yang menyentuh surat
+mandiri bernomor, lock wajib berurutan: draf/proses, `outgoing_letters`, versi
+dokumen terkait, Position Assignment aktor, dan audit. Operasi yang tidak
+mempunyai surat atau versi pada tahapnya melewati lock tersebut tanpa membalik
+urutan. Konflik state, file privat yang hilang, metadata/path yang tidak sah,
+atau bukti audit yang gagal harus menggagalkan seluruh transaksi dengan `409`;
+upload kandidat dikompensasi bila belum berhasil dicatat.
+
+Limiter berlaku untuk upload, review, penomoran, pengesahan, delivery, QR
+verification, dan tautan unduh. Tautan email kedaluwarsa atau tercabut tidak
+dapat dipakai kembali. Notifikasi selalu dijalankan setelah commit sehingga
+kegagalan email tidak dapat membatalkan status surat yang telah resmi.
