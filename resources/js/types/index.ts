@@ -17,4 +17,7 @@ export * from './organization';
 export * from './periodic-report';
 export * from './privilege-audit';
 export * from './submission';
+export * from './standalone-outgoing';
 export * from './ui';
+export * from './user-management';
+export * from './admin-dashboard';

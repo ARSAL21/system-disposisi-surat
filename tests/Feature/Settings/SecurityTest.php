@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Authorization\AuthorizationCatalog;
+use App\Enums\RoleName;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class SecurityTest extends TestCase
@@ -114,5 +117,42 @@ class SecurityTest extends TestCase
         $response
             ->assertSessionHasErrors('current_password')
             ->assertRedirect(route('security.edit'));
+    }
+
+    public function test_super_admin_without_two_factor_has_requires_mfa_setup_flag_and_is_redirected_from_back_office(): void
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+        Role::findOrCreate(RoleName::SuperAdmin->value, AuthorizationCatalog::GUARD_NAME);
+
+        $superAdmin = User::factory()->internal()->create();
+        $superAdmin->assignRole(RoleName::SuperAdmin->value);
+
+        // Accessing back-office dashboard without 2FA must redirect to security.edit
+        $this->actingAs($superAdmin)
+            ->get(route('back-office.dashboard'))
+            ->assertRedirect(route('security.edit'));
+
+        // On security.edit, Inertia auth.user must include requires_mfa_setup = true
+        $this->actingAs($superAdmin)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('security.edit'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('settings/Security')
+                ->where('auth.user.requires_mfa_setup', true)
+                ->where('auth.user.is_super_admin', true)
+            );
+
+        // When 2FA is enabled, requires_mfa_setup is false
+        $confirmedSuperAdmin = User::factory()->internal()->withTwoFactor()->create();
+        $confirmedSuperAdmin->assignRole(RoleName::SuperAdmin->value);
+
+        $this->actingAs($confirmedSuperAdmin)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('security.edit'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('auth.user.requires_mfa_setup', false)
+                ->where('auth.user.two_factor_enabled', true)
+            );
     }
 }

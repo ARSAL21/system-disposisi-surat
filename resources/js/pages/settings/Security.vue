@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, usePage } from '@inertiajs/vue3';
 import {
     CheckCircle2,
     Fingerprint,
@@ -21,6 +21,7 @@ import PasswordInput from '@/components/PasswordInput.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { useTwoFactorWalkthrough } from '@/composables/useTwoFactorWalkthrough';
 import { edit } from '@/routes/security';
 
 type Props = {
@@ -42,6 +43,12 @@ defineOptions({
 });
 
 const newPasswordValue = ref('');
+
+const page = usePage();
+const { startTour } = useTwoFactorWalkthrough();
+const requiresMfaSetup = computed(() =>
+    Boolean(page.props.auth.user?.requires_mfa_setup),
+);
 
 const hasMinLength = computed(() => newPasswordValue.value.length >= 8);
 const hasMixedCase = computed(
@@ -89,6 +96,17 @@ const hasNumbersOrSymbols = computed(() =>
                                     class="mr-1 size-3 text-emerald-600"
                                 />
                                 Sangat Baik
+                            </Badge>
+                            <Badge
+                                v-else-if="requiresMfaSetup"
+                                variant="outline"
+                                class="cursor-pointer border-rose-300 bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-300"
+                                @click="startTour"
+                            >
+                                <ShieldAlert
+                                    class="mr-1 size-3 text-rose-600"
+                                />
+                                2FA Wajib Aktif (Admin)
                             </Badge>
                             <Badge
                                 v-else
@@ -310,6 +328,7 @@ const hasNumbersOrSymbols = computed(() =>
         <!-- Two-Factor Authentication Section -->
         <div
             v-if="props.canManageTwoFactor"
+            id="two-factor-section"
             class="border-t border-border/60 pt-8"
         >
             <ManageTwoFactor
