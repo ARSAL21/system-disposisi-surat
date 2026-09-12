@@ -4,12 +4,12 @@ import LandingBentoGrid from '@/components/landing/LandingBentoGrid.vue';
 import LandingCtaFooter from '@/components/landing/LandingCtaFooter.vue';
 import LandingHeroSection from '@/components/landing/LandingHeroSection.vue';
 import LandingNavbar from '@/components/landing/LandingNavbar.vue';
+import LandingOnlineGuide from '@/components/landing/LandingOnlineGuide.vue';
 import LandingPublicTracker from '@/components/landing/LandingPublicTracker.vue';
-import LandingWorkflowSimulator from '@/components/landing/LandingWorkflowSimulator.vue';
 </script>
 
 <template>
-    <Head title="Sistem Disposisi & Tata Naskah Dinas Terintegrasi">
+    <Head title="Sistem E-Disposisi & Tata Naskah Dinas Terpadu">
         <!-- Google Fonts: Syne (Display), Plus Jakarta Sans (Body), JetBrains Mono (Cryptographic Hashes) -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -49,14 +49,14 @@ import LandingWorkflowSimulator from '@/components/landing/LandingWorkflowSimula
             <!-- 1. Floating Pill Navigation -->
             <LandingNavbar />
 
-            <!-- 2. Attention: Hero Section with Ultra-Wide H1 & Action CTAs -->
+            <!-- 2. Attention: Hero Section with Ultra-Wide H1 & Interactive Disposisi Engine Mockup -->
             <LandingHeroSection />
 
-            <!-- 3. Interest: Dense Interlocking Bento Grid -->
-            <LandingBentoGrid />
+            <!-- 3. Online Disposition Guide: 4-Step Visual Journey (Submit -> Screen -> Route -> Reply) -->
+            <LandingOnlineGuide />
 
-            <!-- 4. Desire: Interactive 4-Tier Workflow Simulator Sandbox -->
-            <LandingWorkflowSimulator />
+            <!-- 4. Interest & Security: Gapless Interlocking Bento Grid -->
+            <LandingBentoGrid />
 
             <!-- 5. Utility & Trust: Live Public Letter Tracking Wayfinder -->
             <LandingPublicTracker />

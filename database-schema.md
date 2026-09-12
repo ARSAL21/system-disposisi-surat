@@ -1,5 +1,10 @@
 # Database Schema — Sistem Disposisi Surat
 
+> **Status workflow aktif.** Penyebutan historis `EXECUTIVE_ENTRY` di bagian
+> yang belum diperbarui tidak menggantikan katalog runtime: `MAYOR` untuk Wali
+> Kota dan `REGIONAL_SECRETARY` untuk Sekda. Route awal memilih jalur langsung
+> ke Sekda atau melalui Wali Kota; hanya Sekda meneruskan kepada Asisten.
+
 ## 1. Tujuan
 
 Dokumen ini mendefinisikan struktur database untuk Sistem Disposisi Surat berdasarkan `system-design.md`.
@@ -191,6 +196,11 @@ Bagian Umum
 | updated_at | timestamp    |                                       |
 
 `parent_id` memungkinkan struktur unit dikembangkan di masa depan tanpa mengubah schema.
+Untuk forward disposisi dari Asisten ke Kepala Bagian, relasi ini juga menjadi
+sumber kebenaran runtime: unit Position Kepala Bagian harus menjadi anak
+langsung unit Position Asisten source. Authorized query membatasi kandidat sejak
+database query dan Action memvalidasi ulang relasi tersebut di dalam
+transaction/lock; tidak ada mapping hierarchy yang di-hardcode.
 
 ---
 
@@ -202,12 +212,15 @@ Contoh data MVP:
 
 ```text
 GENERAL_AFFAIRS
-EXECUTIVE_ENTRY
+MAYOR
+REGIONAL_SECRETARY
 ASSISTANT
 SECTION_HEAD
 ```
 
-Wali Kota dan Sekda sama-sama berada pada `EXECUTIVE_ENTRY`.
+Wali Kota berada pada `MAYOR`; Sekretaris Daerah berada pada
+`REGIONAL_SECRETARY`. Pemisahan ini memungkinkan hierarchy workflow divalidasi
+tanpa mengandalkan nama jabatan.
 
 | Column          | Type              | Constraint   |
 | --------------- | ----------------- | ------------ |
@@ -694,7 +707,7 @@ Merepresentasikan pengiriman awal surat:
 ```text
 Bagian Umum
      ↓
-Wali Kota / Sekda
+Sekda langsung atau Wali Kota sebagai jalur formal menuju Sekda
 ```
 
 | Column                           | Type        | Constraint                            |
@@ -730,7 +743,8 @@ status
 
 Business invariant:
 
-* recipient wajib Wali Kota atau Sekda;
+* recipient wajib Position `SEKDA` pada jalur `DIRECT_TO_SEKDA`, atau Position
+  `WALI_KOTA` pada jalur `VIA_MAYOR`;
 * hanya route aktif yang boleh menjadi sumber disposisi pertama;
 * satu surat hanya mempunyai satu initial route;
 * route dibuat saat surat `REGISTERED`, kemudian surat berubah menjadi
@@ -785,8 +799,11 @@ tidak dapat menghasilkan lebih dari satu tindakan disposisi saat request
 bersaing. `parent_recipient_id` tetap menjadi sumber disposisi lanjutan pada
 tahap multiple-recipient berikutnya.
 
-Satu tindakan disposisi pertama dapat mempunyai satu sampai tiga recipient
-Position level `ASSISTANT`. Batas jumlah dan eligibility target divalidasi di
+Route langsung kepada Sekda dapat menghasilkan satu tindakan disposisi dengan
+satu sampai tiga recipient Position level `ASSISTANT`. Route melalui Wali Kota
+lebih dahulu menghasilkan satu recipient `SEKDA` dari arahan formal Wali Kota;
+recipient tersebut kemudian membuat tindakan kepada satu sampai tiga Asisten.
+Batas jumlah dan eligibility target divalidasi di
 Form Request serta Action; unique `(disposition_id, recipient_position_id)`
 mencegah Position Asisten yang sama dicatat dua kali.
 
@@ -822,7 +839,7 @@ Interpretasi:
 
 ```text
 source_route_id
-→ disposisi pertama Wali Kota/Sekda
+→ arahan formal Wali Kota kepada Sekda atau disposisi pertama Sekda
 
 parent_recipient_id
 → disposisi lanjutan dari penerima sebelumnya
@@ -1287,7 +1304,7 @@ harus dibuat oleh user berwenang dari Bagian Umum
 
 ```text
 Bagian Umum
-→ Wali Kota / Sekda
+→ Sekda, langsung atau melalui Wali Kota
 ```
 
 Tidak boleh:
@@ -1300,7 +1317,7 @@ Bagian Umum → Kepala Bagian
 ### First Disposition
 
 ```text
-Wali Kota / Sekda
+Sekda
 → Asisten
 ```
 
@@ -1504,7 +1521,7 @@ Authorization collection harus terjadi pada query database, bukan setelah seluru
 
 Schema harus mendukung query berikut dengan baik.
 
-## Inbox Wali Kota / Sekda
+## Inbox Wali Kota dan Sekda
 
 ```text
 letter_routes
@@ -1803,3 +1820,81 @@ Seluruh foreign key memakai `RESTRICT ON DELETE`. Berkas surat keluar disimpan
 pada private disk `outgoing-letter-documents` dengan prefix
 `letters/{incomingLetterId}/mandates/{outgoingLetterId}/`. Disk dan path privat
 tidak boleh dikirim ke Vue atau portal publik.
+
+---
+
+# 29. Persiapan Surat Keluar Mandiri M10.1â€“M10.3
+
+`outgoing_letter_templates` adalah identitas template per unit organisasi. Kode
+template unik dalam satu unit dan template hanya dapat diaktifkan atau
+dinonaktifkan; nama dan kode historis tidak berubah.
+`outgoing_letter_template_versions` menyimpan DOCX immutable, hash SHA-256,
+metadata private storage, konfigurasi letak QR, serta aktor dan Position
+Assignment pengunggah. Kombinasi template/nomor versi dan template/hash unik.
+
+`standalone_outgoing_drafts` adalah konsep surat keluar yang belum menjadi surat
+bernomor. Ia menyimpan satu penerima eksternal, perihal, ringkasan, unit
+penyusun, template-version snapshot, pencipta, dan Position Assignment pencipta.
+`standalone_outgoing_copy_recipients` menyimpan nol atau lebih tembusan Position
+struktural; kombinasi draft/Position unik.
+
+PDF konsep disimpan pada `standalone_outgoing_document_versions` sebagai seri
+immutable. Versi tidak dapat diubah atau dihapus dan memiliki nomor versi,
+replaces-version, hash, metadata penyimpanan privat, catatan revisi, uploader,
+dan Position Assignment historis. `standalone_outgoing_reviews` adalah keputusan
+append-only terhadap satu versi dan satu tahap (`SECTION_HEAD` atau `ASSISTANT`),
+dengan keputusan `APPROVED` atau `RETURNED`, alasan, serta aktor historis.
+
+Seluruh foreign key M10 memakai `RESTRICT ON DELETE`. DOCX template disimpan pada
+private disk `outgoing-letter-templates` dengan prefix `units/{unitId}/`; PDF
+konsep pada disk `standalone-outgoing-documents` dengan prefix
+`drafts/{draftPublicId}/`. Disk/path privat, Position Assignment ID, dan metadata
+audit mentah tidak dikirim ke Vue.
+
+---
+
+# 30. Penerbitan Surat Keluar Mandiri M10.4-M10.5
+
+`outgoing_letters.origin` membedakan `RESPONSE` (jalur M8) dan `STANDALONE`
+(jalur M10). Record `STANDALONE` mempunyai relasi unik ke
+`standalone_outgoing_drafts`; `incoming_letter_id`, `letter_response_dossier_id`,
+dan `source_document_version_id` tidak dipakai. Nomor tetap unik global per
+`(agenda_year, outgoing_number)` sehingga tidak dapat digunakan ulang oleh
+jalur mana pun.
+
+`outgoing_letter_electronic_approvals` adalah bukti append-only pengesahan
+Sekda: metode, hash PDF sumber, versi PDF final (untuk QR), hash token
+verifikasi, aktor, Position Assignment, dan waktu. Token mentah tidak pernah
+disimpan. `standalone_outgoing_sekda_decisions` menyimpan keputusan QR,
+tanda-tangan fisik, atau pengembalian secara append-only.
+
+Scan fisik dan PDF QR adalah `outgoing_letter_document_versions` immutable pada
+disk privat `standalone-outgoing-final-documents` dengan prefix
+`letters/{outgoingLetterPublicId}/`. `outgoing_letter_manual_signature_reviews`
+menyimpan satu keputusan append-only per versi scan. Semua foreign key memakai
+`RESTRICT ON DELETE`; disk/path tidak menjadi payload Vue atau halaman publik.
+
+## 30.1 Pengiriman dan Koreksi M10.6
+
+`standalone_outgoing_drafts.corrects_outgoing_letter_id` menunjuk surat mandiri
+terkirim yang dikoreksi dan `correction_reason` menyimpan alasan immutable.
+Ketika konsep koreksi telah diberi nomor, nilai tersebut disalin ke
+`outgoing_letters.corrects_outgoing_letter_id`; nomor lama dan PDF lama tidak
+pernah diubah.
+
+`outgoing_letter_delivery_links` menyimpan hash token email, alamat tujuan,
+waktu kirim/kedaluwarsa, serta aktor historis. Token mentah tidak pernah masuk
+database atau audit. `outgoing_letter_delivery_link_revocations` adalah satu
+record append-only per tautan yang dicabut. `outgoing_letter_internal_copy_notifications`
+mencatat pengiriman notifikasi tembusan tanpa menyimpan public link. Semua
+foreign key memakai `RESTRICT ON DELETE` dan semua tiga tabel tidak memiliki
+workflow update/delete normal.
+
+## 30.2 Release Gate M10.7
+
+M10.7 tidak menambah tabel atau kolom. Semua dokumen M10 tetap immutable dan
+semua keputusan, delivery, tautan, pencabutan, notifikasi tembusan, serta audit
+berstatus append-only. Storage guard memeriksa disk privat, prefix path, MIME,
+metadata hash/ukuran, keberadaan, dan ukuran fisik sebelum dokumen M10 dipakai
+atau di-stream. Kegagalan transaksi menghapus berkas kandidat yang sudah
+ditulis tetapi belum memiliki record commit.

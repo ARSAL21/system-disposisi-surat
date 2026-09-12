@@ -1,5 +1,11 @@
 # System Design — Sistem Disposisi Surat
 
+> **Status workflow aktif.** Catatan milestone historis yang masih menyebut
+> `EXECUTIVE_ENTRY` atau role `pimpinan-eksekutif` tidak lagi menjadi aturan
+> runtime. Struktur aktif adalah `MAYOR → REGIONAL_SECRETARY → ASSISTANT →
+> SECTION_HEAD`; Wali Kota memberi arahan formal kepada Sekda dan Sekda membuat
+> disposisi substantif kepada Asisten.
+
 ## 1. Tujuan Sistem
 
 Sistem Disposisi Surat adalah aplikasi Pemerintah Kota untuk menerima, meregistrasi, dan memproses **surat masuk** sampai seluruh tindak lanjut disposisi selesai.
@@ -67,7 +73,7 @@ Alur umum MVP:
                             ↓
                       Incoming Letter
                             ↓
-                 Wali Kota ATAU Sekda
+            Sekda langsung atau melalui Wali Kota
                             ↓
                    Asisten I / II / III
                             ↓
@@ -85,8 +91,9 @@ Aturan utama:
 * Pengirim manual tidak wajib memiliki account.
 * Submission belum otomatis menjadi `IncomingLetter`.
 * Hanya Kepala Bagian Umum yang dapat mengesahkan registrasi surat masuk resmi.
-* Surat resmi diarahkan ke Wali Kota atau Sekda.
-* Wali Kota dan Sekda berada pada level penerimaan awal yang sama.
+* Surat resmi diarahkan langsung kepada Sekda atau melalui Wali Kota.
+* Wali Kota berada di atas Sekda; Wali Kota hanya memberi arahan formal kepada
+  Sekda, sedangkan Sekda menjadi penerima substantif awal.
 * Disposisi wajib mengikuti hierarchy.
 * Kepala Bagian merupakan terminal formal workflow MVP.
 * Staff belum menjadi bagian workflow formal MVP.
@@ -378,14 +385,16 @@ Position Assignment
 Mengatur capability aplikasi.
 
 Katalog operasional baku menyediakan role `petugas-surat`, `kabag-umum`,
-`pimpinan-eksekutif`, `asisten`, dan `kepala-bagian`. Role tersebut immutable
+`wali-kota`, `sekda`, `asisten`, dan `kepala-bagian`. Role tersebut immutable
 dan permission-nya disinkronkan secara exact, tetapi dapat ditetapkan kepada
 akun internal melalui UI RBAC. Hanya assignment role `super-admin` yang wajib
 melalui console terkontrol.
 
-Role operasional tidak menggantikan Position. Wali Kota dan Sekda menggunakan
-capability eksekutif yang sama, sedangkan kepemilikan inbox dan kewenangan
-terhadap surat tetap ditentukan oleh Position Assignment aktif.
+Role operasional tidak menggantikan Position. Role `wali-kota` hanya memiliki
+pengawasan global dan arahan formal kepada Sekda. Role `sekda` memiliki
+kewenangan disposisi substantif, dossier balasan, dan persetujuan akhir surat
+keluar mandiri. Kepemilikan resource tetap ditentukan oleh Position Assignment
+aktif.
 
 ---
 
@@ -433,11 +442,12 @@ menolak eksekusi seeder operasional.
 
 ## Administrasi Struktur Organisasi
 
-Empat `PositionLevel` workflow merupakan katalog terlindungi:
+Enam `PositionLevel` workflow merupakan katalog terlindungi:
 
 ```text
+MAYOR
+REGIONAL_SECRETARY
 GENERAL_AFFAIRS
-EXECUTIVE_ENTRY
 ASSISTANT
 SECTION_HEAD
 ```
@@ -1027,7 +1037,7 @@ Assignment aktif yang memenuhi salah satu konteks bisnis berikut:
 
 * staf `GENERAL_AFFAIRS` pada unit `BAGIAN_UMUM`;
 * Kepala Bagian Umum (`SECTION_HEAD` pada unit `BAGIAN_UMUM`);
-* Wali Kota atau Sekda pada level `EXECUTIVE_ENTRY`.
+* Wali Kota pada level `MAYOR` atau Sekda pada level `REGIONAL_SECRETARY`.
 
 Permission tidak menjadi bypass terhadap Position. Asisten, Kepala Bagian lain,
 dan super-admin teknis tanpa Position bisnis tersebut menerima `404` dan tidak
@@ -1065,9 +1075,10 @@ Presenter response menggunakan allowlist dan tidak mengirim `storage_disk`,
 ## 24.4 Routing Awal dan Inbox Pimpinan (M5)
 
 M5 memisahkan pengiriman administratif Bagian Umum dari disposisi substantif.
-Kepala Bagian Umum mengarahkan surat resmi kepada tepat satu Position Wali Kota
-atau Sekda melalui `letter_routes`; tidak dibuat row `dispositions` pada tahap
-ini.
+Kepala Bagian Umum memilih `DIRECT_TO_SEKDA` atau `VIA_MAYOR` melalui
+`letter_routes`. Route langsung ditujukan ke Position `SEKDA`; route melalui
+Wali Kota ditujukan ke Position `WALI_KOTA`. Tidak dibuat row `dispositions`
+pada tahap routing.
 
 Endpoint produksi:
 
@@ -1088,15 +1099,16 @@ Antrean Bagian Umum membutuhkan `letter-routing.view` dan Position Assignment
 aktif pada unit `BAGIAN_UMUM` dengan level `GENERAL_AFFAIRS` atau
 `SECTION_HEAD`. Pembuatan membutuhkan `letter-routing.create`, tetapi hanya
 `SECTION_HEAD` pada unit tersebut yang dapat menjalankannya. Inbox memerlukan
-`executive-inbox.view` dan hanya membaca route `PENDING` milik Position
-`EXECUTIVE_ENTRY` aktif pengguna. Permission tidak pernah menjadi bypass
+`executive-inbox.view` dan hanya membaca route/recipient yang menjadi milik
+Position `MAYOR` atau `REGIONAL_SECRETARY` aktif pengguna. Permission tidak pernah menjadi bypass
 Position; super-admin teknis tanpa Position bisnis tetap menerima `404` dan
 tidak melihat menu.
 
 Action routing mengunci surat, dokumen resmi terkini, assignment actor, Position
-tujuan, dan assignment pemegang tujuan. Surat wajib masih `REGISTERED`, tujuan
-wajib Position `EXECUTIVE_ENTRY` aktif dengan tepat satu pemegang internal aktif
-dan terverifikasi, kemudian route `PENDING`, perubahan surat menjadi `ROUTED`,
+tujuan, dan assignment pemegang tujuan. Surat wajib masih `REGISTERED`; target
+server wajib Position `WALI_KOTA` level `MAYOR` atau Position `SEKDA` level
+`REGIONAL_SECRETARY` dengan tepat satu pemegang internal aktif dan
+terverifikasi, kemudian route `PENDING`, perubahan surat menjadi `ROUTED`,
 dan audit `LETTER_ROUTED` ditulis dalam transaction yang sama. Unique constraint
 pada `incoming_letter_id` mencegah routing ganda. Route immutable; M5 tidak
 menyediakan endpoint reroute, update, atau delete.
@@ -1112,8 +1124,8 @@ keamanan PDF privat yang sama dengan M4.3.
 
 ## 24.5 Disposisi Pertama Berbasis Position (M6.1)
 
-M6.1 mengaktifkan tindakan substantif pertama dari Wali Kota/Sekda kepada satu
-atau lebih Asisten, dengan batas operasional maksimal tiga Position Asisten per
+M6.1 mengaktifkan tindakan substantif pertama dari Sekda kepada satu atau lebih
+Asisten, dengan batas operasional maksimal tiga Position Asisten per
 disposisi awal. UI tidak merangkai target dari user atau role: backend hanya
 mengirim Position level `ASSISTANT` yang benar-benar eligible (tepat satu
 pemegang internal, aktif, dan terverifikasi), menghapus Position actor maupun
@@ -1124,6 +1136,9 @@ Endpoint produksi:
 
 ```text
 POST /back-office/executive/inbox/routes/{letterRoute}/dispositions
+POST /back-office/executive/inbox/routes/{letterRoute}/forward-to-sekda
+GET  /back-office/executive/inbox/recipients/{dispositionRecipient}
+POST /back-office/executive/inbox/recipients/{dispositionRecipient}/dispositions
 
 GET  /back-office/dispositions/inbox
 GET  /back-office/dispositions/inbox/recipients/{dispositionRecipient}
@@ -1136,9 +1151,12 @@ PATCH /back-office/workflow/instruction-labels/{instructionLabel}
 PATCH /back-office/workflow/instruction-labels/{instructionLabel}/status
 ```
 
-Account actor dan seluruh pemegang tujuan, route, surat, Position/assignment, dokumen,
-serta label aktif dikunci dan diperiksa ulang. Disposisi, recipient, label,
-transisi `letter_routes PENDING -> COMPLETED`, transisi
+Wali Kota hanya dapat membuat satu arahan formal berlabel kepada Sekda. Sekda
+kemudian dapat membuat disposisi kepada Asisten dari route langsung atau dari
+recipient Sekda hasil arahan Wali Kota. Account actor dan seluruh pemegang tujuan,
+route/recipient sumber, surat, Position/assignment, dokumen, serta label aktif
+dikunci dan diperiksa ulang. Disposisi, recipient, label, transisi route yang
+relevan ke `COMPLETED`, transisi
 `incoming_letters ROUTED -> IN_PROGRESS`, dan audit `DISPOSITION_CREATED`
 ditulis atomik. Inbox Asisten dibatasi pada SQL menggunakan Position Assignment
 aktif. Presenter allowlist tidak mengekspos email, storage disk/path, assignment
@@ -1158,6 +1176,12 @@ confirmation, transaction, dan audit.
 Asisten dapat meneruskan satu tindakan disposisi kepada satu atau lebih
 Position level `SECTION_HEAD`. Setiap recipient menjadi cabang terminal
 independen: memulai atau menyelesaikan satu cabang tidak memutasi cabang lain.
+Target hanya sah apabila unit aktif Position Kepala Bagian merupakan anak
+langsung (`organizational_units.parent_id`) dari unit aktif Position Asisten
+sumber. Hubungan unit ini merupakan sumber kebenaran; kode tidak menggunakan
+nama jabatan atau mapping hierarchy yang di-hardcode. Karena itu Asisten hanya
+menerima pilihan Kabag dalam garis koordinasinya sendiri, bahkan apabila user
+yang sama mempunyai lebih dari satu Position Asisten aktif.
 Dalam satu surat, satu Position Kepala Bagian hanya boleh berada pada satu
 subtree Asisten. Setelah dipilih Asisten pertama, Position tersebut tidak lagi
 ditampilkan kepada Asisten lain dan crafted/concurrent request divalidasi ulang
@@ -1169,9 +1193,10 @@ Position Assignment yang sah.
 
 Kepala Bagian hanya menerima detail cabangnya sendiri beserta jurnal follow-up.
 Asisten menerima monitoring read-only untuk seluruh cabang yang merupakan anak
-langsung recipient Asisten miliknya. Wali Kota/Sekda hanya menerima fase dan
-angka aggregate tanpa identitas recipient, isi jurnal, hasil penyelesaian,
-email, assignment ID, atau metadata audit mentah.
+langsung recipient Asisten miliknya. Wali Kota dan Sekda memperoleh detail
+proses lintas kota sesuai Policy; Wali Kota tetap read-only pada tindakan
+substansif. Email, assignment ID, dan metadata audit mentah tidak pernah
+dikirim ke Vue.
 
 Lifecycle resmi:
 
@@ -1370,7 +1395,7 @@ Akses awal memerlukan account `INTERNAL` yang aktif, terverifikasi, dan
 permission eksplisit `letter-activities.view`. Permission hanya membuka fitur.
 Kedalaman informasi tetap ditentukan oleh Position Assignment aktif:
 
-* Wali Kota/Sekda pada level `EXECUTIVE_ENTRY` memperoleh detail bisnis;
+* Wali Kota pada level `MAYOR` dan Sekda pada level `REGIONAL_SECRETARY` memperoleh detail bisnis;
 * Kepala Bagian Umum pada level `SECTION_HEAD` dan unit `BAGIAN_UMUM`
   memperoleh detail bisnis;
 * pemegang permission tanpa Position bisnis tersebut, termasuk super-admin
@@ -1581,7 +1606,7 @@ Future capability tidak boleh memaksa redesign terhadap:
 6. Staf Bagian Umum melakukan screening teknis, tetapi tidak dapat menolak atau meregistrasikan submission.
 7. Hanya Kepala Bagian Umum yang dapat mengesahkan registrasi IncomingLetter.
 8. Surat resmi selalu melewati Bagian Umum.
-9. IncomingLetter diarahkan ke Wali Kota atau Sekda.
+9. IncomingLetter diarahkan langsung ke Sekda atau melalui Wali Kota sebagai arahan formal menuju Sekda.
 10. Disposisi tidak boleh melompati hierarchy.
 11. Kepala Bagian adalah terminal workflow formal MVP.
 12. Satu surat dapat mempunyai beberapa branch aktif.
@@ -1719,3 +1744,90 @@ Pengajuan online memperoleh kartu balasan dan tautan unduh privat setelah
 pengiriman; email hanya berisi tautan login tanpa lampiran. Surat manual tidak
 membuat akun publik. Petugas mencatat metode, penerima, waktu, nomor pelacakan,
 dan catatan penyerahan offline.
+
+---
+
+## M10.1â€“M10.3 â€” Persiapan Surat Keluar Mandiri
+
+Surat keluar mandiri tidak memakai `outgoing_letters` M8 sampai memiliki nomor
+resmi. Pada tahap persiapan, Kabag setiap Bagian memiliki template DOCX aktif
+yang hanya berlaku bagi unitnya. Staf unit mengunduh template, menyusun isi di
+aplikasi pengolah kata, lalu mengunggah PDF konsep yang immutable.
+
+Pembatasan kerja mengikuti struktur unit, bukan role saja:
+
+```text
+Staf Unit (unit X)
+  -> Kabag (unit X)
+  -> Asisten (unit induk X)
+  -> siap diberi nomor pada tahap M10.4
+```
+
+Asisten hanya dapat melihat unit anak langsung miliknya; Kabag tidak dapat
+memeriksa konsep unit lain. Pengembalian dari level mana pun selalu mengembalikan
+konsep ke staf dan pengajuan ulang harus melewati Kabag kembali. PDF, DOCX,
+keputusan pemeriksaan, hash, serta Position Assignment historis bersifat
+append-only. Tahap ini sengaja tidak menerbitkan nomor, QR, tanda tangan, atau
+mengirim surat sehingga ia tidak mengubah lifecycle mandat balasan M8.
+
+---
+
+## M10.4-M10.5 Nomor dan Pengesahan Surat Keluar Mandiri
+
+Surat mandiri baru menjadi record `outgoing_letters` setelah persetujuan
+Asisten. Record itu memakai `origin = STANDALONE`; mandat balasan M8 tetap
+memakai `origin = RESPONSE` dan lifecycle-nya tidak berubah.
+
+```text
+Asisten menyetujui konsep
+  -> Petugas Bagian Umum memberi nomor dan tanggal
+  -> meja pengesahan Sekda
+       -> QR elektronik -> siap dikirim
+       -> tanda tangan fisik -> scan -> pemeriksaan Kabag unit -> siap dikirim
+  -> Staf penyusun atau Kabag unit asal mencatat pengiriman
+```
+
+Hanya Sekda dengan Position Assignment aktif yang dapat memilih pengesahan QR
+atau tanda tangan fisik. QR memuat URL verifikasi saja; token acak hanya
+disimpan sebagai hash. Halaman publik tidak pernah mengirim PDF atau isi surat,
+melainkan hanya status, nomor, tanggal, unit asal, jabatan Sekda, waktu, dan
+fingerprint PDF final. Pengesahan QR adalah pengesahan elektronik internal,
+bukan TTE tersertifikasi PSrE/BSrE.
+
+## M10.6 Pengiriman, Tembusan, dan Koreksi Surat Mandiri
+
+Setelah `READY_FOR_DELIVERY`, pengiriman surat mandiri adalah kewenangan Staf
+yang menyusun surat atau Kabag aktif pada unit asalnya; Petugas Bagian Umum
+tetap mengendalikan nomor, tetapi tidak mengambil alih substansi pengiriman.
+Metode non-email menyimpan bukti append-only: metode, penerima, waktu, nomor
+pelacakan, catatan, aktor, dan Position Assignment historis.
+
+Pengiriman email memakai tautan unduh acak yang disimpan sebagai hash dan
+berlaku tujuh hari. PDF tidak pernah dilampirkan atau dipindahkan ke public
+storage. Tautan dapat dikirim ulang (tautan aktif lama dicabut secara
+append-only) atau dicabut manual. Tembusan internal menerima notifikasi hanya
+bila Policy mengizinkan mereka membuka surat melalui back-office; notifikasi
+itu tidak memuat tautan publik.
+
+`DELIVERED` mengunci surat, nomor, PDF final, dan bukti pengiriman. Koreksi
+membuat konsep mandiri baru dengan salinan PDF konsep sebagai versi pertama,
+alasan koreksi, dan referensi ke surat lama. Ia wajib kembali melalui review,
+nomor, pengesahan, serta pengiriman. Surat lama tidak diubah; halaman QR hanya
+menandainya sudah digantikan setelah surat koreksi benar-benar terkirim.
+
+## M10.7 Hardening dan Release Gate
+
+M10 tidak menambah bypass otorisasi di controller: seluruh mutasi tetap melalui
+Form Request, Policy, Action, dan audit append-only. Mutasi surat mandiri yang
+melibatkan draf dan surat bernomor mengambil lock secara tetap: draf, surat
+keluar, versi dokumen yang dipakai, Position Assignment aktor, lalu audit.
+Urutan ini juga dipakai pengesahan QR, scan fisik, delivery, penerbitan ulang
+atau pencabutan tautan, serta pembuatan konsep koreksi.
+
+Semua PDF konsep/final dan DOCX template diverifikasi terhadap relasi, disk,
+prefix path privat, MIME, hash/ukuran metadata, keberadaan, dan ukuran fisik
+sebelum dipakai. Hash fisik tidak dihitung ulang saat akses biasa; verifikasi
+massal tetap menjadi tugas scanner integritas. Jika transaksi setelah upload
+gagal, berkas kandidat dibersihkan sebagai kompensasi. Notifikasi email dan
+tembusan selalu dipicu setelah commit; kegagalan kanal notifikasi tidak
+mengubah surat yang sudah resmi tercatat.

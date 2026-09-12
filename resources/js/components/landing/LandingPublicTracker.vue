@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { Check, Clock, Copy, QrCode, Search } from '@lucide/vue';
+import {
+    Check,
+    CheckCircle2,
+    Copy,
+    FileSearch,
+    Fingerprint,
+    Search,
+} from '@lucide/vue';
 import { ref } from 'vue';
 
-const trackingQuery = ref<string>('SRT/2026/08/0492');
-const trackingResult = ref<{
-    found: boolean;
+const trackingQuery = ref<string>('0001/SETDA/IX/2026');
+
+interface TrackingRecord {
     number: string;
     sender: string;
     subject: string;
@@ -13,42 +20,60 @@ const trackingResult = ref<{
     statusBadge: string;
     hash: string;
     currentAssignee: string;
-    dispositionSteps: { title: string; time: string; done: boolean }[];
-}>({
-    found: true,
-    number: 'SRT/2026/08/0492',
-    sender: 'Kementerian Pendayagunaan Aparatur Negara & RB',
-    subject:
-        'Permohonan Validasi Kebijakan Transformasi Digital Layanan Terpadu',
-    receivedAt: '28 Agustus 2026, 09:14 WITA',
-    status: 'Sedang Didisposisikan',
+    dispositionSteps: {
+        title: string;
+        actor: string;
+        time: string;
+        done: boolean;
+    }[];
+}
+
+const sampleQueries = [
+    { label: 'Sentra UMKM Baubau', code: '0001/SETDA/IX/2026' },
+    { label: 'Fasilitasi Adat Baubau', code: '0002/SETDA/IX/2026' },
+];
+
+const trackingResult = ref<TrackingRecord>({
+    number: '0001/SETDA/IX/2026',
+    sender: 'Forum UMKM Kota Baubau',
+    subject: 'Permohonan Koordinasi Pengembangan Sentra UMKM Kota Baubau',
+    receivedAt: '28 Agustus 2026 &bull; 09:15 WITA',
+    status: 'Balasan Resmi Terbit',
     statusBadge:
-        'bg-indigo-500/10 text-indigo-700 border-indigo-500/30 dark:text-indigo-300',
+        'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300',
     hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    currentAssignee: 'Bagian Organisasi & Tata Laksana',
+    currentAssignee: 'Pemohon Online (Dokumen Siap Diunduh)',
     dispositionSteps: [
         {
-            title: 'Registrasi & Verifikasi Berkas Asli (SHA-256 Valid)',
+            title: 'Pengajuan Mandiri & Kunci SHA-256',
+            actor: 'Pemohon Online',
             time: '28 Agt 09:15',
             done: true,
         },
         {
-            title: 'Disposisi Primer: Wali Kota -> Sekda',
-            time: '28 Agt 11:30',
+            title: 'Pemeriksaan & Pengesahan Agenda',
+            actor: 'Petugas Surat & Kabag Umum',
+            time: '28 Agt 10:00',
             done: true,
         },
         {
-            title: 'Koordinasi Taktis: Asisten Administrasi Umum',
-            time: '29 Agt 08:45',
+            title: 'Disposisi Sekda & Telaah Paralel',
+            actor: 'Sekda, Asisten II, Bagian Hukum & Ekonomi',
+            time: '28 Agt 14:20',
             done: true,
         },
         {
-            title: 'Tindak Lanjut Teknis: Bagian Organisasi & Tata Laksana',
-            time: 'Sedang Proses',
-            done: false,
+            title: 'Mandat Selesai: 0001/BALASAN/SETDA/IX/2026',
+            actor: 'Sekda & Petugas Surat Keluar',
+            time: '29 Agt 11:30',
+            done: true,
         },
     ],
 });
+
+function applySample(code: string) {
+    trackingQuery.value = code;
+}
 
 const isCopied = ref<boolean>(false);
 function copyHash() {
@@ -63,233 +88,213 @@ function copyHash() {
 <template>
     <section
         id="tracking"
-        class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24"
+        class="mx-auto max-w-6xl px-3 py-14 sm:px-6 sm:py-24"
     >
-        <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
-            <!-- Left Context Column (5 Cols) -->
-            <div class="space-y-4 lg:col-span-5">
-                <div
-                    class="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-indigo-600 uppercase dark:text-indigo-400"
-                >
-                    <Search class="size-4" />
-                    <span>Layanan Publik Terbuka</span>
-                </div>
-                <h2
-                    class="font-['Syne',sans-serif] text-2xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
-                >
-                    Pelacakan Berkas Publik Transparan
-                </h2>
-                <p
-                    class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
-                >
-                    Masyarakat dan pemohon surat dapat memantau setiap langkah
-                    disposisi secara langsung tanpa perlu datang ke kantor
-                    dinas.
-                </p>
-
-                <div class="space-y-2 pt-2">
-                    <div
-                        class="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/60"
-                    >
-                        <div
-                            class="flex size-9 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400"
-                        >
-                            <QrCode class="size-5" />
-                        </div>
-                        <div class="text-xs">
-                            <p class="font-bold text-slate-900 dark:text-white">
-                                Nomor Agenda & Barcode Unik
-                            </p>
-                            <p class="text-muted-foreground">
-                                Otomatis terbit saat surat diverifikasi.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div
-                        class="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/60"
-                    >
-                        <div
-                            class="flex size-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:bg-teal-400/10 dark:text-teal-400"
-                        >
-                            <Clock class="size-5" />
-                        </div>
-                        <div class="text-xs">
-                            <p class="font-bold text-slate-900 dark:text-white">
-                                Riwayat Waktu Real-Time
-                            </p>
-                            <p class="text-muted-foreground">
-                                Catatan timestamp akurat per tahapan disposisi.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+        <!-- Section Header (Centered, Clean) -->
+        <div class="mx-auto max-w-2xl space-y-2 text-center">
+            <div
+                class="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-bold text-indigo-700 dark:border-indigo-400/30 dark:text-indigo-300"
+            >
+                <FileSearch class="size-3.5" />
+                <span>Pelacakan Mandiri Publik</span>
             </div>
 
-            <!-- Right Interactive Tracking Panel (7 Cols) -->
-            <div class="lg:col-span-7">
-                <div
-                    class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5 backdrop-blur-2xl dark:border-slate-800 dark:bg-slate-900/90"
+            <h2
+                class="font-['Syne',sans-serif] text-2xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
+            >
+                Pantau Status Dokumen Secara Terbuka
+            </h2>
+
+            <p
+                class="text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-300"
+            >
+                Gunakan nomor agenda resmi untuk memantau perjalanan naskah dan
+                mengunduh balasan secara real-time.
+            </p>
+        </div>
+
+        <!-- Tracking Console Card (Mobile Responsive) -->
+        <div
+            class="mx-auto mt-8 max-w-3xl rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-xl shadow-slate-950/5 backdrop-blur-2xl sm:p-7 dark:border-slate-800 dark:bg-slate-900/90"
+        >
+            <!-- Search Console Input -->
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div class="relative flex-1">
+                    <Search
+                        class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
+                    />
+                    <input
+                        v-model="trackingQuery"
+                        type="text"
+                        placeholder="Ketik nomor agenda (contoh: 0001/SETDA/IX/2026)..."
+                        class="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 pr-4 pl-10 font-mono text-xs text-foreground focus:border-indigo-600 focus:outline-none dark:border-slate-800 dark:bg-slate-950/80"
+                    />
+                </div>
+
+                <button
+                    type="button"
+                    class="flex h-12 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 text-xs font-bold text-white shadow-md shadow-indigo-600/25 transition-all hover:bg-indigo-700 active:scale-[0.98]"
                 >
-                    <!-- Tracking Input Search -->
-                    <div class="relative flex items-center gap-2">
-                        <div class="relative flex-1">
-                            <Search
-                                class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
-                            />
-                            <input
-                                v-model="trackingQuery"
-                                type="text"
-                                placeholder="Masukkan nomor agenda surat (contoh: SRT/2026/08/0492)..."
-                                class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 pr-4 pl-10 font-mono text-xs text-foreground focus:border-indigo-600 focus:outline-none dark:border-slate-800 dark:bg-slate-950/70"
-                            />
-                        </div>
-                        <button
-                            type="button"
-                            class="h-11 rounded-2xl bg-indigo-600 px-5 text-xs font-bold text-white shadow-md hover:bg-indigo-700"
+                    <Search class="size-4" />
+                    <span>Lacak Dokumen</span>
+                </button>
+            </div>
+
+            <!-- Quick-Pick Demo Chips for Mobile Users -->
+            <div class="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+                <span class="font-mono text-[10px] text-muted-foreground"
+                    >Contoh Cepat:</span
+                >
+                <button
+                    v-for="sample in sampleQueries"
+                    :key="sample.code"
+                    type="button"
+                    class="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[10px] text-slate-700 transition-all hover:border-indigo-500 hover:bg-indigo-50/50 hover:text-indigo-700 active:scale-[0.97] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"
+                    @click="applySample(sample.code)"
+                >
+                    {{ sample.label }} ({{ sample.code }})
+                </button>
+            </div>
+
+            <!-- Result Card Panel -->
+            <div
+                class="mt-6 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 sm:p-5 dark:border-slate-800 dark:bg-slate-950/70"
+            >
+                <!-- Result Header -->
+                <div
+                    class="flex flex-col gap-2 border-b border-slate-200/70 pb-3.5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                >
+                    <div>
+                        <span
+                            class="font-mono text-[10px] font-bold text-muted-foreground uppercase"
                         >
-                            Cek Status
-                        </button>
+                            NOMOR AGENDA TERKONFIRMASI
+                        </span>
+                        <p
+                            class="font-mono text-xs font-extrabold text-slate-900 sm:text-sm dark:text-white"
+                        >
+                            {{ trackingResult.number }}
+                        </p>
                     </div>
 
-                    <!-- Live Simulated Result Card -->
-                    <div
-                        class="mt-6 rounded-2xl border border-slate-200/70 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950/60"
+                    <span
+                        class="inline-flex w-fit items-center gap-1 rounded-full border px-3 py-1 font-mono text-[10px] font-bold"
+                        :class="trackingResult.statusBadge"
                     >
-                        <div
-                            class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 pb-3 dark:border-slate-800"
-                        >
-                            <div>
-                                <span
-                                    class="font-mono text-[10px] font-bold text-muted-foreground"
-                                    >NOMOR SURAT RESMI</span
-                                >
-                                <p
-                                    class="font-mono text-xs font-bold text-slate-900 dark:text-white"
-                                >
-                                    {{ trackingResult.number }}
-                                </p>
-                            </div>
-                            <span
-                                class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-bold"
-                                :class="trackingResult.statusBadge"
-                            >
-                                {{ trackingResult.status }}
-                            </span>
-                        </div>
+                        <CheckCircle2 class="size-3 text-emerald-500" />
+                        <span>{{ trackingResult.status }}</span>
+                    </span>
+                </div>
 
-                        <div class="mt-3 space-y-2 text-xs">
-                            <div>
-                                <span class="text-muted-foreground"
-                                    >Perihal Surat:
-                                </span>
-                                <span
-                                    class="font-semibold text-slate-900 dark:text-white"
-                                    >{{ trackingResult.subject }}</span
-                                >
-                            </div>
+                <!-- Perihal & Info -->
+                <div class="mt-3.5 space-y-1.5 text-xs">
+                    <h4
+                        class="leading-snug font-bold text-slate-900 dark:text-white"
+                    >
+                        {{ trackingResult.subject }}
+                    </h4>
+                    <div
+                        class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground"
+                    >
+                        <span
+                            >Pemohon:
+                            <strong class="text-foreground">{{
+                                trackingResult.sender
+                            }}</strong></span
+                        >
+                        <span
+                            >Waktu:
+                            <strong class="text-foreground">{{
+                                trackingResult.receivedAt
+                            }}</strong></span
+                        >
+                    </div>
+                </div>
+
+                <!-- Vertical Disposition Stepper -->
+                <div
+                    class="mt-5 border-t border-slate-200/70 pt-4 dark:border-slate-800"
+                >
+                    <span
+                        class="font-mono text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+                    >
+                        Tahapan Penanganan Berkas:
+                    </span>
+
+                    <div class="mt-2.5 space-y-2">
+                        <div
+                            v-for="(
+                                step, idx
+                            ) in trackingResult.dispositionSteps"
+                            :key="idx"
+                            class="flex items-start gap-2.5 rounded-xl border border-slate-200/60 bg-white p-2.5 sm:items-center sm:justify-between dark:border-slate-800/80 dark:bg-slate-900"
+                        >
                             <div
-                                class="flex flex-wrap gap-4 text-muted-foreground"
+                                class="flex items-start gap-2.5 sm:items-center"
                             >
-                                <span
-                                    >Instansi:
-                                    <strong class="text-foreground">{{
-                                        trackingResult.sender
-                                    }}</strong></span
-                                >
-                                <span
-                                    >Diterima:
-                                    <strong class="text-foreground">{{
-                                        trackingResult.receivedAt
-                                    }}</strong></span
-                                >
-                            </div>
-                        </div>
-
-                        <!-- Stepper Timeline -->
-                        <div
-                            class="mt-5 space-y-2 border-t border-slate-200/60 pt-4 dark:border-slate-800"
-                        >
-                            <span
-                                class="font-mono text-[10px] font-bold text-muted-foreground uppercase"
-                            >
-                                Perjalanan Disposisi Berkas:
-                            </span>
-                            <div class="space-y-2 pt-1">
                                 <div
-                                    v-for="(
-                                        step, idx
-                                    ) in trackingResult.dispositionSteps"
-                                    :key="idx"
-                                    class="flex items-center justify-between gap-2 rounded-xl bg-white p-2.5 text-xs shadow-2xs dark:bg-slate-900"
+                                    class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white sm:mt-0"
                                 >
-                                    <div class="flex items-center gap-2.5">
-                                        <div
-                                            class="flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                                            :class="
-                                                step.done
-                                                    ? 'bg-emerald-500'
-                                                    : 'animate-pulse bg-indigo-600'
-                                            "
-                                        >
-                                            <Check
-                                                v-if="step.done"
-                                                class="size-3"
-                                            />
-                                            <span v-else>{{ idx + 1 }}</span>
-                                        </div>
-                                        <span
-                                            :class="
-                                                step.done
-                                                    ? 'text-slate-800 dark:text-slate-200'
-                                                    : 'font-bold text-indigo-600 dark:text-indigo-400'
-                                            "
-                                        >
-                                            {{ step.title }}
-                                        </span>
-                                    </div>
-                                    <span
-                                        class="shrink-0 font-mono text-[10px] text-muted-foreground"
+                                    <Check class="size-3" />
+                                </div>
+                                <div class="text-xs">
+                                    <p
+                                        class="font-semibold text-slate-900 dark:text-white"
                                     >
-                                        {{ step.time }}
-                                    </span>
+                                        {{ step.title }}
+                                    </p>
+                                    <p
+                                        class="font-mono text-[10px] text-muted-foreground"
+                                    >
+                                        Aktor: {{ step.actor }}
+                                    </p>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Cryptographic Fingerprint Box -->
-                        <div
-                            class="mt-4 flex items-center justify-between gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-2.5 text-xs"
-                        >
-                            <div class="truncate">
-                                <span
-                                    class="font-mono text-[10px] text-muted-foreground"
-                                    >SHA-256 Fingerprint:
-                                </span>
-                                <span
-                                    class="truncate font-mono text-[10px] text-indigo-600 dark:text-indigo-400"
-                                >
-                                    {{
-                                        trackingResult.hash.substring(0, 32)
-                                    }}...
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                                @click="copyHash"
+                            <span
+                                class="shrink-0 pt-0.5 font-mono text-[10px] text-muted-foreground sm:pt-0"
                             >
-                                <Check
-                                    v-if="isCopied"
-                                    class="size-3 text-emerald-500"
-                                />
-                                <Copy v-else class="size-3" />
-                                <span>{{
-                                    isCopied ? 'Tersalin' : 'Salin Hash'
-                                }}</span>
-                            </button>
+                                {{ step.time }}
+                            </span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Cryptographic Fingerprint Box -->
+                <div
+                    class="mt-4 flex flex-col gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div class="flex min-w-0 items-center gap-2">
+                        <Fingerprint
+                            class="size-4 shrink-0 text-indigo-600 dark:text-indigo-400"
+                        />
+                        <div class="truncate">
+                            <span
+                                class="font-mono text-[10px] text-muted-foreground"
+                                >SHA-256:
+                            </span>
+                            <span
+                                class="truncate font-mono text-[10px] font-bold text-indigo-700 dark:text-indigo-300"
+                            >
+                                {{ trackingResult.hash.substring(0, 24) }}...
+                            </span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="flex items-center justify-center gap-1 rounded-lg border border-indigo-500/30 bg-white/80 px-3 py-1 font-mono text-[10px] font-bold text-indigo-700 hover:bg-white active:scale-[0.97] dark:bg-slate-800 dark:text-indigo-300"
+                        @click="copyHash"
+                    >
+                        <Check
+                            v-if="isCopied"
+                            class="size-3 text-emerald-500"
+                        />
+                        <Copy v-else class="size-3" />
+                        <span>{{
+                            isCopied ? 'Tersalin' : 'Salin Sidik Jari'
+                        }}</span>
+                    </button>
                 </div>
             </div>
         </div>
