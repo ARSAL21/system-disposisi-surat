@@ -51,4 +51,22 @@ enum AuditAction: string
     case PositionCreated = 'POSITION_CREATED';
     case PositionUpdated = 'POSITION_UPDATED';
     case PositionStatusChanged = 'POSITION_STATUS_CHANGED';
+    case OutgoingTemplateVersionCreated = 'OUTGOING_TEMPLATE_VERSION_CREATED';
+    case OutgoingTemplateStatusChanged = 'OUTGOING_TEMPLATE_STATUS_CHANGED';
+    case StandaloneOutgoingDraftCreated = 'STANDALONE_OUTGOING_DRAFT_CREATED';
+    case StandaloneOutgoingDraftUpdated = 'STANDALONE_OUTGOING_DRAFT_UPDATED';
+    case StandaloneOutgoingDocumentVersionCreated = 'STANDALONE_OUTGOING_DOCUMENT_VERSION_CREATED';
+    case StandaloneOutgoingSubmitted = 'STANDALONE_OUTGOING_SUBMITTED';
+    case StandaloneOutgoingReviewed = 'STANDALONE_OUTGOING_REVIEWED';
+    case StandaloneOutgoingNumberAssigned = 'STANDALONE_OUTGOING_NUMBER_ASSIGNED';
+    case StandaloneOutgoingSubmittedToSekda = 'STANDALONE_OUTGOING_SUBMITTED_TO_SEKDA';
+    case StandaloneOutgoingQrApproved = 'STANDALONE_OUTGOING_QR_APPROVED';
+    case StandaloneOutgoingManualSignatureSelected = 'STANDALONE_OUTGOING_MANUAL_SIGNATURE_SELECTED';
+    case StandaloneOutgoingManualScanUploaded = 'STANDALONE_OUTGOING_MANUAL_SCAN_UPLOADED';
+    case StandaloneOutgoingManualScanReviewed = 'STANDALONE_OUTGOING_MANUAL_SCAN_REVIEWED';
+    case StandaloneOutgoingReturnedBySekda = 'STANDALONE_OUTGOING_RETURNED_BY_SEKDA';
+    case StandaloneOutgoingDelivered = 'STANDALONE_OUTGOING_DELIVERED';
+    case StandaloneOutgoingEmailLinkIssued = 'STANDALONE_OUTGOING_EMAIL_LINK_ISSUED';
+    case StandaloneOutgoingEmailLinkRevoked = 'STANDALONE_OUTGOING_EMAIL_LINK_REVOKED';
+    case StandaloneOutgoingCorrectionDraftCreated = 'STANDALONE_OUTGOING_CORRECTION_DRAFT_CREATED';
 }
