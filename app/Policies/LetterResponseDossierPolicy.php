@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\PermissionName;
 use App\LetterResponses\LetterResponseScopeQuery;
+use App\LetterResponses\LetterResponseSekdaPositionResolver;
 use App\Models\LetterResponseDossier;
 use App\Models\User;
 use App\Services\LetterResponsePositionAssignmentResolver;
@@ -14,6 +15,7 @@ final class LetterResponseDossierPolicy
     public function __construct(
         private readonly LetterResponseScopeQuery $scopeQuery,
         private readonly LetterResponsePositionAssignmentResolver $assignmentResolver,
+        private readonly LetterResponseSekdaPositionResolver $sekdaPositionResolver,
     ) {}
 
     public function viewAny(User $user): Response
@@ -65,11 +67,9 @@ final class LetterResponseDossierPolicy
             return $authorization;
         }
 
-        $positionId = (int) $dossier->incomingLetter->routes()
-            ->orderBy('id')
-            ->value('recipient_position_id');
+        $positionId = $this->sekdaPositionResolver->positionId($dossier->incomingLetter);
 
-        return $positionId > 0 && $this->assignmentResolver->hasAssignmentForPosition($user, $positionId)
+        return $positionId !== null && $this->assignmentResolver->hasAssignmentForPosition($user, $positionId)
             ? Response::allow()
             : Response::denyAsNotFound();
     }

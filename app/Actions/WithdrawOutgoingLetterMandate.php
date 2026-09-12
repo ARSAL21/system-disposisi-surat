@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Enums\LetterResponseDossierStatus;
 use App\Enums\OutgoingLetterStatus;
 use App\Exceptions\OutgoingLetterStateConflict;
+use App\LetterResponses\LetterResponseSekdaPositionResolver;
 use App\Models\OutgoingLetter;
 use App\Models\User;
 use App\Services\LetterResponsePositionAssignmentResolver;
@@ -18,6 +19,7 @@ final class WithdrawOutgoingLetterMandate
     public function __construct(
         private readonly OutgoingLetterLockService $lockService,
         private readonly LetterResponsePositionAssignmentResolver $assignmentResolver,
+        private readonly LetterResponseSekdaPositionResolver $sekdaPositionResolver,
         private readonly RecordAudit $recordAudit,
     ) {}
 
@@ -41,10 +43,7 @@ final class WithdrawOutgoingLetterMandate
                 throw OutgoingLetterStateConflict::lastActiveMandate();
             }
 
-            $executivePositionId = (int) $context['letter']->routes()->orderBy('id')->value('recipient_position_id');
-            if ($executivePositionId < 1) {
-                throw OutgoingLetterStateConflict::invalidGraph();
-            }
+            $executivePositionId = $this->sekdaPositionResolver->lockPositionId($context['letter']);
 
             $lockedActor = User::query()->whereKey($actor->getKey())->lockForUpdate()->firstOrFail();
             $assignment = $this->assignmentResolver->lockAssignmentForPosition($lockedActor, $executivePositionId);

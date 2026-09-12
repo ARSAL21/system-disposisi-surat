@@ -7,6 +7,7 @@ use App\Enums\IncomingLetterStatus;
 use App\Enums\LetterResponseDossierStatus;
 use App\Enums\OutgoingLetterStatus;
 use App\Exceptions\LetterResponseStateConflict;
+use App\LetterResponses\LetterResponseSekdaPositionResolver;
 use App\Models\IncomingLetter;
 use App\Models\LetterResponseDossier;
 use App\Models\LetterResponseReview;
@@ -20,6 +21,7 @@ final class FinalizeLetterResponseDossier
 {
     public function __construct(
         private readonly LetterResponsePositionAssignmentResolver $assignmentResolver,
+        private readonly LetterResponseSekdaPositionResolver $sekdaPositionResolver,
         private readonly RecordAudit $recordAudit,
     ) {}
 
@@ -63,11 +65,7 @@ final class FinalizeLetterResponseDossier
                 throw LetterResponseStateConflict::staleDossier();
             }
 
-            $executivePositionId = (int) $letter->routes()->orderBy('id')->value('recipient_position_id');
-
-            if ($executivePositionId < 1) {
-                throw LetterResponseStateConflict::staleDossier();
-            }
+            $executivePositionId = $this->sekdaPositionResolver->lockPositionId($letter);
 
             $lockedActor = User::query()->whereKey($actor->getKey())->lockForUpdate()->firstOrFail();
             $assignment = $this->assignmentResolver->lockAssignmentForPosition($lockedActor, $executivePositionId);

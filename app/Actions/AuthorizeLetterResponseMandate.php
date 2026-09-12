@@ -8,6 +8,7 @@ use App\Enums\LetterResponseDocumentKind;
 use App\Enums\LetterResponseDossierStatus;
 use App\Enums\OutgoingLetterStatus;
 use App\Exceptions\LetterResponseStateConflict;
+use App\LetterResponses\LetterResponseSekdaPositionResolver;
 use App\Models\IncomingLetter;
 use App\Models\LetterResponseDocumentVersion;
 use App\Models\LetterResponseDossier;
@@ -25,6 +26,7 @@ final class AuthorizeLetterResponseMandate
 {
     public function __construct(
         private readonly LetterResponsePositionAssignmentResolver $assignmentResolver,
+        private readonly LetterResponseSekdaPositionResolver $sekdaPositionResolver,
         private readonly RecordAudit $recordAudit,
     ) {}
 
@@ -45,11 +47,7 @@ final class AuthorizeLetterResponseMandate
                 throw LetterResponseStateConflict::staleDossier();
             }
 
-            $executivePositionId = (int) $letter->routes()->orderBy('id')->value('recipient_position_id');
-
-            if ($executivePositionId < 1) {
-                throw LetterResponseStateConflict::staleDossier();
-            }
+            $executivePositionId = $this->sekdaPositionResolver->lockPositionId($letter);
 
             $lockedActor = User::query()->whereKey($actor->getKey())->lockForUpdate()->firstOrFail();
             $assignment = $this->assignmentResolver->lockAssignmentForPosition($lockedActor, $executivePositionId);
@@ -121,13 +119,12 @@ final class AuthorizeLetterResponseMandate
     private function isEligibleSignatory(IncomingLetter $letter, Position $position, int $executivePositionId): bool
     {
         if ((int) $position->getKey() === $executivePositionId
-            && $position->positionLevel()->where('code', OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL)->exists()) {
+            && $position->positionLevel()->where('code', OrganizationCatalog::REGIONAL_SECRETARY_LEVEL)->exists()) {
             return true;
         }
 
         return $position->positionLevel()->where('code', OrganizationCatalog::ASSISTANT_LEVEL)->exists()
             && $letter->dispositions()
-                ->whereNotNull('source_route_id')
                 ->whereHas('recipients', fn (Builder $recipient): Builder => $recipient
                     ->where('recipient_position_id', $position->getKey()))
                 ->exists();
