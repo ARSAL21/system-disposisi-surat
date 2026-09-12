@@ -18,6 +18,8 @@ use App\Http\Controllers\BackOffice\Disposition\StartDispositionBranchController
 use App\Http\Controllers\BackOffice\Disposition\StoreDispositionFollowUpController;
 use App\Http\Controllers\BackOffice\Disposition\StoreForwardDispositionController;
 use App\Http\Controllers\BackOffice\Disposition\StoreInitialDispositionController;
+use App\Http\Controllers\BackOffice\Disposition\StoreMayorDispositionController;
+use App\Http\Controllers\BackOffice\Disposition\StoreSekdaDispositionController;
 use App\Http\Controllers\BackOffice\Documents\DocumentArchiveController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentFileController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentHistoryController;
@@ -335,6 +337,29 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         'throttle:disposition-create',
                     ])
                     ->name('executive.inbox.dispositions.store');
+
+                Route::post('executive/inbox/routes/{letterRoute}/forward-to-sekda', StoreMayorDispositionController::class)
+                    ->middleware([
+                        'can:'.PermissionName::CreateDispositions->value,
+                        'throttle:disposition-create',
+                    ])
+                    ->name('executive.inbox.forward-to-sekda.store');
+
+                Route::get('executive/inbox/recipients/{dispositionRecipient}', [ExecutiveInboxController::class, 'showRecipient'])
+                    ->middleware('can:'.PermissionName::ViewExecutiveInbox->value)
+                    ->name('executive.inbox.recipient.show');
+                Route::get('executive/inbox/recipients/{dispositionRecipient}/document/preview', [DispositionInboxDocumentController::class, 'executivePreview'])
+                    ->middleware('throttle:private-document-access')
+                    ->name('executive.inbox.recipient.document.preview');
+                Route::get('executive/inbox/recipients/{dispositionRecipient}/document/download', [DispositionInboxDocumentController::class, 'executiveDownload'])
+                    ->middleware('throttle:private-document-access')
+                    ->name('executive.inbox.recipient.document.download');
+                Route::post('executive/inbox/recipients/{dispositionRecipient}/dispositions', StoreSekdaDispositionController::class)
+                    ->middleware([
+                        'can:'.PermissionName::CreateDispositions->value,
+                        'throttle:disposition-create',
+                    ])
+                    ->name('executive.inbox.recipient.dispositions.store');
 
                 Route::prefix('dispositions/inbox')
                     ->name('dispositions.inbox.')
