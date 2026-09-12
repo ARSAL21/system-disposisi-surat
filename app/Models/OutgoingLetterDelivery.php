@@ -6,6 +6,7 @@ use App\Enums\OutgoingDeliveryMethod;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -65,5 +66,17 @@ final class OutgoingLetterDelivery extends Model
     public function deliveredByPositionAssignment(): BelongsTo
     {
         return $this->belongsTo(PositionAssignment::class, 'delivered_by_position_assignment_id');
+    }
+
+    /** @return HasMany<OutgoingLetterDeliveryLink, $this> */
+    public function links(): HasMany
+    {
+        return $this->hasMany(OutgoingLetterDeliveryLink::class)->orderByDesc('id');
+    }
+
+    /** @return HasMany<OutgoingLetterInternalCopyNotification, $this> */
+    public function internalCopyNotifications(): HasMany
+    {
+        return $this->hasMany(OutgoingLetterInternalCopyNotification::class)->orderBy('id');
     }
 }

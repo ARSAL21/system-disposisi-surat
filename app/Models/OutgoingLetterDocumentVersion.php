@@ -25,6 +25,7 @@ use LogicException;
  * @property CarbonInterface $created_at
  * @property-read OutgoingLetter $outgoingLetter
  * @property-read OutgoingLetterDocumentReview|null $review
+ * @property-read OutgoingLetterManualSignatureReview|null $manualSignatureReview
  */
 final class OutgoingLetterDocumentVersion extends Model
 {
@@ -80,5 +81,11 @@ final class OutgoingLetterDocumentVersion extends Model
     public function review(): HasOne
     {
         return $this->hasOne(OutgoingLetterDocumentReview::class);
+    }
+
+    /** @return HasOne<OutgoingLetterManualSignatureReview, $this> */
+    public function manualSignatureReview(): HasOne
+    {
+        return $this->hasOne(OutgoingLetterManualSignatureReview::class);
     }
 }
