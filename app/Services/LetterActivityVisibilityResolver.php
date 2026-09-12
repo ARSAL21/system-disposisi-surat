@@ -28,7 +28,7 @@ class LetterActivityVisibilityResolver
                     ->where(function (Builder $eligiblePosition): void {
                         $eligiblePosition
                             ->whereHas('positionLevel', fn (Builder $level): Builder => $level
-                                ->where('code', OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL)
+                                ->whereIn('code', OrganizationCatalog::executiveLevelCodes())
                                 ->where('is_active', true))
                             ->orWhere(function (Builder $generalAffairsHead): void {
                                 $generalAffairsHead

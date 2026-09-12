@@ -46,7 +46,7 @@ final class LetterResponsePositionAssignmentResolver
                 ->whereHas('positionLevel', fn (Builder $level): Builder => $level
                     ->where('is_active', true)
                     ->whereIn('code', [
-                        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+                        ...OrganizationCatalog::executiveLevelCodes(),
                         OrganizationCatalog::ASSISTANT_LEVEL,
                         OrganizationCatalog::SECTION_HEAD_LEVEL,
                     ])));
