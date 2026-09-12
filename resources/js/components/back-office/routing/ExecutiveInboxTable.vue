@@ -70,7 +70,7 @@ function getPhaseBadgeClass(phase: string): string {
             <tbody class="divide-y divide-border/60 dark:divide-border/40">
                 <tr
                     v-for="route in routes"
-                    :key="route.route_id"
+                    :key="`${route.entry_type}-${route.entry_id}`"
                     class="transition-colors duration-150 hover:bg-indigo-500/5 dark:hover:bg-indigo-500/10"
                 >
                     <!-- Column 1: Subject & Agenda -->
@@ -125,6 +125,9 @@ function getPhaseBadgeClass(phase: string): string {
                             </p>
                         </div>
                         <span v-else class="text-muted-foreground">-</span>
+                        <p class="mt-1 text-[10px] text-muted-foreground">
+                            {{ route.source_label }}
+                        </p>
                     </td>
 
                     <!-- Column 4: Phase & Status -->

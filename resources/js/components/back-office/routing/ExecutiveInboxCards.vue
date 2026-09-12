@@ -55,7 +55,7 @@ function getPhaseBadgeClass(phase: string): string {
     <div class="grid grid-cols-1 gap-5">
         <article
             v-for="route in routes"
-            :key="route.route_id"
+            :key="`${route.entry_type}-${route.entry_id}`"
             class="group relative overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-500/40 hover:shadow-xl dark:border-border/60 dark:bg-slate-900/80"
         >
             <!-- Card Header: Metadata Row -->
@@ -68,6 +68,12 @@ function getPhaseBadgeClass(phase: string): string {
                         class="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1 font-mono text-xs font-bold text-indigo-700 dark:text-indigo-300"
                     >
                         Agenda #{{ route.letter.agenda_number }}
+                    </span>
+
+                    <span
+                        class="rounded-xl border border-border/70 px-2.5 py-1 text-[11px] text-muted-foreground"
+                    >
+                        {{ route.source_label }}
                     </span>
 
                     <span
