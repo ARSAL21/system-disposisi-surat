@@ -9,11 +9,12 @@ import RoutingLetterOverviewCard from '@/components/back-office/routing/RoutingL
 import RoutingOfficialDocumentCard from '@/components/back-office/routing/RoutingOfficialDocumentCard.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
-    previewExecutivePositions,
+    previewInitialRouteOptions,
     previewLetterRoutingItems,
 } from '@/lib/letterRoutingPreview';
 import type {
-    ExecutivePositionOption,
+    InitialRouteOption,
+    InitialRoutePath,
     InitialRouteReceipt,
     LetterRoutingCapabilities,
     LetterRoutingItem,
@@ -22,7 +23,7 @@ import type {
 
 const props = defineProps<{
     letter?: LetterRoutingItem;
-    executivePositions?: ExecutivePositionOption[];
+    routeOptions?: InitialRouteOption[];
     capabilities?: LetterRoutingCapabilities;
     routes?: LetterRoutingRoutes;
     preview?: boolean;
@@ -72,10 +73,8 @@ const activeLetter = computed<LetterRoutingItem | null>(() => {
         current_route: simulatedRoute.value,
     };
 });
-const executivePositions = computed(() =>
-    previewMode.value
-        ? previewExecutivePositions
-        : (props.executivePositions ?? []),
+const routeOptions = computed(() =>
+    previewMode.value ? previewInitialRouteOptions : (props.routeOptions ?? []),
 );
 const canRoute = computed(
     () =>
@@ -103,18 +102,18 @@ function handleDocumentAction(action: 'preview' | 'download'): void {
             : 'Unduhan dinonaktifkan pada fixture UI. Berkas produksi tetap harus dilayani endpoint privat yang terotorisasi.';
 }
 
-function routeLetter(targetPositionId: number): void {
+function routeLetter(routePath: InitialRoutePath): void {
     errors.value = {};
     successNotice.value = '';
 
     if (previewMode.value) {
-        const target = executivePositions.value.find(
-            (position) => position.id === targetPositionId,
+        const target = routeOptions.value.find(
+            (option) => option.path === routePath,
         );
 
         if (!target) {
             errors.value = {
-                target_position_id: 'Tujuan pimpinan tidak tersedia.',
+                route_path: 'Jalur pimpinan tidak tersedia.',
             };
 
             return;
@@ -124,7 +123,13 @@ function routeLetter(targetPositionId: number): void {
         previewTimer = setTimeout(() => {
             simulatedRoute.value = {
                 status: 'PENDING',
-                target_position: target,
+                target_position: target.target_position ?? {
+                    id: 0,
+                    code: 'UNAVAILABLE',
+                    name: 'Jabatan belum tersedia',
+                    holder_name: null,
+                    is_available: false,
+                },
                 routed_by: {
                     name: 'La Ode Rahmat Hidayat',
                     position: 'Kepala Bagian Umum',
@@ -143,7 +148,7 @@ function routeLetter(targetPositionId: number): void {
 
     if (!props.routes?.store) {
         errors.value = {
-            target_position_id:
+            route_path:
                 'Endpoint routing belum tersedia. Muat ulang halaman setelah backend M5 diaktifkan.',
         };
 
@@ -152,7 +157,7 @@ function routeLetter(targetPositionId: number): void {
 
     router.post(
         props.routes.store,
-        { target_position_id: targetPositionId },
+        { route_path: routePath },
         {
             preserveScroll: true,
             onStart: () => {
@@ -231,7 +236,7 @@ onBeforeUnmount(() => {
                     />
                     <RoutingDecisionPanel
                         v-else
-                        :positions="executivePositions"
+                        :options="routeOptions"
                         :can-route="canRoute"
                         :processing="processing"
                         :errors="errors"
