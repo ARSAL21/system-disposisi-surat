@@ -71,13 +71,23 @@ final class DispositionPresenter
             throw DispositionStateConflict::staleSource();
         }
 
+        $recipientLevel = $disposition->recipients->first()->recipientPosition->positionLevel->code;
+        $isMayorToSekda = $disposition->recipients->count() === 1
+            && $recipientLevel === OrganizationCatalog::REGIONAL_SECRETARY_LEVEL;
+
+        if (! $isMayorToSekda && $recipientLevel !== OrganizationCatalog::ASSISTANT_LEVEL) {
+            throw DispositionStateConflict::inconsistentGraph();
+        }
+
         return [
             'recipients' => $disposition->recipients
                 ->map(fn (DispositionRecipient $recipient): array => [
                     'status' => $recipient->status->value,
                     'recipient_position' => $this->position(
                         $recipient->recipientPosition,
-                        OrganizationCatalog::ASSISTANT_LEVEL,
+                        $isMayorToSekda
+                            ? OrganizationCatalog::REGIONAL_SECRETARY_LEVEL
+                            : OrganizationCatalog::ASSISTANT_LEVEL,
                     ),
                 ])
                 ->values()
@@ -195,6 +205,22 @@ final class DispositionPresenter
             throw DispositionStateConflict::inconsistentGraph();
         }
 
+        if ($assistantRecipients->count() === 1
+            && $assistantRecipients->first()->recipientPosition->positionLevel->code === OrganizationCatalog::REGIONAL_SECRETARY_LEVEL) {
+            $sekdaRecipient = $assistantRecipients->firstOrFail();
+            $forwardedDisposition = $sekdaRecipient->childDispositions->first();
+
+            if ($sekdaRecipient->childDispositions->count() > 1) {
+                throw DispositionStateConflict::inconsistentGraph();
+            }
+
+            if (! $forwardedDisposition instanceof Disposition) {
+                return $this->emptyBranchProgress('AWAITING_FORWARDING');
+            }
+
+            return $this->executiveBranchProgress($forwardedDisposition);
+        }
+
         $branches = [];
         $hasUnforwardedAssistant = false;
 
@@ -265,6 +291,36 @@ final class DispositionPresenter
             'current_document' => $presentedLetter['current_document'],
             'links' => [
                 'show' => route('back-office.dispositions.inbox.show', $recipient),
+            ],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function executiveInboxRecipient(DispositionRecipient $recipient): array
+    {
+        if ($recipient->received_at === null) {
+            throw DispositionStateConflict::staleSource();
+        }
+
+        $disposition = $recipient->disposition;
+        $letter = $disposition->incomingLetter;
+        $presentedLetter = $this->letterPresenter->executiveInboxRecipientLetter($letter, $recipient);
+
+        return [
+            'recipient_id' => (int) $recipient->getKey(),
+            'letter' => $presentedLetter,
+            'sender' => $this->actor($disposition),
+            'recipient_position' => $this->position(
+                $recipient->recipientPosition,
+                OrganizationCatalog::REGIONAL_SECRETARY_LEVEL,
+            ),
+            'instructions' => $this->instructionSnapshots($disposition->instructionLabels),
+            'instruction_note' => $disposition->instruction_note,
+            'status' => $recipient->status->value,
+            'received_at' => $recipient->received_at->toISOString(),
+            'current_document' => $presentedLetter['current_document'],
+            'links' => [
+                'show' => route('back-office.executive.inbox.recipient.show', $recipient),
             ],
         ];
     }
@@ -437,6 +493,8 @@ final class DispositionPresenter
 
         if (($expectedLevelCode !== null && $levelCode !== $expectedLevelCode)
             || ! in_array($levelCode, [
+                OrganizationCatalog::MAYOR_LEVEL,
+                OrganizationCatalog::REGIONAL_SECRETARY_LEVEL,
                 OrganizationCatalog::ASSISTANT_LEVEL,
                 OrganizationCatalog::SECTION_HEAD_LEVEL,
             ], true)) {

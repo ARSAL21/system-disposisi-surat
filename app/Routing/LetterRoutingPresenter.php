@@ -11,7 +11,6 @@ use App\Models\LetterRoute;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Services\DocumentStorageGuard;
-use Illuminate\Support\Collection;
 
 final class LetterRoutingPresenter
 {
@@ -46,15 +45,39 @@ final class LetterRoutingPresenter
         return $this->letter($letter, null, $recipient);
     }
 
+    /** @return array<string, mixed> */
+    public function executiveInboxRecipientLetter(IncomingLetter $letter, DispositionRecipient $recipient): array
+    {
+        $presented = $this->letter($letter, null, $recipient);
+        $presented['links']['show'] = route('back-office.executive.inbox.recipient.show', $recipient);
+        $presented['current_document']['preview_url'] = route('back-office.executive.inbox.recipient.document.preview', $recipient);
+        $presented['current_document']['download_url'] = route('back-office.executive.inbox.recipient.document.download', $recipient);
+
+        return $presented;
+    }
+
     /**
-     * @param  Collection<int, Position>  $positions
+     * @param  iterable<array{path: string, label: string, description: string, position: Position|null}>  $options
      * @return list<array<string, mixed>>
      */
-    public function executivePositions(Collection $positions): array
+    public function initialRouteOptions(iterable $options): array
     {
-        return array_values($positions
-            ->map(fn (Position $position): array => $this->position($position))
-            ->all());
+        $presented = [];
+
+        foreach ($options as $option) {
+            $presented[] = [
+                'path' => $option['path'],
+                'label' => $option['label'],
+                'description' => $option['description'],
+                'target_position' => $option['position'] instanceof Position
+                    ? $this->position($option['position'])
+                    : null,
+                'is_available' => $option['position'] instanceof Position
+                    && $this->isPositionAvailable($option['position']),
+            ];
+        }
+
+        return $presented;
     }
 
     /** @return array<string, mixed> */
@@ -150,12 +173,7 @@ final class LetterRoutingPresenter
         $holder = $assignment instanceof PositionAssignment
             ? $assignment->user
             : null;
-        $isAvailable = $assignment instanceof PositionAssignment
-            && $assignment->started_at->lessThanOrEqualTo(now())
-            && $holder !== null
-            && $holder->account_type === AccountType::InternalAccount
-            && $holder->is_active
-            && $holder->hasVerifiedEmail();
+        $isAvailable = $this->isPositionAvailable($position);
 
         return [
             'id' => (int) $position->getKey(),
@@ -164,5 +182,19 @@ final class LetterRoutingPresenter
             'holder_name' => $isAvailable ? $holder->name : null,
             'is_available' => $isAvailable,
         ];
+    }
+
+    private function isPositionAvailable(Position $position): bool
+    {
+        $assignment = $position->activeAssignment;
+        $holder = $assignment instanceof PositionAssignment ? $assignment->user : null;
+
+        return $position->is_active
+            && $assignment instanceof PositionAssignment
+            && $assignment->started_at->lessThanOrEqualTo(now())
+            && $holder !== null
+            && $holder->account_type === AccountType::InternalAccount
+            && $holder->is_active
+            && $holder->hasVerifiedEmail();
     }
 }
