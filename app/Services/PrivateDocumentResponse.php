@@ -10,6 +10,8 @@ use App\Models\LetterResponseDossier;
 use App\Models\LetterSubmission;
 use App\Models\OutgoingLetter;
 use App\Models\OutgoingLetterDocumentVersion;
+use App\Models\StandaloneOutgoingDocumentVersion;
+use App\Models\StandaloneOutgoingDraft;
 use App\Models\SubmissionDocument;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -82,18 +84,52 @@ class PrivateDocumentResponse
         return $this->buildOutgoingLetterDocument($letter, $version, true);
     }
 
+    public function previewStandaloneOutgoingSourceDocument(
+        StandaloneOutgoingDraft $draft,
+        StandaloneOutgoingDocumentVersion $version,
+    ): StreamedResponse {
+        return $this->buildStandaloneOutgoingSourceDocument($draft, $version, false);
+    }
+
+    public function downloadStandaloneOutgoingSourceDocument(
+        StandaloneOutgoingDraft $draft,
+        StandaloneOutgoingDocumentVersion $version,
+    ): StreamedResponse {
+        return $this->buildStandaloneOutgoingSourceDocument($draft, $version, true);
+    }
+
     private function buildOutgoingLetterDocument(
         OutgoingLetter $letter,
         OutgoingLetterDocumentVersion $version,
         bool $asDownload,
     ): StreamedResponse {
-        app(OutgoingLetterDocumentStorage::class)->validate($letter, $version);
+        if ($letter->origin->value === 'STANDALONE') {
+            app(StandaloneOutgoingFinalDocumentStorage::class)->validate($letter, $version);
+        } else {
+            app(OutgoingLetterDocumentStorage::class)->validate($letter, $version);
+        }
 
         return $this->buildStorageResponse(
             disk: $version->storage_disk,
             path: $version->storage_path,
             originalFilename: $version->original_filename,
             fallbackId: 'surat-keluar-'.$letter->public_id,
+            asDownload: $asDownload,
+        );
+    }
+
+    private function buildStandaloneOutgoingSourceDocument(
+        StandaloneOutgoingDraft $draft,
+        StandaloneOutgoingDocumentVersion $version,
+        bool $asDownload,
+    ): StreamedResponse {
+        app(StandaloneOutgoingDocumentStorage::class)->validate($draft, $version);
+
+        return $this->buildStorageResponse(
+            disk: $version->storage_disk,
+            path: $version->storage_path,
+            originalFilename: $version->original_filename,
+            fallbackId: 'konsep-'.$draft->public_id,
             asDownload: $asDownload,
         );
     }
