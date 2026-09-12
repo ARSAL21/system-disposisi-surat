@@ -56,7 +56,7 @@ class LetterRoutingController extends Controller
 
         return Inertia::render('back-office/letter-routing/Show', [
             'letter' => $presenter->routingLetter($incomingLetter),
-            'executivePositions' => $presenter->executivePositions($targetResolver->options()),
+            'routeOptions' => $presenter->initialRouteOptions($targetResolver->options()),
             'capabilities' => [
                 'can_route' => Gate::allows('createRoute', $incomingLetter),
             ],
