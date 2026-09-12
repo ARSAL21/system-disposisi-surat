@@ -38,6 +38,26 @@ class DispositionInboxDocumentController extends Controller
         );
     }
 
+    public function executivePreview(
+        DispositionRecipient $dispositionRecipient,
+        PrivateDocumentResponse $documentResponse,
+    ): StreamedResponse {
+        Gate::authorize('viewExecutiveInbox', $dispositionRecipient);
+        $letter = $dispositionRecipient->disposition->incomingLetter;
+
+        return $documentResponse->previewLetterDocument($letter, $this->currentDocument($dispositionRecipient));
+    }
+
+    public function executiveDownload(
+        DispositionRecipient $dispositionRecipient,
+        PrivateDocumentResponse $documentResponse,
+    ): StreamedResponse {
+        Gate::authorize('viewExecutiveInbox', $dispositionRecipient);
+        $letter = $dispositionRecipient->disposition->incomingLetter;
+
+        return $documentResponse->downloadLetterDocument($letter, $this->currentDocument($dispositionRecipient));
+    }
+
     private function currentDocument(DispositionRecipient $recipient): LetterDocument
     {
         $document = $recipient->disposition->incomingLetter->currentDocument()
