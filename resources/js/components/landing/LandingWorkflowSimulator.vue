@@ -25,15 +25,15 @@ const workflowStages = [
     },
     {
         id: 2,
-        code: 'EXECUTIVE_ENTRY',
-        title: '02. Telaah & Disposisi Pimpinan',
-        role: 'Wali Kota / Sekretaris Daerah',
+        code: 'REGIONAL_SECRETARY',
+        title: '02. Telaah & Disposisi Sekda',
+        role: 'Sekretaris Daerah',
         badgeColor:
             'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
         description:
-            'Pimpinan eksekutif memeriksa naskah, menetapkan tingkat urgensi (Biasa, Penting, Rahasia, Sangat Segera), dan memberikan instruksi disposisi primer.',
+            'Sekda memeriksa naskah, termasuk arahan Wali Kota bila ada, menetapkan tingkat urgensi, dan memberikan instruksi disposisi primer.',
         invariants: [
-            'Penetapan instruksi kebijakan',
+            'Arahan Wali Kota tetap melalui Sekda',
             'Penentuan tenggat batas waktu (SLA)',
             'Disposisi primer ke Asisten / Koordinator',
         ],
