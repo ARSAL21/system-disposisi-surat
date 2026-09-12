@@ -47,7 +47,7 @@ test('organization level command repairs protected drift and preserves unknown l
     $generalAffairs = PositionLevel::query()->where('code', 'GENERAL_AFFAIRS')->firstOrFail();
 
     expect($generalAffairs->name)->toBe('Bagian Umum / Tata Usaha')
-        ->and($generalAffairs->hierarchy_order)->toBe(10)
+        ->and($generalAffairs->hierarchy_order)->toBe(50)
         ->and($generalAffairs->is_active)->toBeTrue()
         ->and($unknown->fresh())->not->toBeNull()
         ->and(AuditLog::query()

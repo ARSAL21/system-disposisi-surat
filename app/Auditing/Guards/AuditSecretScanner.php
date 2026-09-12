@@ -111,6 +111,13 @@ class AuditSecretScanner
         }
 
         foreach (self::FORBIDDEN_STEMS as $stem) {
+            // The protected Position level REGIONAL_SECRETARY is organisational
+            // metadata, not a credential. Other forbidden stems still catch a
+            // compound key such as `secretary_token` through `token`.
+            if ($stem === 'secret' && str_contains($normalizedKey, 'secretary')) {
+                continue;
+            }
+
             if (str_contains($normalizedKey, $stem)) {
                 throw AuditContractViolationException::forAction(
                     $contract->action->value,
