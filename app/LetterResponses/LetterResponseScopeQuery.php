@@ -6,6 +6,7 @@ use App\Enums\LetterResponseDocumentKind;
 use App\Models\LetterResponseDocumentVersion;
 use App\Models\LetterResponseDossier;
 use App\Models\User;
+use App\Organization\OrganizationCatalog;
 use App\Reporting\ReportScopeResolver;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -25,8 +26,20 @@ final class LetterResponseScopeQuery
 
         return $query->where(function (Builder $visibility) use ($scope): void {
             if ($scope->executivePositionIds !== []) {
-                $visibility->whereHas('incomingLetter.routes', fn (Builder $route): Builder => $route
-                    ->whereIn('recipient_position_id', $scope->executivePositionIds));
+                $visibility->where(function (Builder $executiveVisibility) use ($scope): void {
+                    $executiveVisibility->whereHas('incomingLetter.routes', fn (Builder $route): Builder => $route
+                        ->whereIn('recipient_position_id', $scope->executivePositionIds))
+                        ->orWhereHas('incomingLetter.dispositions.recipients', fn (Builder $recipient): Builder => $recipient
+                            ->whereIn('recipient_position_id', $scope->executivePositionIds)
+                            ->whereHas('recipientPosition', fn (Builder $position): Builder => $position
+                                ->where('code', OrganizationCatalog::REGIONAL_SECRETARY_POSITION)
+                                ->whereHas('positionLevel', fn (Builder $level): Builder => $level
+                                    ->where('code', OrganizationCatalog::REGIONAL_SECRETARY_LEVEL)))
+                            ->whereHas('disposition.sourceRoute.recipientPosition', fn (Builder $position): Builder => $position
+                                ->where('code', OrganizationCatalog::MAYOR_POSITION)
+                                ->whereHas('positionLevel', fn (Builder $level): Builder => $level
+                                    ->where('code', OrganizationCatalog::MAYOR_LEVEL))));
+                });
             }
 
             if ($scope->assistantPositionIds !== []) {
@@ -86,9 +99,7 @@ final class LetterResponseScopeQuery
         }
 
         if ($scope->executivePositionIds !== []
-            && $dossier->incomingLetter->routes()
-                ->whereIn('recipient_position_id', $scope->executivePositionIds)
-                ->exists()) {
+            && $this->canExecutiveViewDossier($dossier, $scope->executivePositionIds)) {
             return true;
         }
 
@@ -115,5 +126,25 @@ final class LetterResponseScopeQuery
                 fn (Builder $recipient): Builder => $recipient
                     ->whereIn('recipient_position_id', $scope->assistantPositionIds),
             )->exists();
+    }
+
+    /** @param list<int> $executivePositionIds */
+    private function canExecutiveViewDossier(LetterResponseDossier $dossier, array $executivePositionIds): bool
+    {
+        return $dossier->incomingLetter->routes()
+            ->whereIn('recipient_position_id', $executivePositionIds)
+            ->exists()
+            || $dossier->incomingLetter->dispositions()
+                ->whereHas('recipients', fn (Builder $recipient): Builder => $recipient
+                    ->whereIn('recipient_position_id', $executivePositionIds)
+                    ->whereHas('recipientPosition', fn (Builder $position): Builder => $position
+                        ->where('code', OrganizationCatalog::REGIONAL_SECRETARY_POSITION)
+                        ->whereHas('positionLevel', fn (Builder $level): Builder => $level
+                            ->where('code', OrganizationCatalog::REGIONAL_SECRETARY_LEVEL)))
+                    ->whereHas('disposition.sourceRoute.recipientPosition', fn (Builder $position): Builder => $position
+                        ->where('code', OrganizationCatalog::MAYOR_POSITION)
+                        ->whereHas('positionLevel', fn (Builder $level): Builder => $level
+                            ->where('code', OrganizationCatalog::MAYOR_LEVEL))))
+                ->exists();
     }
 }
