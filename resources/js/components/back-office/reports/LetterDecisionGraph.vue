@@ -23,6 +23,12 @@ const rootStatus = computed(() =>
     props.report.letter.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
 );
 
+const rootLevel = computed<ReportNodeInspectorData['level']>(() =>
+    props.report.initial_route?.target_position.code === 'WALI_KOTA'
+        ? 'MAYOR'
+        : 'REGIONAL_SECRETARY',
+);
+
 function progressForAssistant(
     branch: ReportProcessAssistantBranch,
 ): PeriodicReportBranchProgress {
@@ -56,7 +62,7 @@ function rootInspector(): ReportNodeInspectorData {
     return {
         reference: props.report.letter.reference,
         context: 'LETTER',
-        level: 'EXECUTIVE_ENTRY',
+        level: rootLevel.value,
         position: route.target_position,
         status: rootStatus.value,
         progress: props.report.progress,
@@ -74,6 +80,36 @@ function rootInspector(): ReportNodeInspectorData {
         completion_note: null,
         completed_by: null,
         participant_position_codes: [route.target_position.code],
+    };
+}
+
+function sekdaInspector(): ReportNodeInspectorData {
+    const handoff = props.report.sekda_handoff;
+
+    if (!handoff) {
+        throw new Error('Arahan Wali Kota kepada Sekda tidak tersedia.');
+    }
+
+    return {
+        reference: handoff.reference,
+        context: 'LETTER',
+        level: 'REGIONAL_SECRETARY',
+        position: handoff.recipient_position,
+        status: handoff.status,
+        progress: props.report.progress,
+        attention: null,
+        timings: [
+            { label: 'Diterima Sekda', value: handoff.received_at },
+            { label: 'Diteruskan', value: handoff.forwarded_at },
+        ],
+        instructions: handoff.instructions,
+        instruction_note: handoff.instruction_note,
+        decided_by: handoff.disposed_by,
+        decided_at: handoff.disposed_at,
+        follow_ups: [],
+        completion_note: null,
+        completed_by: null,
+        participant_position_codes: [handoff.recipient_position.code],
     };
 }
 
@@ -215,7 +251,7 @@ const assistantBusClass = computed(() =>
                         :aria-expanded="true"
                     >
                         <ReportGraphNode
-                            level="EXECUTIVE_ENTRY"
+                            :level="rootLevel"
                             :position="report.initial_route.target_position"
                             :progress="report.progress"
                             :status="rootStatus"
@@ -234,7 +270,47 @@ const assistantBusClass = computed(() =>
                     </div>
 
                     <div
-                        v-if="report.branches.length"
+                        v-if="report.sekda_handoff || report.branches.length"
+                        class="relative mx-auto h-10 w-px bg-indigo-300 dark:bg-indigo-700"
+                        aria-hidden="true"
+                    >
+                        <span
+                            class="absolute bottom-0 left-1/2 size-3 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-indigo-500 bg-background ring-4 ring-indigo-100 dark:ring-indigo-950"
+                        />
+                    </div>
+
+                    <div
+                        v-if="report.sekda_handoff"
+                        class="mx-auto max-w-md"
+                        role="treeitem"
+                        :aria-expanded="true"
+                    >
+                        <ReportGraphNode
+                            level="REGIONAL_SECRETARY"
+                            :position="report.sekda_handoff.recipient_position"
+                            :progress="report.progress"
+                            :status="report.sekda_handoff.status"
+                            :timings="[
+                                {
+                                    label: 'Diterima Sekda',
+                                    value: report.sekda_handoff.received_at,
+                                },
+                                {
+                                    label: 'Diteruskan',
+                                    value: report.sekda_handoff.forwarded_at,
+                                },
+                            ]"
+                            :selected="
+                                selectedReference ===
+                                report.sekda_handoff.reference
+                            "
+                            :path-active="Boolean(selectedReference)"
+                            @select="emit('selectNode', sekdaInspector())"
+                        />
+                    </div>
+
+                    <div
+                        v-if="report.sekda_handoff && report.branches.length"
                         class="relative mx-auto h-10 w-px bg-indigo-300 dark:bg-indigo-700"
                         aria-hidden="true"
                     >
