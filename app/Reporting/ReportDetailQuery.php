@@ -29,6 +29,7 @@ final class ReportDetailQuery
                 'submission:id,source',
                 'senderOrganization:id,name',
                 'currentRoute.recipientPosition.organizationalUnit:id,name',
+                'currentRoute.recipientPosition.positionLevel:id,code',
                 'currentRoute.recipientPosition.activeAssignment.user:id,name',
                 'currentRoute.routedBy:id,name',
                 'currentRoute.routedByPositionAssignment.position.organizationalUnit:id,name',
@@ -40,21 +41,38 @@ final class ReportDetailQuery
                     ->orderBy('received_at')
                     ->orderBy('id'),
                 'currentRoute.disposition.recipients.recipientPosition.organizationalUnit:id,name',
+                'currentRoute.disposition.recipients.recipientPosition.positionLevel:id,code',
                 'currentRoute.disposition.recipients.recipientPosition.activeAssignment.user:id,name',
                 'currentRoute.disposition.recipients.childDispositions.instructionLabels:id,code,name,sort_order',
                 'currentRoute.disposition.recipients.childDispositions.createdBy:id,name',
                 'currentRoute.disposition.recipients.childDispositions.createdByPositionAssignment.position.organizationalUnit:id,name',
                 'currentRoute.disposition.recipients.childDispositions.recipients' => fn ($recipient) => $this
-                    ->branchVisibility->terminalRecipients($recipient, $scope, false)
+                    ->branchVisibility->intermediateRecipients($recipient, $scope, false)
                     ->orderBy('received_at')
                     ->orderBy('id'),
                 'currentRoute.disposition.recipients.childDispositions.recipients.recipientPosition.organizationalUnit:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.recipientPosition.positionLevel:id,code',
                 'currentRoute.disposition.recipients.childDispositions.recipients.recipientPosition.activeAssignment.user:id,name',
                 'currentRoute.disposition.recipients.childDispositions.recipients.completedBy:id,name',
                 'currentRoute.disposition.recipients.childDispositions.recipients.completedByPositionAssignment.position.organizationalUnit:id,name',
                 'currentRoute.disposition.recipients.childDispositions.recipients.followUps',
                 'currentRoute.disposition.recipients.childDispositions.recipients.followUps.createdBy:id,name',
                 'currentRoute.disposition.recipients.childDispositions.recipients.followUps.createdByPositionAssignment.position.organizationalUnit:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.instructionLabels:id,code,name,sort_order',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.createdBy:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.createdByPositionAssignment.position.organizationalUnit:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients' => fn ($recipient) => $this
+                    ->branchVisibility->terminalRecipients($recipient, $scope, false)
+                    ->orderBy('received_at')
+                    ->orderBy('id'),
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients.recipientPosition.organizationalUnit:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients.recipientPosition.positionLevel:id,code',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients.recipientPosition.activeAssignment.user:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients.completedBy:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients.completedByPositionAssignment.position.organizationalUnit:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients.followUps',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients.followUps.createdBy:id,name',
+                'currentRoute.disposition.recipients.childDispositions.recipients.childDispositions.recipients.followUps.createdByPositionAssignment.position.organizationalUnit:id,name',
             ])
             ->firstOrFail();
     }

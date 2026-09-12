@@ -10,6 +10,7 @@ use App\Models\LetterRoute;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\User;
+use App\Organization\OrganizationCatalog;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -43,15 +44,28 @@ final class ReportOrganizationGraphQuery
             ->with([
                 'recipientPosition.organizationalUnit:id,name',
                 'recipientPosition.activeAssignment.user:id,name',
+                'recipientPosition.positionLevel:id,code',
                 'disposition.recipients' => fn ($recipient) => $this
                     ->branchVisibility->firstRecipients($recipient, $scope, true),
                 'disposition.recipients.recipientPosition.organizationalUnit:id,name',
                 'disposition.recipients.recipientPosition.activeAssignment.user:id,name',
+                'disposition.recipients.recipientPosition.positionLevel:id,code',
                 'disposition.recipients.childDispositions.recipients' => fn ($recipient) => $this
-                    ->branchVisibility->terminalRecipients($recipient, $scope, true),
+                    ->branchVisibility->intermediateRecipients($recipient, $scope, true)
+                    ->orderBy('received_at')
+                    ->orderBy('id'),
                 'disposition.recipients.childDispositions.recipients.recipientPosition.organizationalUnit:id,name',
                 'disposition.recipients.childDispositions.recipients.recipientPosition.activeAssignment.user:id,name',
+                'disposition.recipients.childDispositions.recipients.recipientPosition.positionLevel:id,code',
                 'disposition.recipients.childDispositions.recipients.followUps:id,disposition_recipient_id,created_at',
+                'disposition.recipients.childDispositions.recipients.childDispositions.recipients' => fn ($recipient) => $this
+                    ->branchVisibility->terminalRecipients($recipient, $scope, true)
+                    ->orderBy('received_at')
+                    ->orderBy('id'),
+                'disposition.recipients.childDispositions.recipients.childDispositions.recipients.recipientPosition.organizationalUnit:id,name',
+                'disposition.recipients.childDispositions.recipients.childDispositions.recipients.recipientPosition.activeAssignment.user:id,name',
+                'disposition.recipients.childDispositions.recipients.childDispositions.recipients.recipientPosition.positionLevel:id,code',
+                'disposition.recipients.childDispositions.recipients.childDispositions.recipients.followUps:id,disposition_recipient_id,created_at',
             ])
             ->orderBy('id')
             ->get();
@@ -73,6 +87,82 @@ final class ReportOrganizationGraphQuery
             }
 
             $this->touch($executive, $route->disposition->created_at);
+
+            $sekdaRecipient = $route->disposition->recipients->count() === 1
+                ? $route->disposition->recipients->first()
+                : null;
+
+            if ($sekdaRecipient instanceof DispositionRecipient
+                && $sekdaRecipient->recipientPosition->positionLevel->code === OrganizationCatalog::REGIONAL_SECRETARY_LEVEL) {
+                $sekdaKey = (string) $sekdaRecipient->recipientPosition->code;
+                $sekda = $executive['children'][$sekdaKey] ?? $this->newNode(
+                    'aggregate-'.$route->recipientPosition->code.'-'.$sekdaRecipient->recipientPosition->code,
+                    $sekdaRecipient->recipientPosition,
+                );
+                $this->touch($sekda, $sekdaRecipient->received_at);
+
+                if ($sekdaRecipient->childDispositions->count() > 1) {
+                    throw DispositionStateConflict::inconsistentGraph();
+                }
+
+                $sekdaDisposition = $sekdaRecipient->childDispositions->first();
+                if (! $sekdaDisposition instanceof Disposition || $sekdaDisposition->recipients->isEmpty()) {
+                    $this->addStatus($sekda, DispositionRecipientStatus::Pending->value, $sekdaRecipient->received_at);
+                    $this->addStatus($executive, DispositionRecipientStatus::Pending->value, $sekdaRecipient->received_at);
+                    $executive['children'][$sekdaKey] = $sekda;
+                    $executives[$executiveKey] = $executive;
+
+                    continue;
+                }
+
+                $this->touch($sekda, $sekdaDisposition->created_at);
+
+                foreach ($sekdaDisposition->recipients as $assistantRecipient) {
+                    $assistantKey = (string) $assistantRecipient->recipientPosition->code;
+                    $assistant = $sekda['children'][$assistantKey] ?? $this->newNode(
+                        'aggregate-'.$route->recipientPosition->code.'-'.$sekdaRecipient->recipientPosition->code.'-'.$assistantRecipient->recipientPosition->code,
+                        $assistantRecipient->recipientPosition,
+                    );
+                    $this->touch($assistant, $assistantRecipient->received_at);
+
+                    if ($assistantRecipient->childDispositions->count() > 1) {
+                        throw DispositionStateConflict::inconsistentGraph();
+                    }
+
+                    $terminalDisposition = $assistantRecipient->childDispositions->first();
+                    if (! $terminalDisposition instanceof Disposition || $terminalDisposition->recipients->isEmpty()) {
+                        $this->addStatus($assistant, DispositionRecipientStatus::Pending->value, $assistantRecipient->received_at);
+                        $this->addStatus($sekda, DispositionRecipientStatus::Pending->value, $assistantRecipient->received_at);
+                        $this->addStatus($executive, DispositionRecipientStatus::Pending->value, $assistantRecipient->received_at);
+                        $sekda['children'][$assistantKey] = $assistant;
+
+                        continue;
+                    }
+
+                    $this->touch($assistant, $terminalDisposition->created_at);
+                    foreach ($terminalDisposition->recipients as $terminalRecipient) {
+                        $sectionKey = (string) $terminalRecipient->recipientPosition->code;
+                        $section = $assistant['children'][$sectionKey] ?? $this->newNode(
+                            'aggregate-'.$route->recipientPosition->code.'-'.$sekdaRecipient->recipientPosition->code.'-'.$assistantRecipient->recipientPosition->code.'-'.$terminalRecipient->recipientPosition->code,
+                            $terminalRecipient->recipientPosition,
+                        );
+                        $activityAt = $this->lastActivityAt($terminalRecipient);
+                        $completionDuration = $this->completionDurationSeconds($terminalRecipient);
+                        $this->addStatus($section, $terminalRecipient->status->value, $activityAt, $completionDuration);
+                        $this->addStatus($assistant, $terminalRecipient->status->value, $activityAt, $completionDuration);
+                        $this->addStatus($sekda, $terminalRecipient->status->value, $activityAt, $completionDuration);
+                        $this->addStatus($executive, $terminalRecipient->status->value, $activityAt, $completionDuration);
+                        $assistant['children'][$sectionKey] = $section;
+                    }
+
+                    $sekda['children'][$assistantKey] = $assistant;
+                }
+
+                $executive['children'][$sekdaKey] = $sekda;
+                $executives[$executiveKey] = $executive;
+
+                continue;
+            }
 
             foreach ($route->disposition->recipients as $assistantRecipient) {
                 $assistantKey = (string) $assistantRecipient->recipientPosition->code;
@@ -143,6 +233,7 @@ final class ReportOrganizationGraphQuery
         return [
             'reference' => $reference,
             'recipient_position' => $this->position($position),
+            'level' => $position->positionLevel->code,
             'counts' => ['pending' => 0, 'in_progress' => 0, 'completed' => 0],
             'last_activity_at' => null,
             'oldest_attention_at' => null,
@@ -243,6 +334,7 @@ final class ReportOrganizationGraphQuery
         return [
             'reference' => $node['reference'],
             'recipient_position' => $node['recipient_position'],
+            'level' => $node['level'],
             'progress' => [
                 'total' => $total,
                 'pending' => $counts['pending'],

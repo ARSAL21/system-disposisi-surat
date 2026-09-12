@@ -27,7 +27,7 @@ final class ReportScopeResolver
                 ->whereHas('positionLevel', fn (Builder $level): Builder => $level
                     ->where('is_active', true)
                     ->whereIn('code', [
-                        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+                        ...OrganizationCatalog::executiveLevelCodes(),
                         OrganizationCatalog::ASSISTANT_LEVEL,
                         OrganizationCatalog::SECTION_HEAD_LEVEL,
                     ])))
@@ -43,7 +43,10 @@ final class ReportScopeResolver
                 || $position->organizationalUnit->is_active)
             ->unique('id')
             ->values();
-        $executiveIds = $this->idsAtLevel($positions, OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL);
+        $executiveIds = array_values($positions
+            ->filter(fn (Position $position): bool => in_array($position->positionLevel->code, OrganizationCatalog::executiveLevelCodes(), true))
+            ->map(fn (Position $position): int => (int) $position->getKey())
+            ->all());
         $assistantIds = $this->idsAtLevel($positions, OrganizationCatalog::ASSISTANT_LEVEL);
         $sectionHeadIds = $this->idsAtLevel($positions, OrganizationCatalog::SECTION_HEAD_LEVEL);
         $hasGeneralAffairsHead = $positions->contains(fn (Position $position): bool => $position->positionLevel->code === OrganizationCatalog::SECTION_HEAD_LEVEL
