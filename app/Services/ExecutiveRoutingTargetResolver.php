@@ -3,23 +3,34 @@
 namespace App\Services;
 
 use App\Enums\AccountType;
+use App\Enums\InitialLetterRoutePath;
 use App\Models\Position;
 use App\Models\PositionAssignment;
-use App\Organization\OrganizationCatalog;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class ExecutiveRoutingTargetResolver
 {
-    /** @return Collection<int, Position> */
-    public function options(): Collection
+    /**
+     * @return list<array{path: string, label: string, description: string, position: Position|null}>
+     */
+    public function options(): array
     {
-        return $this->eligiblePositionsQuery()
-            ->with('activeAssignment.user:id,name,account_type,is_active,email_verified_at')
-            ->orderBy('name')
-            ->orderBy('id')
-            ->get();
+        return array_values(collect(InitialLetterRoutePath::cases())
+            ->map(function (InitialLetterRoutePath $path): array {
+                $position = $this->eligiblePositionQuery($path)
+                    ->with('activeAssignment.user:id,name,account_type,is_active,email_verified_at')
+                    ->first();
+
+                return [
+                    'path' => $path->value,
+                    'label' => $path->label(),
+                    'description' => $path->description(),
+                    'position' => $position,
+                ];
+            })
+            ->values()
+            ->all());
     }
 
     /**
@@ -28,10 +39,9 @@ class ExecutiveRoutingTargetResolver
      *
      * @return array{Position, PositionAssignment}
      */
-    public function lockAvailablePosition(int $positionId): array
+    public function lockAvailablePosition(InitialLetterRoutePath $path): array
     {
-        $position = $this->eligiblePositionsQuery()
-            ->whereKey($positionId)
+        $position = $this->eligiblePositionQuery($path)
             ->lockForUpdate()
             ->first();
 
@@ -59,19 +69,20 @@ class ExecutiveRoutingTargetResolver
     }
 
     /** @return Builder<Position> */
-    private function eligiblePositionsQuery(): Builder
+    private function eligiblePositionQuery(InitialLetterRoutePath $path): Builder
     {
         return Position::query()
             ->where('is_active', true)
+            ->where('code', $path->targetPositionCode())
             ->whereHas('positionLevel', fn (Builder $level): Builder => $level
-                ->where('code', OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL)
+                ->where('code', $path->targetLevelCode())
                 ->where('is_active', true));
     }
 
     private function throwUnavailable(): never
     {
         throw ValidationException::withMessages([
-            'target_position_id' => 'Pimpinan tujuan tidak tersedia atau tidak memiliki pejabat aktif.',
+            'route_path' => 'Jalur routing tidak tersedia atau jabatan tujuan belum memiliki pejabat aktif.',
         ]);
     }
 }
