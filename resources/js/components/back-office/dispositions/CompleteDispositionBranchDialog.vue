@@ -35,7 +35,9 @@ const technicalDocument = ref<File | null>(null);
 const technicalDocumentNote = ref('');
 const localError = ref('');
 const noteLength = computed(() => completionNote.value.length);
-const mergedError = computed(() => props.errors?.completion_note || localError.value);
+const mergedError = computed(
+    () => props.errors?.completion_note || localError.value,
+);
 
 watch(
     () => props.open,
@@ -70,7 +72,10 @@ function confirmCompletion(): void {
 
     const normalizedTechnicalNote = technicalDocumentNote.value.trim();
 
-    if (technicalDocument.value && normalizedTechnicalNote.length < minimumNoteLength) {
+    if (
+        technicalDocument.value &&
+        normalizedTechnicalNote.length < minimumNoteLength
+    ) {
         localError.value = `Catatan bahan teknis minimal ${minimumNoteLength} karakter.`;
 
         return;
@@ -80,7 +85,9 @@ function confirmCompletion(): void {
     emit('confirm', {
         completion_note: normalizedNote,
         technical_document: technicalDocument.value,
-        technical_document_note: technicalDocument.value ? normalizedTechnicalNote : null,
+        technical_document_note: technicalDocument.value
+            ? normalizedTechnicalNote
+            : null,
     });
 }
 
@@ -88,7 +95,11 @@ function chooseTechnicalDocument(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
 
-    if (file && (file.type !== 'application/pdf' || !file.name.toLowerCase().endsWith('.pdf'))) {
+    if (
+        file &&
+        (file.type !== 'application/pdf' ||
+            !file.name.toLowerCase().endsWith('.pdf'))
+    ) {
         localError.value = 'Bahan teknis harus berupa berkas PDF.';
         input.value = '';
         technicalDocument.value = null;
@@ -182,15 +193,52 @@ function chooseTechnicalDocument(event: Event): void {
 
             <div class="rounded-2xl border border-dashed p-4">
                 <div class="flex items-start gap-3">
-                    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-500/10 text-indigo-600"><FileUp class="size-5" /></span>
-                    <div><p class="font-semibold">Bahan teknis (opsional)</p><p class="mt-1 text-sm leading-6 text-muted-foreground">Lampirkan PDF hasil telaah untuk dossier balasan. Maksimal 20 MB dan disimpan sebagai dokumen privat immutable.</p></div>
+                    <span
+                        class="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-500/10 text-indigo-600"
+                        ><FileUp class="size-5"
+                    /></span>
+                    <div>
+                        <p class="font-semibold">Bahan teknis (opsional)</p>
+                        <p class="mt-1 text-sm leading-6 text-muted-foreground">
+                            Lampirkan PDF hasil telaah untuk dossier balasan.
+                            Maksimal 20 MB dan disimpan sebagai dokumen privat
+                            immutable.
+                        </p>
+                    </div>
                 </div>
-                <input class="mt-4 block w-full rounded-xl border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium" type="file" accept="application/pdf,.pdf" :disabled="processing" @change="chooseTechnicalDocument" />
-                <InputError class="mt-2" :message="errors?.technical_document" />
+                <input
+                    class="mt-4 block w-full rounded-xl border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    :disabled="processing"
+                    @change="chooseTechnicalDocument"
+                />
+                <InputError
+                    class="mt-2"
+                    :message="errors?.technical_document"
+                />
                 <div v-if="technicalDocument" class="mt-4">
-                    <label for="technical-document-note" class="text-sm font-semibold">Catatan bahan teknis <span class="text-destructive">*</span></label>
-                    <textarea id="technical-document-note" v-model="technicalDocumentNote" rows="3" minlength="10" maxlength="2000" class="mt-2 w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50" placeholder="Jelaskan isi bahan teknis ini..." :disabled="processing" @input="localError = ''" />
-                    <InputError class="mt-2" :message="errors?.technical_document_note" />
+                    <label
+                        for="technical-document-note"
+                        class="text-sm font-semibold"
+                        >Catatan bahan teknis
+                        <span class="text-destructive">*</span></label
+                    >
+                    <textarea
+                        id="technical-document-note"
+                        v-model="technicalDocumentNote"
+                        rows="3"
+                        minlength="10"
+                        maxlength="2000"
+                        class="mt-2 w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm leading-6 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        placeholder="Jelaskan isi bahan teknis ini..."
+                        :disabled="processing"
+                        @input="localError = ''"
+                    />
+                    <InputError
+                        class="mt-2"
+                        :message="errors?.technical_document_note"
+                    />
                 </div>
             </div>
 

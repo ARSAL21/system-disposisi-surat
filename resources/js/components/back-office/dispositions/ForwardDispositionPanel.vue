@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+    Building2,
     Check,
     ChevronRight,
     CircleHelp,
@@ -29,6 +30,8 @@ const maximumRecipients = 50;
 
 const props = defineProps<{
     positions: DispositionPositionOption[];
+    scopePositionName?: string;
+    scopeUnitName?: string | null;
     instructionLabels: DispositionInstructionLabelOption[];
     canForward: boolean;
     processing?: boolean;
@@ -57,6 +60,11 @@ const availableSectionHeads = computed(() =>
 const allSectionHeads = computed(() =>
     props.positions.filter(
         (position) => position.level_code === 'SECTION_HEAD',
+    ),
+);
+const assignedSectionHeads = computed(() =>
+    allSectionHeads.value.filter((position) =>
+        Boolean(position.assigned_by_name),
     ),
 );
 const searchTerm = computed(() =>
@@ -316,9 +324,33 @@ function confirmDisposition(): void {
                         variant="outline"
                         class="w-fit border-violet-200 bg-violet-50/70 px-3 py-1.5 text-violet-800 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-200"
                     >
-                        {{ selectedRecipients.length }}/{{ maximumRecipients }}
-                        dipilih
+                        {{ selectedRecipients.length }} dipilih
                     </Badge>
+                </div>
+
+                <div
+                    class="mt-5 flex items-start gap-3 rounded-2xl border border-sky-200/80 bg-sky-50/75 p-4 text-sky-950 dark:border-sky-900 dark:bg-sky-950/25 dark:text-sky-100"
+                    role="status"
+                >
+                    <Building2
+                        class="mt-0.5 size-5 shrink-0 text-sky-700 dark:text-sky-300"
+                        aria-hidden="true"
+                    />
+                    <div class="min-w-0 text-sm leading-6">
+                        <p class="font-semibold">
+                            Jalur kerja Anda sudah dibatasi oleh struktur
+                            organisasi
+                        </p>
+                        <p class="mt-1 text-sky-800/85 dark:text-sky-200/85">
+                            Daftar ini hanya berisi Kepala Bagian di bawah
+                            <span class="font-semibold">{{
+                                scopePositionName ?? 'Asisten Anda'
+                            }}</span>
+                            <template v-if="scopeUnitName">
+                                dalam unit {{ scopeUnitName }}.
+                            </template>
+                        </p>
+                    </div>
                 </div>
 
                 <div class="relative mt-5">
@@ -397,7 +429,7 @@ function confirmDisposition(): void {
                                         ? 'border-violet-500 bg-violet-50/80 shadow-sm dark:border-violet-700 dark:bg-violet-950/30'
                                         : position.assigned_by_name
                                           ? 'border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20'
-                                        : 'border-border hover:border-violet-300 hover:bg-violet-50/40 dark:hover:border-violet-800 dark:hover:bg-violet-950/15'
+                                          : 'border-border hover:border-violet-300 hover:bg-violet-50/40 dark:hover:border-violet-800 dark:hover:bg-violet-950/15'
                                 "
                             >
                                 <Checkbox
@@ -439,7 +471,10 @@ function confirmDisposition(): void {
                                     <span
                                         class="mt-1 block text-xs leading-5 text-muted-foreground"
                                     >
-                                        {{ position.holder_name ?? 'Belum ada pejabat aktif' }}
+                                        {{
+                                            position.holder_name ??
+                                            'Belum ada pejabat aktif'
+                                        }}
                                     </span>
                                     <span
                                         v-if="position.assigned_by_name"
@@ -454,14 +489,40 @@ function confirmDisposition(): void {
                     </section>
 
                     <Alert
-                        v-if="allSectionHeads.length > 0 && availableSectionHeads.length === 0"
+                        v-if="allSectionHeads.length === 0"
                         variant="default"
                     >
                         <CircleHelp class="size-4" aria-hidden="true" />
-                        <AlertTitle>Semua pilihan sudah terpakai</AlertTitle>
+                        <AlertTitle
+                            >Belum ada Kepala Bagian dalam jalur
+                            Anda</AlertTitle
+                        >
                         <AlertDescription>
-                            Periksa keterangan pada setiap kartu untuk mengetahui
-                            Asisten yang sudah menugaskan Kepala Bagian tersebut.
+                            Tidak ada Kepala Bagian aktif yang berada di bawah
+                            koordinasi Asisten ini. Periksa struktur organisasi
+                            atau minta administrator memperbarui penugasan.
+                        </AlertDescription>
+                    </Alert>
+
+                    <Alert
+                        v-else-if="availableSectionHeads.length === 0"
+                        variant="default"
+                    >
+                        <CircleHelp class="size-4" aria-hidden="true" />
+                        <AlertTitle
+                            >Semua Kepala Bagian sudah memiliki
+                            tugas</AlertTitle
+                        >
+                        <AlertDescription>
+                            <template v-if="assignedSectionHeads.length > 0">
+                                {{ assignedSectionHeads.length }} Kepala Bagian
+                                dalam jalur ini sudah ditugaskan pada surat yang
+                                sedang diproses.
+                            </template>
+                            <template v-else>
+                                Belum ada pejabat aktif yang dapat menerima
+                                tugas pada jalur ini.
+                            </template>
                         </AlertDescription>
                     </Alert>
 
@@ -480,9 +541,9 @@ function confirmDisposition(): void {
                     id="recipient-selection-help"
                     class="mt-3 text-xs leading-5 text-muted-foreground"
                 >
-                    Maksimal {{ maximumRecipients }} penerima dalam satu
-                    tindakan. Kepala Bagian yang sudah ditugaskan pada surat ini
-                    tidak dapat dipilih kembali oleh Asisten lain.
+                    Kepala Bagian yang berada di unit lain tidak ditampilkan.
+                    Kepala Bagian yang sudah ditugaskan pada surat ini tidak
+                    dapat dipilih kembali.
                 </p>
                 <div
                     id="recipient-selection-error"
