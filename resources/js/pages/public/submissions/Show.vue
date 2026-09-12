@@ -9,9 +9,15 @@ import SubmissionTimeline from '@/components/public/submission-detail/Submission
 import SubmissionActionsPanel from '@/components/public/SubmissionActionsPanel.vue';
 import SubmissionDocumentPanel from '@/components/public/SubmissionDocumentPanel.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { previewPublicResponseTracker, previewPublicSubmission } from '@/lib/outgoingLetterPreview';
+import {
+    previewPublicResponseTracker,
+    previewPublicSubmission,
+} from '@/lib/outgoingLetterPreview';
 import publicRoutes from '@/routes/public';
-import type { LetterSubmission, PublicResponseTracker as ResponseTracker } from '@/types';
+import type {
+    LetterSubmission,
+    PublicResponseTracker as ResponseTracker,
+} from '@/types';
 
 const props = defineProps<{
     submission?: LetterSubmission;
@@ -20,8 +26,14 @@ const props = defineProps<{
 }>();
 
 const previewMode = computed(() => props.preview === true);
-const activeSubmission = computed(() => previewMode.value ? previewPublicSubmission : props.submission ?? null);
-const activeResponseTracker = computed(() => previewMode.value ? previewPublicResponseTracker : props.responseTracker ?? null);
+const activeSubmission = computed(() =>
+    previewMode.value ? previewPublicSubmission : (props.submission ?? null),
+);
+const activeResponseTracker = computed(() =>
+    previewMode.value
+        ? previewPublicResponseTracker
+        : (props.responseTracker ?? null),
+);
 
 defineOptions({
     layout: {
@@ -36,9 +48,16 @@ defineOptions({
 <template>
     <Head :title="activeSubmission?.subject ?? 'Detail Surat'" />
 
-    <div v-if="activeSubmission" class="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+    <div
+        v-if="activeSubmission"
+        class="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8"
+    >
         <SubmissionDetailHeader :submission="activeSubmission" />
-        <PublicResponseTracker v-if="activeResponseTracker" :tracker="activeResponseTracker" :preview="previewMode" />
+        <PublicResponseTracker
+            v-if="activeResponseTracker"
+            :tracker="activeResponseTracker"
+            :preview="previewMode"
+        />
         <div
             class="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start"
         >
@@ -66,7 +85,10 @@ defineOptions({
                         activeSubmission.rejection_note
                     }}</AlertDescription>
                 </Alert>
-                <SubmissionDocumentPanel :submission="activeSubmission" readonly />
+                <SubmissionDocumentPanel
+                    :submission="activeSubmission"
+                    readonly
+                />
                 <SubmissionActionsPanel
                     v-if="activeSubmission.capabilities.can_submit"
                     :submission="activeSubmission"
@@ -79,6 +101,9 @@ defineOptions({
     <Alert v-else variant="destructive" class="m-4 sm:m-6 lg:m-8">
         <MessageSquareWarning class="size-4" />
         <AlertTitle>Surat tidak tersedia</AlertTitle>
-        <AlertDescription>Backend tidak mengirimkan data surat dan fixture hanya aktif pada mode pratinjau.</AlertDescription>
+        <AlertDescription
+            >Backend tidak mengirimkan data surat dan fixture hanya aktif pada
+            mode pratinjau.</AlertDescription
+        >
     </Alert>
 </template>
