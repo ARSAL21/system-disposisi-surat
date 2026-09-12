@@ -409,8 +409,8 @@ class OrganizationAndUserSeeder extends Seeder
     private function positionDefinitions(): array
     {
         return [
-            'WALI_KOTA' => ['name' => 'Wali Kota', 'unit' => 'PEMKOT_BAU-BAU', 'level' => OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL],
-            'SEKDA' => ['name' => 'Sekretaris Daerah', 'unit' => 'SEKDA', 'level' => OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL],
+            'WALI_KOTA' => ['name' => 'Wali Kota', 'unit' => 'PEMKOT_BAU-BAU', 'level' => OrganizationCatalog::MAYOR_LEVEL],
+            'SEKDA' => ['name' => 'Sekretaris Daerah', 'unit' => 'SEKDA', 'level' => OrganizationCatalog::REGIONAL_SECRETARY_LEVEL],
             'ASISTEN-I' => ['name' => 'Asisten I', 'unit' => 'ASISTEN_1', 'level' => OrganizationCatalog::ASSISTANT_LEVEL],
             'ASISTEN-II' => ['name' => 'Asisten II', 'unit' => 'ASISTEN_2', 'level' => OrganizationCatalog::ASSISTANT_LEVEL],
             'ASISTEN-III' => ['name' => 'Asisten III', 'unit' => 'ASISTEN_3', 'level' => OrganizationCatalog::ASSISTANT_LEVEL],
@@ -430,8 +430,8 @@ class OrganizationAndUserSeeder extends Seeder
     private function internalUserDefinitions(): array
     {
         return [
-            ['name' => 'Wali Kota', 'email' => 'wali.kota@internal.test', 'role' => RoleName::ExecutiveLeader, 'position' => 'WALI_KOTA'],
-            ['name' => 'Sekretaris Daerah', 'email' => 'sekda@internal.test', 'role' => RoleName::ExecutiveLeader, 'position' => 'SEKDA'],
+            ['name' => 'Wali Kota', 'email' => 'wali.kota@internal.test', 'role' => RoleName::Mayor, 'position' => 'WALI_KOTA'],
+            ['name' => 'Sekretaris Daerah', 'email' => 'sekda@internal.test', 'role' => RoleName::RegionalSecretary, 'position' => 'SEKDA'],
             ['name' => 'Asisten I', 'email' => 'asisten.1@internal.test', 'role' => RoleName::Assistant, 'position' => 'ASISTEN-I'],
             ['name' => 'Asisten II', 'email' => 'asisten.2@internal.test', 'role' => RoleName::Assistant, 'position' => 'ASISTEN-II'],
             ['name' => 'Asisten III', 'email' => 'asisten.3@internal.test', 'role' => RoleName::Assistant, 'position' => 'ASISTEN-III'],

@@ -1,7 +1,10 @@
 <?php
 
+use App\Actions\SynchronizeAuthorizationCatalog;
 use App\Authorization\AuthorizationCatalog;
+use App\Enums\AccountType;
 use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\Enums\SubmissionDecisionOutcome;
 use App\Enums\SubmissionSource;
 use App\Enums\SubmissionStatus;
@@ -13,6 +16,7 @@ use App\Models\PositionLevel;
 use App\Models\SubmissionDecision;
 use App\Models\SubmissionDocument;
 use App\Models\User;
+use App\Models\UserInvitation;
 use App\Organization\OrganizationCatalog;
 use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,6 +25,7 @@ use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 uses(RefreshDatabase::class);
 
@@ -406,5 +411,47 @@ test('local preview dashboard route renders with preview true', function (): voi
     $response->assertInertia(fn (Assert $page) => $page
         ->component('back-office/Dashboard')
         ->where('preview', true)
+    );
+});
+
+test('super admin receives admin dashboard data with pending invitations and workflow metrics', function (): void {
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+    app(SynchronizeAuthorizationCatalog::class)->execute();
+
+    $admin = User::factory()->internal()->withTwoFactor()->create();
+    $admin->assignRole(RoleName::SuperAdmin->value);
+
+    // Create a pending invitation
+    $invitation = new UserInvitation;
+    $invitation->public_id = (string) Str::ulid();
+    $invitation->name = 'Calon Pegawai';
+    $invitation->email = 'calon@pemkot.go.id';
+    $invitation->account_type = AccountType::InternalAccount;
+    $invitation->token_hash = hash('sha256', 'sample-token');
+    $invitation->expires_at = now()->addDays(2);
+    $invitation->invited_by_user_id = $admin->id;
+    $invitation->save();
+
+    // Create an expired invitation
+    $expired = new UserInvitation;
+    $expired->public_id = (string) Str::ulid();
+    $expired->name = 'Expired Pegawai';
+    $expired->email = 'expired@pemkot.go.id';
+    $expired->account_type = AccountType::InternalAccount;
+    $expired->token_hash = hash('sha256', 'sample-token-expired');
+    $expired->expires_at = now()->subDays(1);
+    $expired->invited_by_user_id = $admin->id;
+    $expired->save();
+
+    $response = $this->actingAs($admin)->get(route('back-office.dashboard'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('back-office/Dashboard')
+        ->where('preview', false)
+        ->has('adminDashboard')
+        ->where('adminDashboard.users.pending_invitations_count', 1)
+        ->where('adminDashboard.security.internal_mfa_percentage', 100)
+        ->where('adminDashboard.security.super_admins_without_mfa', 0)
     );
 });

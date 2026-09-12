@@ -91,17 +91,25 @@ function m6Level(string $code): PositionLevel
     return $level;
 }
 
-function m6Unit(string $code): OrganizationalUnit
+function m6Unit(string $code, ?string $parentCode = null): OrganizationalUnit
 {
     $existing = OrganizationalUnit::query()->where('code', $code)->first();
 
+    $parent = $parentCode === null ? null : m6Unit($parentCode);
+
     if ($existing instanceof OrganizationalUnit) {
+        if ($parent !== null && $existing->parent_id !== $parent->getKey()) {
+            $existing->parent_id = $parent->getKey();
+            $existing->save();
+        }
+
         return $existing;
     }
 
     $unit = new OrganizationalUnit;
     $unit->code = $code;
     $unit->name = str_replace('_', ' ', $code);
+    $unit->parent_id = $parent?->getKey();
     $unit->is_active = true;
     $unit->save();
 
@@ -119,6 +127,15 @@ function m6Position(string $levelCode, string $name, ?string $unitCode = null): 
     $position->save();
 
     return $position;
+}
+
+function m6PlacePositionInUnit(
+    Position $position,
+    string $unitCode,
+    ?string $parentUnitCode = null,
+): void {
+    $position->organizational_unit_id = m6Unit($unitCode, $parentUnitCode)->getKey();
+    $position->save();
 }
 
 function m6Assignment(User $user, Position $position): PositionAssignment
@@ -903,6 +920,9 @@ test('assistant forwards one atomic disposition to multiple section heads and ea
     );
     $selfHeldSectionHead = m6Position(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian rangkap Asisten');
     m6Assignment($assistant['user'], $selfHeldSectionHead);
+    m6PlacePositionInUnit($assistant['position'], 'M6-ASISTEN-PEREKONOMIAN');
+    m6PlacePositionInUnit($sectionHeadOne['position'], 'M6-BAGIAN-HUKUM', 'M6-ASISTEN-PEREKONOMIAN');
+    m6PlacePositionInUnit($sectionHeadTwo['position'], 'M6-BAGIAN-PEREKONOMIAN', 'M6-ASISTEN-PEREKONOMIAN');
     $fixture = m6RoutedLetter($executive);
     $labels = InstructionLabel::query()->orderBy('sort_order')->take(2)->get();
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
@@ -971,7 +991,10 @@ test('assistant forwards one atomic disposition to multiple section heads and ea
             $sectionHeadTwo['position']->getKey(),
         ])
         ->and($audit->metadata['parent_recipient_id'])->toBe($assistantRecipient->getKey())
-        ->and($audit->metadata['recipient_ids'])->toHaveCount(2);
+        ->and($audit->metadata['recipient_ids'])->toHaveCount(2)
+        ->and($audit->metadata['hierarchy']['rule'])->toBe('DIRECT_CHILD_UNIT')
+        ->and($audit->metadata['hierarchy']['source_assistant']['position_id'])->toBe($assistant['position']->getKey())
+        ->and($audit->metadata['hierarchy']['recipients'])->toHaveCount(2);
 
     $this->actingAs($assistant['user'])
         ->get(route('back-office.dispositions.inbox.show', $assistantRecipient))
@@ -1060,7 +1083,7 @@ test('multiple-recipient forwarding preserves permission, position, and target b
         ->and(AuditLog::query()->where('action', AuditAction::DispositionCreated->value)->count())->toBe(1);
 });
 
-test('a section head can only belong to one assistant branch on the same letter', function (): void {
+test('an assistant only sees and can appoint section heads in its direct organizational scope', function (): void {
     $executive = m6Actor(
         OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
         'Sekretaris Daerah',
@@ -1081,6 +1104,9 @@ test('a section head can only belong to one assistant branch on the same letter'
         'Kepala Bagian Ekonomi',
         [PermissionName::ViewDispositions],
     );
+    m6PlacePositionInUnit($firstAssistant['position'], 'M6-ASISTEN-I');
+    m6PlacePositionInUnit($secondAssistant['position'], 'M6-ASISTEN-II');
+    m6PlacePositionInUnit($sectionHead['position'], 'M6-BAGIAN-EKONOMI', 'M6-ASISTEN-I');
     $fixture = m6RoutedLetter($executive, 'Koordinasi ekonomi lintas Asisten');
     $label = InstructionLabel::query()->firstOrFail();
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
@@ -1115,10 +1141,8 @@ test('a section head can only belong to one assistant branch on the same letter'
         ->assertInertia(fn (Assert $page) => $page
             ->where('capabilities.can_forward_disposition', true)
             ->where('sectionHeadPositions', fn ($positions): bool => collect($positions)
-                ->where('id', $sectionHead['position']->getKey())
-                ->where('assigned_by_name', 'Asisten I')
-                ->where('is_available', true)
-                ->isNotEmpty()));
+                ->pluck('id')
+                ->doesntContain($sectionHead['position']->getKey())));
 
     $this->actingAs($secondAssistant['user'])
         ->from(route('back-office.dispositions.inbox.show', $secondRecipient))
@@ -1127,14 +1151,123 @@ test('a section head can only belong to one assistant branch on the same letter'
             'instruction_label_ids' => [$label->getKey()],
             'instruction_note' => 'Crafted request tidak boleh melewati validasi server.',
         ])
-        ->assertRedirect(route('back-office.dispositions.inbox.show', $secondRecipient))
-        ->assertSessionHasErrors('recipient_position_ids');
+        ->assertNotFound();
 
     expect(Disposition::query()->whereNotNull('parent_recipient_id')->count())->toBe(1)
         ->and(DispositionRecipient::query()
             ->where('recipient_position_id', $sectionHead['position']->getKey())
             ->count())->toBe(1)
         ->and($secondRecipient->refresh()->status)->toBe(DispositionRecipientStatus::Pending);
+});
+
+test('direct-child target scope is isolated per assistant and revalidated before mutation', function (): void {
+    $executive = m6Actor(
+        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+        'Sekretaris Daerah',
+        [PermissionName::CreateDispositions],
+    );
+    $assistantOne = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten I',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $assistantTwo = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten II',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $assistantThree = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten III',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $headOne = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian Pemerintahan');
+    $headTwo = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian Hukum');
+    $headThree = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian Kesra');
+    $headFour = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian Perekonomian');
+    $headFive = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian Organisasi');
+
+    m6PlacePositionInUnit($assistantOne['position'], 'M6-SCOPE-ASISTEN-I');
+    m6PlacePositionInUnit($assistantTwo['position'], 'M6-SCOPE-ASISTEN-II');
+    m6PlacePositionInUnit($assistantThree['position'], 'M6-SCOPE-ASISTEN-III');
+    m6PlacePositionInUnit($headOne['position'], 'M6-SCOPE-PEMERINTAHAN', 'M6-SCOPE-ASISTEN-I');
+    m6PlacePositionInUnit($headTwo['position'], 'M6-SCOPE-HUKUM', 'M6-SCOPE-ASISTEN-I');
+    m6PlacePositionInUnit($headThree['position'], 'M6-SCOPE-KESRA', 'M6-SCOPE-ASISTEN-I');
+    m6PlacePositionInUnit($headFour['position'], 'M6-SCOPE-PEREKONOMIAN', 'M6-SCOPE-ASISTEN-II');
+    m6PlacePositionInUnit($headFive['position'], 'M6-SCOPE-ORGANISASI', 'M6-SCOPE-ASISTEN-III');
+
+    $fixture = m6RoutedLetter($executive, 'Validasi struktur disposisi Asisten');
+    $label = InstructionLabel::query()->firstOrFail();
+    $initialDisposition = app(CreateInitialDisposition::class)->execute(
+        $executive['user'],
+        $fixture['route'],
+        [
+            $assistantOne['position']->getKey(),
+            $assistantTwo['position']->getKey(),
+            $assistantThree['position']->getKey(),
+        ],
+        [$label->getKey()],
+        null,
+    );
+    $recipients = $initialDisposition->recipients()->get()->keyBy('recipient_position_id');
+    $firstRecipient = $recipients->get($assistantOne['position']->getKey());
+    $secondRecipient = $recipients->get($assistantTwo['position']->getKey());
+    $thirdRecipient = $recipients->get($assistantThree['position']->getKey());
+
+    if (! $firstRecipient instanceof DispositionRecipient
+        || ! $secondRecipient instanceof DispositionRecipient
+        || ! $thirdRecipient instanceof DispositionRecipient) {
+        throw new RuntimeException('Fixture recipient Asisten tidak lengkap.');
+    }
+
+    $this->actingAs($assistantOne['user'])
+        ->get(route('back-office.dispositions.inbox.show', $firstRecipient))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('sectionHeadPositions', fn ($positions): bool => collect($positions)
+                ->pluck('id')
+                ->sort()
+                ->values()
+                ->all() === collect([
+                    $headOne['position']->getKey(),
+                    $headTwo['position']->getKey(),
+                    $headThree['position']->getKey(),
+                ])->sort()->values()->all())
+            ->missing('sectionHeadPositions.0.assignment_id')
+            ->missing('sectionHeadPositions.0.holder_email'));
+
+    $this->actingAs($assistantTwo['user'])
+        ->get(route('back-office.dispositions.inbox.show', $secondRecipient))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('sectionHeadPositions', fn ($positions): bool => collect($positions)
+                ->pluck('id')
+                ->all() === [$headFour['position']->getKey()]));
+
+    $this->actingAs($assistantThree['user'])
+        ->get(route('back-office.dispositions.inbox.show', $thirdRecipient))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('sectionHeadPositions', fn ($positions): bool => collect($positions)
+                ->pluck('id')
+                ->all() === [$headFive['position']->getKey()]));
+
+    DB::table('organizational_units')
+        ->where('id', $headOne['position']->organizational_unit_id)
+        ->update(['parent_id' => $assistantTwo['position']->organizational_unit_id]);
+
+    $this->actingAs($assistantOne['user'])
+        ->post(route('back-office.dispositions.inbox.forward.store', $firstRecipient), [
+            'recipient_position_ids' => [$headOne['position']->getKey()],
+            'instruction_label_ids' => [$label->getKey()],
+            'instruction_note' => 'Target yang sudah berpindah unit tidak boleh diteruskan.',
+        ])
+        ->assertNotFound();
+
+    expect(Disposition::query()->whereNotNull('parent_recipient_id')->count())->toBe(0)
+        ->and(DispositionRecipient::query()->count())->toBe(3)
+        ->and($firstRecipient->refresh()->status)->toBe(DispositionRecipientStatus::Pending)
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionCreated->value)->count())->toBe(1);
 });
 
 test('historical duplicate section head branches can still complete with separate technical materials', function (): void {
@@ -1158,6 +1291,9 @@ test('historical duplicate section head branches can still complete with separat
         'Kepala Bagian Ekonomi',
         [PermissionName::ViewDispositions, PermissionName::ProcessDispositions],
     );
+    m6PlacePositionInUnit($firstAssistant['position'], 'M6-ASISTEN-I');
+    m6PlacePositionInUnit($secondAssistant['position'], 'M6-ASISTEN-II');
+    m6PlacePositionInUnit($sectionHead['position'], 'M6-BAGIAN-EKONOMI', 'M6-ASISTEN-I');
     $fixture = m6RoutedLetter($executive, 'Surat lama dengan penerima Bagian ganda');
     $label = InstructionLabel::query()->firstOrFail();
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
@@ -1268,6 +1404,26 @@ test('multiple-recipient forwarding rejects invalid targets and labels without p
     m6Assignment($assistant['user'], $selfHeldSectionHead);
     $vacantSectionHead = m6Position(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian kosong');
     $inactiveHolderSectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian nonaktif');
+    $ambiguousSectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian dengan dua penugasan');
+    $inactivePositionSectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian nonaktif');
+    $orphanSectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian tanpa unit');
+    $wrongParentSectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian lintas unit');
+    $inactiveUnitSectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian dengan unit nonaktif');
+    m6PlacePositionInUnit($assistant['position'], 'M6-ASISTEN-ADMINISTRASI');
+    m6PlacePositionInUnit($sectionHead['position'], 'M6-BAGIAN-AKTIF', 'M6-ASISTEN-ADMINISTRASI');
+    m6PlacePositionInUnit($selfHeldSectionHead, 'M6-BAGIAN-RANGKAP', 'M6-ASISTEN-ADMINISTRASI');
+    m6PlacePositionInUnit($vacantSectionHead, 'M6-BAGIAN-KOSONG', 'M6-ASISTEN-ADMINISTRASI');
+    m6PlacePositionInUnit($inactiveHolderSectionHead['position'], 'M6-BAGIAN-NONAKTIF', 'M6-ASISTEN-ADMINISTRASI');
+    m6PlacePositionInUnit($ambiguousSectionHead['position'], 'M6-BAGIAN-AMBIGU', 'M6-ASISTEN-ADMINISTRASI');
+    m6PlacePositionInUnit($inactivePositionSectionHead['position'], 'M6-BAGIAN-POSISI-NONAKTIF', 'M6-ASISTEN-ADMINISTRASI');
+    m6PlacePositionInUnit($wrongParentSectionHead['position'], 'M6-BAGIAN-LINTAS-UNIT', 'M6-ASISTEN-LAIN');
+    m6PlacePositionInUnit($inactiveUnitSectionHead['position'], 'M6-BAGIAN-UNIT-NONAKTIF', 'M6-ASISTEN-ADMINISTRASI');
+    m6Assignment(User::factory()->internal()->create(), $ambiguousSectionHead['position']);
+    $inactivePositionSectionHead['position']->is_active = false;
+    $inactivePositionSectionHead['position']->save();
+    $inactiveUnit = m6Unit('M6-BAGIAN-UNIT-NONAKTIF');
+    $inactiveUnit->is_active = false;
+    $inactiveUnit->save();
     DB::table('users')
         ->where('id', $inactiveHolderSectionHead['user']->getKey())
         ->update(['is_active' => false]);
@@ -1288,11 +1444,10 @@ test('multiple-recipient forwarding rejects invalid targets and labels without p
     $assistantRecipient = $initialDisposition->recipients()->firstOrFail();
 
     foreach ([
-        [$executive['position']->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
-        [$assistant['position']->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
         [$selfHeldSectionHead->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
         [$vacantSectionHead->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
         [$inactiveHolderSectionHead['position']->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
+        [$ambiguousSectionHead['position']->getKey(), [$activeLabel->getKey()], 'recipient_position_ids'],
         [$sectionHead['position']->getKey(), [$inactiveLabel->getKey()], 'instruction_label_ids'],
     ] as [$positionId, $labelIds, $errorKey]) {
         $this->actingAs($assistant['user'])
@@ -1303,6 +1458,23 @@ test('multiple-recipient forwarding rejects invalid targets and labels without p
                 'instruction_note' => '',
             ])
             ->assertSessionHasErrors($errorKey);
+    }
+
+    foreach ([
+        $executive['position']->getKey(),
+        $assistant['position']->getKey(),
+        $inactivePositionSectionHead['position']->getKey(),
+        $orphanSectionHead['position']->getKey(),
+        $wrongParentSectionHead['position']->getKey(),
+        $inactiveUnitSectionHead['position']->getKey(),
+    ] as $outOfScopePositionId) {
+        $this->actingAs($assistant['user'])
+            ->post(route('back-office.dispositions.inbox.forward.store', $assistantRecipient), [
+                'recipient_position_ids' => [$outOfScopePositionId],
+                'instruction_label_ids' => [$activeLabel->getKey()],
+                'instruction_note' => '',
+            ])
+            ->assertNotFound();
     }
 
     $this->actingAs($assistant['user'])
@@ -1323,6 +1495,91 @@ test('multiple-recipient forwarding rejects invalid targets and labels without p
         ->and(AuditLog::query()->where('action', AuditAction::DispositionCreated->value)->count())->toBe(1);
 });
 
+test('an assistant without an active organizational unit cannot inspect or forward a branch', function (): void {
+    $executive = m6Actor(
+        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+        'Sekretaris Daerah',
+        [PermissionName::CreateDispositions],
+    );
+    $assistant = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten tanpa unit',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $sectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian tujuan');
+    $fixture = m6RoutedLetter($executive, 'Validasi unit sumber Asisten');
+    $label = InstructionLabel::query()->firstOrFail();
+    $initialDisposition = app(CreateInitialDisposition::class)->execute(
+        $executive['user'],
+        $fixture['route'],
+        [$assistant['position']->getKey()],
+        [$label->getKey()],
+        null,
+    );
+    $assistantRecipient = $initialDisposition->recipients()->firstOrFail();
+
+    $this->actingAs($assistant['user'])
+        ->get(route('back-office.dispositions.inbox.show', $assistantRecipient))
+        ->assertNotFound();
+
+    $this->actingAs($assistant['user'])
+        ->post(route('back-office.dispositions.inbox.forward.store', $assistantRecipient), [
+            'recipient_position_ids' => [$sectionHead['position']->getKey()],
+            'instruction_label_ids' => [$label->getKey()],
+            'instruction_note' => '',
+        ])
+        ->assertNotFound();
+
+    expect(Disposition::query()->where('parent_recipient_id', $assistantRecipient->getKey())->exists())
+        ->toBeFalse()
+        ->and($assistantRecipient->refresh()->status)->toBe(DispositionRecipientStatus::Pending)
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionCreated->value)->count())->toBe(1);
+});
+
+test('stale assistant assignment context returns an Inertia-compatible conflict response', function (): void {
+    $executive = m6Actor(
+        OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
+        'Sekretaris Daerah',
+        [PermissionName::CreateDispositions],
+    );
+    $assistant = m6Actor(
+        OrganizationCatalog::ASSISTANT_LEVEL,
+        'Asisten Administrasi',
+        [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
+    );
+    $sectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian Umum');
+    m6PlacePositionInUnit($assistant['position'], 'M6-ASISTEN-STALE');
+    m6PlacePositionInUnit($sectionHead['position'], 'M6-BAGIAN-STALE', 'M6-ASISTEN-STALE');
+
+    $fixture = m6RoutedLetter($executive, 'Konflik konteks penugasan Asisten');
+    $label = InstructionLabel::query()->firstOrFail();
+    $initialDisposition = app(CreateInitialDisposition::class)->execute(
+        $executive['user'],
+        $fixture['route'],
+        [$assistant['position']->getKey()],
+        [$label->getKey()],
+        null,
+    );
+    $assistantRecipient = $initialDisposition->recipients()->firstOrFail();
+    m6Assignment($assistant['user'], $assistant['position']);
+
+    $this->actingAs($assistant['user'])
+        ->from(route('back-office.dispositions.inbox.show', $assistantRecipient))
+        ->withHeader('X-Inertia', 'true')
+        ->post(route('back-office.dispositions.inbox.forward.store', $assistantRecipient), [
+            'recipient_position_ids' => [$sectionHead['position']->getKey()],
+            'instruction_label_ids' => [$label->getKey()],
+            'instruction_note' => '',
+        ])
+        ->assertRedirect(route('back-office.dispositions.inbox.show', $assistantRecipient))
+        ->assertSessionHasErrors('workflow');
+
+    expect(Disposition::query()->where('parent_recipient_id', $assistantRecipient->getKey())->exists())
+        ->toBeFalse()
+        ->and($assistantRecipient->refresh()->status)->toBe(DispositionRecipientStatus::Pending)
+        ->and(AuditLog::query()->where('action', AuditAction::DispositionCreated->value)->count())->toBe(1);
+});
+
 test('multiple-recipient forwarding rolls back recipients and source completion when audit writing fails', function (): void {
     $executive = m6Actor(
         OrganizationCatalog::EXECUTIVE_ENTRY_LEVEL,
@@ -1335,6 +1592,8 @@ test('multiple-recipient forwarding rolls back recipients and source completion 
         [PermissionName::ViewDispositions, PermissionName::CreateDispositions],
     );
     $sectionHead = m6Actor(OrganizationCatalog::SECTION_HEAD_LEVEL, 'Kepala Bagian Kesejahteraan Rakyat');
+    m6PlacePositionInUnit($assistant['position'], 'M6-ASISTEN-KESRA');
+    m6PlacePositionInUnit($sectionHead['position'], 'M6-BAGIAN-KESRA', 'M6-ASISTEN-KESRA');
     $fixture = m6RoutedLetter($executive);
     $label = InstructionLabel::query()->firstOrFail();
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
@@ -1411,6 +1670,9 @@ function m6IndependentBranchFixture(): array
             [PermissionName::ViewDispositions, PermissionName::ProcessDispositions],
         ),
     ];
+    m6PlacePositionInUnit($assistant['position'], 'M6-ASISTEN-CABANG');
+    m6PlacePositionInUnit($heads[0]['position'], 'M6-BAGIAN-CABANG-SATU', 'M6-ASISTEN-CABANG');
+    m6PlacePositionInUnit($heads[1]['position'], 'M6-BAGIAN-CABANG-DUA', 'M6-ASISTEN-CABANG');
     $fixture = m6RoutedLetter($executive, 'Penanganan cabang independen');
     $label = InstructionLabel::query()->firstOrFail();
     $initialDisposition = app(CreateInitialDisposition::class)->execute(
