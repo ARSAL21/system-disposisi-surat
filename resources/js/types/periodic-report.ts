@@ -110,21 +110,19 @@ export type ReportGraphAttention = {
 export type ReportAggregateGraphNode = {
     reference: string;
     recipient_position: ReportProcessPosition;
+    level: 'MAYOR' | 'REGIONAL_SECRETARY' | 'ASSISTANT' | 'SECTION_HEAD';
     progress: PeriodicReportBranchProgress;
     last_activity_at: string | null;
     average_completion_hours?: number | null;
     attention: ReportGraphAttention;
+    children: ReportAggregateGraphNode[];
 };
 
 export type ReportAggregateSectionHeadNode = ReportAggregateGraphNode;
 
-export type ReportAggregateAssistantNode = ReportAggregateGraphNode & {
-    children: ReportAggregateSectionHeadNode[];
-};
+export type ReportAggregateAssistantNode = ReportAggregateGraphNode;
 
-export type ReportAggregateExecutiveNode = ReportAggregateGraphNode & {
-    children: ReportAggregateAssistantNode[];
-};
+export type ReportAggregateExecutiveNode = ReportAggregateGraphNode;
 
 export type PeriodicReportOrganizationGraph = {
     generated_at: string;
@@ -226,6 +224,17 @@ export type ReportProcessDetail = {
         routed_by: RoutingActor;
         routed_at: string;
     } | null;
+    sekda_handoff: {
+        reference: string;
+        recipient_position: ReportProcessPosition;
+        status: 'PENDING' | 'COMPLETED';
+        received_at: string;
+        forwarded_at: string | null;
+        instructions: ReportProcessInstruction[];
+        instruction_note: string | null;
+        disposed_by: RoutingActor;
+        disposed_at: string;
+    } | null;
     branches: ReportProcessAssistantBranch[];
     progress: PeriodicReportBranchProgress;
     visibility_note: string;
@@ -239,7 +248,7 @@ export type ReportInspectorTiming = {
 export type ReportNodeInspectorData = {
     reference: string;
     context: 'AGGREGATE' | 'LETTER';
-    level: 'EXECUTIVE_ENTRY' | 'ASSISTANT' | 'SECTION_HEAD';
+    level: 'MAYOR' | 'REGIONAL_SECRETARY' | 'ASSISTANT' | 'SECTION_HEAD';
     position: ReportProcessPosition;
     status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | null;
     progress: PeriodicReportBranchProgress | null;
