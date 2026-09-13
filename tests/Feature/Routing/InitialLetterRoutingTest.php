@@ -746,6 +746,14 @@ test('via mayor routing keeps Wali Kota formal and hands substantive disposition
     );
 
     $this->actingAs($mayor['user'])
+        ->get(route('back-office.executive.inbox.show', $route))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('capabilities.can_forward_to_sekda', true)
+            ->has('instructionLabels', 8)
+            ->where('instructionLabels.0.id', $label->getKey()));
+
+    $this->actingAs($mayor['user'])
         ->post(route('back-office.executive.inbox.dispositions.store', $route), [
             'recipient_position_ids' => [$assistant['position']->getKey()],
             'instruction_label_ids' => [$label->getKey()],

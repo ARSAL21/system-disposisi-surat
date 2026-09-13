@@ -46,4 +46,8 @@ enum PermissionName: string
     case CreateStandaloneOutgoing = 'standalone-outgoing.create';
     case ReviewStandaloneOutgoing = 'standalone-outgoing.review';
     case ApproveStandaloneOutgoing = 'standalone-outgoing.approve';
+    case ViewExpertConsultations = 'expert-consultations.view';
+    case RequestExpertConsultations = 'expert-consultations.request';
+    case RespondExpertConsultations = 'expert-consultations.respond';
+    case CoordinateExpertConsultations = 'expert-consultations.coordinate';
 }

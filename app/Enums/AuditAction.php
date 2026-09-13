@@ -69,4 +69,7 @@ enum AuditAction: string
     case StandaloneOutgoingEmailLinkIssued = 'STANDALONE_OUTGOING_EMAIL_LINK_ISSUED';
     case StandaloneOutgoingEmailLinkRevoked = 'STANDALONE_OUTGOING_EMAIL_LINK_REVOKED';
     case StandaloneOutgoingCorrectionDraftCreated = 'STANDALONE_OUTGOING_CORRECTION_DRAFT_CREATED';
+    case ExpertConsultationRequested = 'EXPERT_CONSULTATION_REQUESTED';
+    case ExpertConsultationReported = 'EXPERT_CONSULTATION_REPORTED';
+    case ExpertConsultationCancelled = 'EXPERT_CONSULTATION_CANCELLED';
 }

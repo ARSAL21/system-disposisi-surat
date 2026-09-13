@@ -9,6 +9,7 @@ use App\Enums\InitialLetterRoutePath;
 use App\Enums\LetterRouteStatus;
 use App\Exceptions\DispositionStateConflict;
 use App\Exceptions\DocumentStorageConflict;
+use App\ExpertConsultations\ExpertConsultationForwardingGuard;
 use App\Models\Disposition;
 use App\Models\DispositionRecipient;
 use App\Models\IncomingLetter;
@@ -32,6 +33,7 @@ final class CreateMayorDispositionToSekda
         private readonly DispositionPositionAssignmentResolver $positionAssignmentResolver,
         private readonly ExecutiveRoutingTargetResolver $targetResolver,
         private readonly DocumentStorageGuard $storageGuard,
+        private readonly ExpertConsultationForwardingGuard $expertConsultationForwardingGuard,
         private readonly RecordAudit $recordAudit,
     ) {}
 
@@ -56,6 +58,8 @@ final class CreateMayorDispositionToSekda
                     || Disposition::query()->where('source_route_id', $lockedRoute->getKey())->lockForUpdate()->exists()) {
                     throw DispositionStateConflict::staleSource();
                 }
+
+                $this->expertConsultationForwardingGuard->ensureNoPendingForLockedRoute($lockedRoute);
 
                 $currentDocument = LetterDocument::query()
                     ->where('incoming_letter_id', $lockedLetter->getKey())

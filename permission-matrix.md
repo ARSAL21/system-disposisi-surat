@@ -468,3 +468,18 @@ mutasi M10 berada di limiter upload atau mutation yang sesuai, sedangkan QR
 verification dan tautan unduh publik memakai limiter berbasis IP. Setelah
 deploy, jalankan `php artisan authorization:sync` untuk memastikan role resmi
 tetap exact-sync dengan katalog yang sudah ada.
+
+## Telaah Staf Ahli Wali Kota
+
+| Role resmi | Lihat tugas/hasil | Minta atau batalkan telaah | Kirim hasil | Koordinasi administratif |
+| --- | --- | --- | --- | --- |
+| `wali-kota` | Ya, hanya route Wali Kota sendiri | Ya | - | - |
+| `staf-ahli` | Ya, hanya tugas Position sendiri | - | Ya | - |
+| `sekda` | - | - | - | Ya, hanya status/actor/waktu |
+| `asisten`, `kepala-bagian`, `petugas-surat` | - | - | - | - |
+| `super-admin` | katalog exact-sync, tetap butuh Position bisnis | katalog exact-sync | katalog exact-sync | katalog exact-sync |
+
+Permission: `expert-consultations.view`, `expert-consultations.request`,
+`expert-consultations.respond`, dan `expert-consultations.coordinate`. Role
+tidak menggantikan Position Assignment maupun hubungan Position substantif dan
+koordinatif. Sekda tidak menerima laporan, instruksi, atau PDF telaah.

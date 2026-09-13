@@ -14,6 +14,7 @@ const props = defineProps<{
     canForward: boolean;
     processing?: boolean;
     errors?: Record<string, string>;
+    blockedReason?: string;
 }>();
 
 const emit = defineEmits<{
@@ -67,11 +68,8 @@ function submit(): void {
         </div>
 
         <Alert v-if="!canForward" class="mt-5">
-            <AlertTitle>Arahan sudah tercatat</AlertTitle>
-            <AlertDescription
-                >Surat ini tidak lagi menunggu arahan Wali
-                Kota.</AlertDescription
-            >
+            <AlertTitle>{{ blockedReason ? 'Belum dapat diteruskan' : 'Arahan sudah tercatat' }}</AlertTitle>
+            <AlertDescription>{{ blockedReason || 'Surat ini tidak lagi menunggu arahan Wali Kota.' }}</AlertDescription>
         </Alert>
 
         <div v-else class="mt-5 grid gap-4">

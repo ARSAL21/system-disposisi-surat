@@ -8,6 +8,7 @@ use App\Listeners\RecordUserLoginEvent;
 use App\Models\AuditLog;
 use App\Models\Disposition;
 use App\Models\DispositionRecipient;
+use App\Models\ExpertConsultation;
 use App\Models\IncomingLetter;
 use App\Models\InstructionLabel;
 use App\Models\LetterResponseDossier;
@@ -20,6 +21,7 @@ use App\Models\UserInvitation;
 use App\Policies\AuditLogPolicy;
 use App\Policies\DispositionPolicy;
 use App\Policies\DispositionRecipientPolicy;
+use App\Policies\ExpertConsultationPolicy;
 use App\Policies\IncomingLetterPolicy;
 use App\Policies\InstructionLabelPolicy;
 use App\Policies\LetterResponseDossierPolicy;
@@ -74,6 +76,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(IncomingLetter::class, IncomingLetterPolicy::class);
         Gate::policy(Disposition::class, DispositionPolicy::class);
+        Gate::policy(ExpertConsultation::class, ExpertConsultationPolicy::class);
         Gate::policy(DispositionRecipient::class, DispositionRecipientPolicy::class);
         Gate::policy(InstructionLabel::class, InstructionLabelPolicy::class);
         Gate::policy(LetterRoute::class, LetterRoutePolicy::class);
@@ -186,6 +189,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('disposition-create', fn (Request $request): array => [
             Limit::perMinute(30)->by('disposition-create:user:'.$request->user()?->getAuthIdentifier()),
             Limit::perMinute(60)->by('disposition-create:ip:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('expert-consultation-mutation', fn (Request $request): array => [
+            Limit::perMinute(30)->by('expert-consultation-mutation:user:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute(60)->by('expert-consultation-mutation:ip:'.$request->ip()),
         ]);
 
         RateLimiter::for('disposition-branch-mutation', fn (Request $request): array => [

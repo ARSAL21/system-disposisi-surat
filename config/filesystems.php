@@ -62,6 +62,14 @@ return [
             'report' => true,
         ],
 
+        'expert-consultation-documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/expert-consultations'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+        ],
+
         'outgoing-letter-documents' => [
             'driver' => 'local',
             'root' => storage_path('app/private/outgoing-letters'),

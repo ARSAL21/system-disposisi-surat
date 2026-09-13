@@ -8,11 +8,13 @@ use App\Actions\SynchronizePositionLevelCatalog;
 use App\Authorization\AuthorizationCatalog;
 use App\Enums\AccountType;
 use App\Enums\AuditAction;
+use App\Enums\PositionRelationshipType;
 use App\Enums\RoleName;
 use App\Models\OrganizationalUnit;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\PositionLevel;
+use App\Models\PositionRelationship;
 use App\Models\User;
 use App\Organization\OrganizationCatalog;
 use Carbon\CarbonInterface;
@@ -45,6 +47,7 @@ class OrganizationAndUserSeeder extends Seeder
             DB::transaction(function (): void {
                 $units = $this->seedOrganizationalUnits();
                 $positions = $this->seedPositions($units);
+                $this->seedExpertAdvisorRelationships($positions);
                 $this->seedInternalUsersAndAssignments($positions);
             }, attempts: 3);
         } finally {
@@ -202,7 +205,9 @@ class OrganizationAndUserSeeder extends Seeder
     /** @param array<string, Position> $positions */
     private function seedInternalUsersAndAssignments(array $positions): void
     {
-        $startedAt = Date::now();
+        // Make bootstrap assignments effective immediately even on database
+        // engines that truncate microseconds before an authorization query.
+        $startedAt = Date::now()->subSecond();
 
         foreach ($this->internalUserDefinitions() as $definition) {
             $position = $positions[$definition['position']] ?? null;
@@ -214,6 +219,28 @@ class OrganizationAndUserSeeder extends Seeder
             $user = $this->seedInternalUser($definition['name'], $definition['email']);
             $this->synchronizeOperationalRole($user, $definition['role']);
             $this->seedPositionAssignment($user, $position, $startedAt);
+        }
+    }
+
+    /** @param array<string, Position> $positions */
+    private function seedExpertAdvisorRelationships(array $positions): void
+    {
+        $mayor = $positions['WALI_KOTA'] ?? null;
+        $sekda = $positions['SEKDA'] ?? null;
+        if (! $mayor instanceof Position || ! $sekda instanceof Position) {
+            throw new RuntimeException('Mayor and Sekda positions are required for Staff Ahli relationships.');
+        }
+        foreach (['STAF_AHLI_PEMERINTAHAN_HUKUM', 'STAF_AHLI_EKONOMI_PEMBANGUNAN', 'STAF_AHLI_KEMASYARAKATAN_SDM'] as $code) {
+            $expert = $positions[$code] ?? null;
+            if (! $expert instanceof Position) {
+                throw new RuntimeException("Expert advisor position {$code} is unavailable.");
+            }
+            foreach ([[PositionRelationshipType::SubstantiveAccountability, $mayor], [PositionRelationshipType::AdministrativeCoordination, $sekda]] as [$type, $target]) {
+                PositionRelationship::query()->updateOrCreate(
+                    ['source_position_id' => $expert->getKey(), 'relationship_type' => $type->value],
+                    ['target_position_id' => $target->getKey(), 'is_active' => true],
+                );
+            }
         }
     }
 
@@ -391,6 +418,7 @@ class OrganizationAndUserSeeder extends Seeder
         return [
             'PEMKOT_BAU-BAU' => ['name' => 'Pemerintah Kota Baubau', 'parent' => null],
             'SEKDA' => ['name' => 'Sekretariat Daerah', 'parent' => 'PEMKOT_BAU-BAU'],
+            'STAF_AHLI_WALI_KOTA' => ['name' => 'Staf Ahli Wali Kota', 'parent' => 'PEMKOT_BAU-BAU'],
             'ASISTEN_1' => ['name' => 'Asisten Pemerintahan dan Kesejahteraan Rakyat (Asisten I)', 'parent' => 'SEKDA'],
             'ASISTEN_2' => ['name' => 'Asisten Perekonomian dan Pembangunan (Asisten II)', 'parent' => 'SEKDA'],
             'ASISTEN_3' => ['name' => 'Asisten Administrasi Umum (Asisten III)', 'parent' => 'SEKDA'],
@@ -411,6 +439,9 @@ class OrganizationAndUserSeeder extends Seeder
         return [
             'WALI_KOTA' => ['name' => 'Wali Kota', 'unit' => 'PEMKOT_BAU-BAU', 'level' => OrganizationCatalog::MAYOR_LEVEL],
             'SEKDA' => ['name' => 'Sekretaris Daerah', 'unit' => 'SEKDA', 'level' => OrganizationCatalog::REGIONAL_SECRETARY_LEVEL],
+            'STAF_AHLI_PEMERINTAHAN_HUKUM' => ['name' => 'Staf Ahli Pemerintahan, Politik, dan Hukum', 'unit' => 'STAF_AHLI_WALI_KOTA', 'level' => OrganizationCatalog::EXPERT_ADVISOR_LEVEL],
+            'STAF_AHLI_EKONOMI_PEMBANGUNAN' => ['name' => 'Staf Ahli Ekonomi dan Pembangunan', 'unit' => 'STAF_AHLI_WALI_KOTA', 'level' => OrganizationCatalog::EXPERT_ADVISOR_LEVEL],
+            'STAF_AHLI_KEMASYARAKATAN_SDM' => ['name' => 'Staf Ahli Kemasyarakatan dan SDM', 'unit' => 'STAF_AHLI_WALI_KOTA', 'level' => OrganizationCatalog::EXPERT_ADVISOR_LEVEL],
             'ASISTEN-I' => ['name' => 'Asisten I', 'unit' => 'ASISTEN_1', 'level' => OrganizationCatalog::ASSISTANT_LEVEL],
             'ASISTEN-II' => ['name' => 'Asisten II', 'unit' => 'ASISTEN_2', 'level' => OrganizationCatalog::ASSISTANT_LEVEL],
             'ASISTEN-III' => ['name' => 'Asisten III', 'unit' => 'ASISTEN_3', 'level' => OrganizationCatalog::ASSISTANT_LEVEL],
@@ -432,6 +463,9 @@ class OrganizationAndUserSeeder extends Seeder
         return [
             ['name' => 'Wali Kota', 'email' => 'wali.kota@internal.test', 'role' => RoleName::Mayor, 'position' => 'WALI_KOTA'],
             ['name' => 'Sekretaris Daerah', 'email' => 'sekda@internal.test', 'role' => RoleName::RegionalSecretary, 'position' => 'SEKDA'],
+            ['name' => 'Staf Ahli Pemerintahan, Politik, dan Hukum', 'email' => 'staf.ahli.pemerintahan@internal.test', 'role' => RoleName::ExpertAdvisor, 'position' => 'STAF_AHLI_PEMERINTAHAN_HUKUM'],
+            ['name' => 'Staf Ahli Ekonomi dan Pembangunan', 'email' => 'staf.ahli.ekonomi@internal.test', 'role' => RoleName::ExpertAdvisor, 'position' => 'STAF_AHLI_EKONOMI_PEMBANGUNAN'],
+            ['name' => 'Staf Ahli Kemasyarakatan dan SDM', 'email' => 'staf.ahli.kemasyarakatan@internal.test', 'role' => RoleName::ExpertAdvisor, 'position' => 'STAF_AHLI_KEMASYARAKATAN_SDM'],
             ['name' => 'Asisten I', 'email' => 'asisten.1@internal.test', 'role' => RoleName::Assistant, 'position' => 'ASISTEN-I'],
             ['name' => 'Asisten II', 'email' => 'asisten.2@internal.test', 'role' => RoleName::Assistant, 'position' => 'ASISTEN-II'],
             ['name' => 'Asisten III', 'email' => 'asisten.3@internal.test', 'role' => RoleName::Assistant, 'position' => 'ASISTEN-III'],

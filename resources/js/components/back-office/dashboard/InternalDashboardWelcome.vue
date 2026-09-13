@@ -16,6 +16,7 @@ import {
     Shield,
     ShieldCheck,
     UserRoundCog,
+    FileSearch,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import IntakeQueueStatsCards from '@/components/back-office/dashboard/IntakeQueueStatsCards.vue';
@@ -126,6 +127,39 @@ const letterOperationModules = computed(() => {
             bgLight: 'bg-amber-50 dark:bg-amber-950/50',
             textLight: 'text-amber-700 dark:text-amber-300',
             badge: 'Meja Pimpinan',
+        });
+    }
+
+    if (
+        capabilities.value.can_view_expert_consultations === true ||
+        props.preview
+    ) {
+        list.push({
+            title: 'Tugas Telaah Staf Ahli',
+            description:
+                'Pelajari surat yang ditugaskan Wali Kota dan kirimkan pertimbangan kembali melalui ruang kerja Anda.',
+            href: props.preview
+                ? '/back-office/previews/expert-consultations'
+                : '/back-office/expert-consultations',
+            icon: FileSearch,
+            color: 'from-amber-500 to-orange-600',
+            bgLight: 'bg-amber-50 dark:bg-amber-950/50',
+            textLight: 'text-amber-700 dark:text-amber-300',
+            badge: 'Telaah Pimpinan',
+        });
+    }
+
+    if (capabilities.value.can_coordinate_expert_consultations === true) {
+        list.push({
+            title: 'Koordinasi Telaah',
+            description:
+                'Pantau status permintaan telaah Staf Ahli untuk kebutuhan administrasi tanpa membuka isi laporan.',
+            href: '/back-office/expert-consultations/coordination',
+            icon: Landmark,
+            color: 'from-indigo-500 to-sky-600',
+            bgLight: 'bg-indigo-50 dark:bg-indigo-950/50',
+            textLight: 'text-indigo-700 dark:text-indigo-300',
+            badge: 'Koordinasi',
         });
     }
 

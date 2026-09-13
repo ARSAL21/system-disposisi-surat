@@ -32,6 +32,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import BackOfficeConfirmPasswordModal from '@/components/back-office/auth/BackOfficeConfirmPasswordModal.vue';
 import AssistantBranchTree from '@/components/back-office/organization/AssistantBranchTree.vue';
 import ExecutiveTierCard from '@/components/back-office/organization/ExecutiveTierCard.vue';
+import ExpertAdvisorRelationshipCard from '@/components/back-office/organization/ExpertAdvisorRelationshipCard.vue';
 import OrganizationTreeNodeBranch from '@/components/back-office/organization/OrganizationTreeNodeBranch.vue';
 import ReparentUnitDialog from '@/components/back-office/organization/ReparentUnitDialog.vue';
 import { Badge } from '@/components/ui/badge';
@@ -657,7 +658,11 @@ const sekdaNode = computed<OrganizationTreeNode | null>(() => {
         return null;
     }
 
-    return waliKotaNode.value.children[0] ?? null;
+    return (
+        waliKotaNode.value.children.find((child) =>
+            child.positions.some((position) => position.code === 'SEKDA'),
+        ) ?? null
+    );
 });
 
 const assistantNodes = computed<OrganizationTreeNode[]>(() => {
@@ -665,7 +670,33 @@ const assistantNodes = computed<OrganizationTreeNode[]>(() => {
         return [];
     }
 
-    return sekdaNode.value.children;
+    return sekdaNode.value.children.filter((child) =>
+        child.positions.some((position) => position.level.code === 'ASSISTANT'),
+    );
+});
+
+const expertAdvisorPositions = computed<OrganizationTreePosition[]>(() => {
+    const positions: OrganizationTreePosition[] = [];
+
+    function collect(nodes: OrganizationTreeNode[]): void {
+        for (const node of nodes) {
+            positions.push(
+                ...node.positions.filter(
+                    (position) => position.level.code === 'EXPERT_ADVISOR',
+                ),
+            );
+            collect(node.children);
+        }
+    }
+
+    collect(props.tree.root_units);
+    positions.push(
+        ...props.tree.unassigned_positions.filter(
+            (position) => position.level.code === 'EXPERT_ADVISOR',
+        ),
+    );
+
+    return positions;
 });
 
 const otherRootUnits = computed<OrganizationTreeNode[]>(() => {
@@ -1199,6 +1230,13 @@ function getLevelBadgeClass(code: string): string {
                         />
                     </div>
                 </div>
+
+                <ExpertAdvisorRelationshipCard
+                    v-if="expertAdvisorPositions.length > 0"
+                    :positions="expertAdvisorPositions"
+                    class="mt-10"
+                    @inspect-position="inspectPosition"
+                />
 
                 <!-- ======================================================== -->
                 <!-- TIER 2: SEKRETARIAT DAERAH (SEKDA)                       -->

@@ -12,4 +12,5 @@ enum RoleName: string
     case Assistant = 'asisten';
     case SectionHead = 'kepala-bagian';
     case UnitStaff = 'staf-bagian';
+    case ExpertAdvisor = 'staf-ahli';
 }

@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Disposition;
 use App\Models\DispositionFollowUp;
 use App\Models\DispositionRecipient;
+use App\Models\ExpertConsultation;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
@@ -158,6 +159,15 @@ final class LetterActivityQuery
                             AuditAction::OutgoingLetterMandateWithdrawn->value,
                             AuditAction::LetterResponseDossierFulfilled->value,
                         ]);
+                })
+                ->orWhere(function (Builder $expertConsultations): void {
+                    $expertConsultations
+                        ->where('subject_type', 'expert_consultation')
+                        ->whereIn('action', [
+                            AuditAction::ExpertConsultationRequested->value,
+                            AuditAction::ExpertConsultationReported->value,
+                            AuditAction::ExpertConsultationCancelled->value,
+                        ]);
                 });
         });
     }
@@ -203,8 +213,11 @@ final class LetterActivityQuery
             ->join('disposition_recipients', 'disposition_recipients.id', '=', 'disposition_follow_ups.disposition_recipient_id')
             ->join('dispositions', 'dispositions.id', '=', 'disposition_recipients.disposition_id')
             ->whereIn('dispositions.incoming_letter_id', clone $letterIds);
+        $expertConsultationIds = ExpertConsultation::query()
+            ->select('id')
+            ->whereIn('incoming_letter_id', clone $letterIds);
 
-        $query->where(function (Builder $target) use ($submissionIds, $letterIds, $documentIds, $routeIds, $dispositionIds, $recipientIds, $followUpIds): void {
+        $query->where(function (Builder $target) use ($submissionIds, $letterIds, $documentIds, $routeIds, $dispositionIds, $recipientIds, $followUpIds, $expertConsultationIds): void {
             $target
                 ->where(function (Builder $submission) use ($submissionIds): void {
                     $submission
@@ -240,6 +253,11 @@ final class LetterActivityQuery
                     $followUp
                         ->where('subject_type', 'disposition_follow_up')
                         ->whereIn('subject_id', $followUpIds);
+                })
+                ->orWhere(function (Builder $consultation) use ($expertConsultationIds): void {
+                    $consultation
+                        ->where('subject_type', 'expert_consultation')
+                        ->whereIn('subject_id', $expertConsultationIds);
                 });
         });
     }

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Authorization\AuthorizationMutationSecurity;
 use App\Enums\AccountType;

@@ -3,6 +3,7 @@ export * from './authorization';
 export * from './document-archive';
 export * from './document-version';
 export * from './disposition';
+export * from './expert-consultation';
 export * from './intake';
 export * from './intake-approval';
 export * from './intake-dashboard';
