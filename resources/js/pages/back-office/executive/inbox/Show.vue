@@ -6,6 +6,7 @@ import ExecutiveBranchProgressCard from '@/components/back-office/dispositions/E
 import FirstDispositionPanel from '@/components/back-office/dispositions/FirstDispositionPanel.vue';
 import FirstDispositionReceiptCard from '@/components/back-office/dispositions/FirstDispositionReceiptCard.vue';
 import MayorForwardToSekdaPanel from '@/components/back-office/dispositions/MayorForwardToSekdaPanel.vue';
+import MayorExpertConsultationPanel from '@/components/back-office/expert-consultations/MayorExpertConsultationPanel.vue';
 import InitialRouteReceiptCard from '@/components/back-office/routing/InitialRouteReceiptCard.vue';
 import RoutingDetailHeader from '@/components/back-office/routing/RoutingDetailHeader.vue';
 import RoutingLetterOverviewCard from '@/components/back-office/routing/RoutingLetterOverviewCard.vue';
@@ -16,6 +17,10 @@ import {
     previewDispositionInstructionLabels,
     previewFirstDispositionReceipt,
 } from '@/lib/dispositionPreview';
+import {
+    previewExpertAdvisors,
+    previewExpertConsultations,
+} from '@/lib/expertConsultationPreview';
 import {
     previewExecutiveBranchProgress,
     previewExecutiveInboxItems,
@@ -29,6 +34,8 @@ import type {
     FirstDispositionCapabilities,
     FirstDispositionReceipt,
     FirstDispositionRoutes,
+    ExpertAdvisorOption,
+    ExpertConsultation,
 } from '@/types';
 
 const props = defineProps<{
@@ -39,6 +46,9 @@ const props = defineProps<{
     branchProgress?: ExecutiveBranchProgress | null;
     capabilities?: FirstDispositionCapabilities;
     routes?: FirstDispositionRoutes;
+    expertAdvisors?: ExpertAdvisorOption[];
+    expertConsultations?: ExpertConsultation[];
+    expertConsultationRoutes?: { store?: string };
     preview?: boolean;
 }>();
 
@@ -112,6 +122,41 @@ const instructionLabels = computed(() =>
     previewMode.value
         ? previewDispositionInstructionLabels
         : (props.instructionLabels ?? []),
+);
+const isMayorRoute = computed(
+    () => ['WALIKOTA', 'WALI_KOTA'].includes(activeRoute.value?.letter.current_route?.target_position.code ?? ''),
+);
+const expertAdvisors = computed(() =>
+    previewMode.value && isMayorRoute.value
+        ? previewExpertAdvisors
+        : (props.expertAdvisors ?? []),
+);
+const simulatedExpertConsultations = ref<ExpertConsultation[]>([]);
+const activeExpertConsultations = computed(() => {
+    if (previewMode.value && isMayorRoute.value) {
+        return simulatedExpertConsultations.value.length > 0
+            ? simulatedExpertConsultations.value
+            : previewExpertConsultations;
+    }
+
+    return props.expertConsultations ?? [];
+});
+const canRequestExpertConsultation = computed(
+    () =>
+        isMayorRoute.value &&
+        (previewMode.value ||
+            props.capabilities?.can_request_expert_consultations === true),
+);
+const hasPendingExpertConsultation = computed(() =>
+    activeExpertConsultations.value.some(
+        (consultation) => consultation.status === 'PENDING',
+    ),
+);
+const canForwardToSekda = computed(
+    () =>
+        (previewMode.value ||
+            props.capabilities?.can_forward_to_sekda === true) &&
+        !hasPendingExpertConsultation.value,
 );
 const canCreateDisposition = computed(
     () =>
@@ -233,6 +278,15 @@ function forwardToSekda(payload: {
     errors.value = {};
     successNotice.value = '';
 
+    if (hasPendingExpertConsultation.value) {
+        errors.value = {
+            workflow:
+                'Tunggu seluruh Staf Ahli menyampaikan hasil telaah sebelum meneruskan surat kepada Sekda.',
+        };
+
+        return;
+    }
+
     if (!props.routes?.forward_to_sekda) {
         errors.value = {
             workflow:
@@ -243,6 +297,73 @@ function forwardToSekda(payload: {
     }
 
     router.post(props.routes.forward_to_sekda, payload, {
+        preserveScroll: true,
+        onStart: () => {
+            processing.value = true;
+        },
+        onError: (responseErrors) => {
+            errors.value = responseErrors;
+        },
+        onFinish: () => {
+            processing.value = false;
+        },
+    });
+}
+
+function requestExpertConsultation(payload: {
+    expert_position_ids: number[];
+    request_note: string;
+}): void {
+    errors.value = {};
+    successNotice.value = '';
+
+    if (!canRequestExpertConsultation.value) {
+        errors.value = {
+            workflow: 'Anda tidak memiliki akses untuk meminta telaah Staf Ahli.',
+        };
+
+        return;
+    }
+
+    const storeUrl = previewMode.value
+        ? '/back-office/previews/executive/inbox/routes/503/expert-consultations'
+        : props.expertConsultationRoutes?.store;
+
+    if (previewMode.value) {
+        const selected = expertAdvisors.value.filter((advisor) =>
+            payload.expert_position_ids.includes(advisor.id),
+        );
+
+        simulatedExpertConsultations.value = [
+            ...activeExpertConsultations.value,
+            ...selected.map((advisor, index) => ({
+                id: 850 + index,
+                letter: activeRoute.value!.letter,
+                advisor,
+                status: 'PENDING' as const,
+                request_note: payload.request_note || null,
+                requested_at: new Date().toISOString(),
+                report: null,
+                links: {
+                    show: `/back-office/previews/expert-consultations/${850 + index}`,
+                },
+            })),
+        ];
+        successNotice.value =
+            'Permintaan telaah ditambahkan pada simulasi. Tidak ada data backend atau audit yang dibuat.';
+
+        return;
+    }
+
+    if (!storeUrl) {
+        errors.value = {
+            workflow: 'Endpoint permintaan telaah belum tersedia dari server.',
+        };
+
+        return;
+    }
+
+    router.post(storeUrl, payload, {
         preserveScroll: true,
         onStart: () => {
             processing.value = true;
@@ -329,9 +450,20 @@ onBeforeUnmount(() => {
                 <!-- Right Column (5 Cols): Disposition Desk & Provenance Cards -->
                 <div class="space-y-6 lg:col-span-5">
                     <!-- 1. Disposition Panel (Active form if not yet disposed) -->
+                    <MayorExpertConsultationPanel
+                        v-if="!activeDisposition && isMayorRoute"
+                        :advisors="expertAdvisors"
+                        :consultations="activeExpertConsultations"
+                        :can-request="canRequestExpertConsultation"
+                        :processing="processing"
+                        :errors="errors"
+                        @request="requestExpertConsultation"
+                    />
+
                     <FirstDispositionPanel
                         v-if="
                             !activeDisposition &&
+                            !isMayorRoute &&
                             !props.capabilities?.can_forward_to_sekda
                         "
                         :positions="assistantPositions"
@@ -345,14 +477,20 @@ onBeforeUnmount(() => {
                     <MayorForwardToSekdaPanel
                         v-if="
                             !activeDisposition &&
-                            props.capabilities?.can_forward_to_sekda
+                            (isMayorRoute ||
+                                props.capabilities?.can_forward_to_sekda)
                         "
                         :instruction-labels="instructionLabels"
                         :can-forward="
-                            props.capabilities?.can_forward_to_sekda === true
+                            canForwardToSekda
                         "
                         :processing="processing"
                         :errors="errors"
+                        :blocked-reason="
+                            hasPendingExpertConsultation
+                                ? 'Tunggu seluruh Staf Ahli menyampaikan hasil telaah sebelum meneruskan surat kepada Sekda.'
+                                : undefined
+                        "
                         @confirm="forwardToSekda"
                     />
 
