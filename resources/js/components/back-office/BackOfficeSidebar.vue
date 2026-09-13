@@ -22,6 +22,7 @@ import {
     ShieldAlert,
     UserRoundCog,
     Users,
+    FileSearch,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -148,6 +149,46 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: executiveInboxPath,
             icon: Landmark,
             isActive: currentPath.value.startsWith(executiveInboxPath),
+        });
+    }
+
+    const isExpertConsultationPreview = currentPath.value.startsWith(
+        '/back-office/previews/expert-consultations',
+    );
+
+    if (
+        page.props.auth.capabilities.can_view_expert_consultations === true ||
+        (isExpertConsultationPreview &&
+            !currentPath.value.endsWith('/coordination'))
+    ) {
+        const consultationPath = isExpertConsultationPreview
+            ? '/back-office/previews/expert-consultations'
+            : '/back-office/expert-consultations';
+        items.push({
+            title: 'Tugas Telaah Staf Ahli',
+            href: consultationPath,
+            icon: FileSearch,
+            isActive: currentPath.value.startsWith(consultationPath),
+        });
+    }
+
+    const isExpertCoordinationPreview = currentPath.value.endsWith(
+        '/expert-consultations/coordination',
+    );
+
+    if (
+        page.props.auth.capabilities.can_coordinate_expert_consultations ===
+            true ||
+        isExpertCoordinationPreview
+    ) {
+        const coordinationPath = isExpertCoordinationPreview
+            ? '/back-office/previews/expert-consultations/coordination'
+            : '/back-office/expert-consultations/coordination';
+        items.push({
+            title: 'Koordinasi Telaah',
+            href: coordinationPath,
+            icon: Landmark,
+            isActive: currentPath.value.startsWith(coordinationPath),
         });
     }
 
