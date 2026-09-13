@@ -121,7 +121,7 @@ def generate_letter_template(output_path: str):
           <w:sz w:val="18"/>
           <w:szCs w:val="18"/>
         </w:rPr>
-        <w:t>Laman: www.baubaukota.go.id &bull; Pos-el: bagian.umum@baubaukota.go.id</w:t>
+        <w:t>Laman: www.baubaukota.go.id • Pos-el: bagian.umum@baubaukota.go.id</w:t>
       </w:r>
     </w:p>
 
@@ -184,7 +184,7 @@ def generate_letter_template(output_path: str):
     </w:p>
     <w:p>
       <w:pPr><w:spacing w:before="0" w:after="20"/></w:pPr>
-      <w:r><w:t>di &ndash;</w:t></w:r>
+      <w:r><w:t>di -</w:t></w:r>
     </w:p>
     <w:p>
       <w:pPr><w:spacing w:before="0" w:after="160"/><w:ind w:left="400"/></w:pPr>
@@ -416,6 +416,7 @@ if __name__ == '__main__':
     targets = [
         'storage/app/templates/template-surat-dinas-bagian.docx',
         'public/templates/template-surat-dinas-bagian.docx',
+        r'C:/Users/laode/.gemini/antigravity/brain/26e7842d-381d-4ca6-b478-93b52c8b25ae/template-surat-dinas-bagian.docx',
     ]
     for target in targets:
         generate_letter_template(target)

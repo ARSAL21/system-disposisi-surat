@@ -61,7 +61,12 @@ test('organization workspace enforces account and explicit view boundaries', fun
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('back-office/organization/structure/Index')
-            ->has('levels', 6)
+            ->has('levels', 7)
+            ->has('levels.2', fn (Assert $level) => $level
+                ->where('code', 'EXPERT_ADVISOR')
+                ->where('name', 'Staf Ahli Wali Kota')
+                ->where('hierarchy_order', 25)
+                ->etc())
             ->where('mutationSecurity.can_manage', false)
             ->where('mutationSecurity.can_mutate', false));
 });
