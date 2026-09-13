@@ -4,8 +4,10 @@ namespace App\Http\Middleware;
 
 use App\Enums\PermissionName;
 use App\Enums\RoleName;
+use App\ExpertConsultations\ExpertConsultationPositionResolver;
 use App\LetterResponses\LetterResponseScopeQuery;
 use App\Models\User;
+use App\Organization\OrganizationCatalog;
 use App\OutgoingLetters\OutgoingLetterScopeQuery;
 use App\Reporting\ReportScopeResolver;
 use App\Services\DispositionPositionAssignmentResolver;
@@ -141,6 +143,10 @@ class HandleInertiaRequests extends Middleware
                 'can_create_standalone_outgoing' => false,
                 'can_review_standalone_outgoing' => false,
                 'can_approve_standalone_outgoing' => false,
+                'can_view_expert_consultations' => false,
+                'can_request_expert_consultations' => false,
+                'can_respond_expert_consultations' => false,
+                'can_coordinate_expert_consultations' => false,
             ];
         }
 
@@ -186,6 +192,9 @@ class HandleInertiaRequests extends Middleware
         $hasOutgoingLetterPosition = app(OutgoingLetterScopeQuery::class)->hasBusinessScope($user);
         $hasStandaloneOutgoingPosition = app(StandaloneOutgoingScopeQuery::class)->hasBusinessScope($user);
         $hasStandaloneOutgoingApprovalPosition = app(StandaloneOutgoingPositionAssignmentResolver::class)->hasSekdaAssignment($user);
+        $expertConsultationResolver = app(ExpertConsultationPositionResolver::class);
+        $hasExpertPosition = $user->positionAssignments()->active()->whereHas('position.positionLevel', fn ($query) => $query->where('code', OrganizationCatalog::EXPERT_ADVISOR_LEVEL))->exists();
+        $hasMayorPosition = $dispositionResolver->hasMayorAssignmentForPosition($user, (int) $user->positionAssignments()->active()->whereHas('position', fn ($query) => $query->where('code', OrganizationCatalog::MAYOR_POSITION))->value('position_id'));
 
         return [
             'can_view_authorization' => $user->can(PermissionName::ViewAuthorization->value),
@@ -247,6 +256,10 @@ class HandleInertiaRequests extends Middleware
                 && $user->can(PermissionName::ReviewStandaloneOutgoing->value),
             'can_approve_standalone_outgoing' => $hasStandaloneOutgoingApprovalPosition
                 && $user->can(PermissionName::ApproveStandaloneOutgoing->value),
+            'can_view_expert_consultations' => $user->can(PermissionName::ViewExpertConsultations->value) && ($hasExpertPosition || $hasMayorPosition),
+            'can_request_expert_consultations' => $user->can(PermissionName::RequestExpertConsultations->value) && $hasMayorPosition,
+            'can_respond_expert_consultations' => $user->can(PermissionName::RespondExpertConsultations->value) && $hasExpertPosition,
+            'can_coordinate_expert_consultations' => $user->can(PermissionName::CoordinateExpertConsultations->value) && $expertConsultationResolver->hasCoordinationAssignment($user),
         ];
     }
 }

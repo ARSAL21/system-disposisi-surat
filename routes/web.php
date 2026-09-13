@@ -24,6 +24,11 @@ use App\Http\Controllers\BackOffice\Documents\DocumentArchiveController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentFileController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentHistoryController;
 use App\Http\Controllers\BackOffice\Documents\LetterDocumentVersionController;
+use App\Http\Controllers\BackOffice\ExpertConsultations\CancelExpertConsultationController;
+use App\Http\Controllers\BackOffice\ExpertConsultations\ExpertConsultationController;
+use App\Http\Controllers\BackOffice\ExpertConsultations\ExpertConsultationCoordinationController;
+use App\Http\Controllers\BackOffice\ExpertConsultations\ExpertConsultationDocumentController;
+use App\Http\Controllers\BackOffice\ExpertConsultations\StoreExpertConsultationController;
 use App\Http\Controllers\BackOffice\IncomingRegister\IncomingRegisterController;
 use App\Http\Controllers\BackOffice\Intake\IntakeApprovalController;
 use App\Http\Controllers\BackOffice\Intake\IntakeApprovalDocumentController;
@@ -240,6 +245,12 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         ->name('previews.executive-inbox.index');
                     Route::inertia('previews/executive-inbox/routes/{letterRoute}', 'back-office/executive/inbox/Show', ['preview' => true])
                         ->name('previews.executive-inbox.show');
+                    Route::inertia('previews/expert-consultations', 'back-office/expert-consultations/Index', ['preview' => true])
+                        ->name('previews.expert-consultations.index');
+                    Route::inertia('previews/expert-consultations/coordination', 'back-office/expert-consultations/Coordination', ['preview' => true])
+                        ->name('previews.expert-consultations.coordination');
+                    Route::inertia('previews/expert-consultations/{expertConsultation}', 'back-office/expert-consultations/Show', ['preview' => true])
+                        ->name('previews.expert-consultations.show');
                     Route::inertia('previews/dispositions/inbox', 'back-office/dispositions/inbox/Index', ['preview' => true])
                         ->name('previews.dispositions.inbox.index');
                     Route::inertia('previews/dispositions/inbox/recipients/{dispositionRecipient}', 'back-office/dispositions/inbox/Show', ['preview' => true])
@@ -371,6 +382,13 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                     ])
                     ->name('executive.inbox.forward-to-sekda.store');
 
+                Route::post('executive/inbox/routes/{letterRoute}/expert-consultations', StoreExpertConsultationController::class)
+                    ->middleware(['can:'.PermissionName::RequestExpertConsultations->value, 'throttle:expert-consultation-mutation'])
+                    ->name('executive.inbox.expert-consultations.store');
+                Route::post('executive/inbox/routes/{letterRoute}/expert-consultations/{expertConsultation}/cancel', CancelExpertConsultationController::class)
+                    ->middleware(['can:'.PermissionName::RequestExpertConsultations->value, 'throttle:expert-consultation-mutation'])
+                    ->name('executive.inbox.expert-consultations.cancel');
+
                 Route::get('executive/inbox/recipients/{dispositionRecipient}', [ExecutiveInboxController::class, 'showRecipient'])
                     ->middleware('can:'.PermissionName::ViewExecutiveInbox->value)
                     ->name('executive.inbox.recipient.show');
@@ -386,6 +404,24 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
                         'throttle:disposition-create',
                     ])
                     ->name('executive.inbox.recipient.dispositions.store');
+
+                Route::prefix('expert-consultations')->name('expert-consultations.')->group(function (): void {
+                    Route::get('/', [ExpertConsultationController::class, 'index'])
+                        ->middleware('can:'.PermissionName::ViewExpertConsultations->value)->name('index');
+                    Route::get('coordination', ExpertConsultationCoordinationController::class)
+                        ->middleware('can:'.PermissionName::CoordinateExpertConsultations->value)->name('coordination');
+                    Route::get('{expertConsultation}', [ExpertConsultationController::class, 'show'])
+                        ->middleware('can:'.PermissionName::ViewExpertConsultations->value)->name('show');
+                    Route::post('{expertConsultation}/report', [ExpertConsultationController::class, 'report'])
+                        ->middleware(['can:'.PermissionName::RespondExpertConsultations->value, 'throttle:expert-consultation-mutation'])
+                        ->name('report');
+                    Route::get('{expertConsultation}/documents/{expertConsultationDocument}/preview', [ExpertConsultationDocumentController::class, 'preview'])
+                        ->middleware(['can:'.PermissionName::ViewExpertConsultations->value, 'throttle:private-document-access'])
+                        ->name('documents.preview');
+                    Route::get('{expertConsultation}/documents/{expertConsultationDocument}/download', [ExpertConsultationDocumentController::class, 'download'])
+                        ->middleware(['can:'.PermissionName::ViewExpertConsultations->value, 'throttle:private-document-access'])
+                        ->name('documents.download');
+                });
 
                 Route::prefix('dispositions/inbox')
                     ->name('dispositions.inbox.')
