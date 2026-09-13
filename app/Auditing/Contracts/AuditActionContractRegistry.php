@@ -559,6 +559,30 @@ final class AuditActionContractRegistry
                 mutationType: AuditMutationType::Create,
                 positionAssignmentRequirement: PositionAssignmentRequirement::Required,
             ),
+            new AuditContract(
+                action: AuditAction::ExpertConsultationRequested,
+                domain: AuditDomain::Routing,
+                allowedSubjectTypes: ['expert_consultation'],
+                requiresSubjectId: true,
+                mutationType: AuditMutationType::Create,
+                positionAssignmentRequirement: PositionAssignmentRequirement::Required,
+            ),
+            new AuditContract(
+                action: AuditAction::ExpertConsultationReported,
+                domain: AuditDomain::Routing,
+                allowedSubjectTypes: ['expert_consultation'],
+                requiresSubjectId: true,
+                mutationType: AuditMutationType::Update,
+                positionAssignmentRequirement: PositionAssignmentRequirement::Required,
+            ),
+            new AuditContract(
+                action: AuditAction::ExpertConsultationCancelled,
+                domain: AuditDomain::Routing,
+                allowedSubjectTypes: ['expert_consultation'],
+                requiresSubjectId: true,
+                mutationType: AuditMutationType::Update,
+                positionAssignmentRequirement: PositionAssignmentRequirement::Required,
+            ),
         ];
 
         self::$contracts = [];

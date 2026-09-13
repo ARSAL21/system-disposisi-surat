@@ -78,6 +78,9 @@ final class LetterActivityCatalog
             AuditAction::StandaloneOutgoingEmailLinkIssued->value => 'Tautan unduh surat keluar diterbitkan',
             AuditAction::StandaloneOutgoingEmailLinkRevoked->value => 'Tautan unduh surat keluar dicabut',
             AuditAction::StandaloneOutgoingCorrectionDraftCreated->value => 'Konsep surat koreksi dibuat',
+            AuditAction::ExpertConsultationRequested->value => 'Telaah Staf Ahli diminta',
+            AuditAction::ExpertConsultationReported->value => 'Hasil telaah Staf Ahli diterima',
+            AuditAction::ExpertConsultationCancelled->value => 'Permintaan telaah Staf Ahli dibatalkan',
         ];
     }
 
