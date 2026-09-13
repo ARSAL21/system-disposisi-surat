@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Exceptions\DocumentStorageConflict;
+use App\ExpertConsultations\ExpertConsultationDocumentStorage;
+use App\Models\ExpertConsultation;
+use App\Models\ExpertConsultationDocument;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterResponseDocumentVersion;
@@ -68,6 +71,16 @@ class PrivateDocumentResponse
         LetterResponseDocumentVersion $version,
     ): StreamedResponse {
         return $this->buildLetterResponseDocument($dossier, $version, true);
+    }
+
+    public function previewExpertConsultationDocument(ExpertConsultation $consultation, ExpertConsultationDocument $document): StreamedResponse
+    {
+        return $this->buildExpertConsultationDocument($consultation, $document, false);
+    }
+
+    public function downloadExpertConsultationDocument(ExpertConsultation $consultation, ExpertConsultationDocument $document): StreamedResponse
+    {
+        return $this->buildExpertConsultationDocument($consultation, $document, true);
     }
 
     public function previewOutgoingLetterDocument(
@@ -146,6 +159,22 @@ class PrivateDocumentResponse
             path: $version->storage_path,
             originalFilename: $version->original_filename,
             fallbackId: 'balasan-'.$dossier->public_id,
+            asDownload: $asDownload,
+        );
+    }
+
+    private function buildExpertConsultationDocument(
+        ExpertConsultation $consultation,
+        ExpertConsultationDocument $document,
+        bool $asDownload,
+    ): StreamedResponse {
+        app(ExpertConsultationDocumentStorage::class)->validate($consultation, $document);
+
+        return $this->buildStorageResponse(
+            disk: $document->storage_disk,
+            path: $document->storage_path,
+            originalFilename: $document->original_filename,
+            fallbackId: 'telaah-'.$consultation->getKey(),
             asDownload: $asDownload,
         );
     }

@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Disposition;
 use App\Models\DispositionFollowUp;
 use App\Models\DispositionRecipient;
+use App\Models\ExpertConsultation;
 use App\Models\IncomingLetter;
 use App\Models\LetterDocument;
 use App\Models\LetterRoute;
@@ -79,6 +80,15 @@ final class LetterActivityTargetResolver
             ->whereKey($this->subjectIds($audits, 'disposition_follow_up'))
             ->get(['id', 'disposition_recipient_id'])
             ->keyBy('id');
+        $expertConsultations = ExpertConsultation::query()
+            ->with([
+                'incomingLetter:id,letter_submission_id,agenda_number,sender_organization_id,subject',
+                'incomingLetter.submission:id,public_id,source',
+                'incomingLetter.senderOrganization:id,name',
+            ])
+            ->whereKey($this->subjectIds($audits, 'expert_consultation'))
+            ->get(['id', 'incoming_letter_id'])
+            ->keyBy('id');
         $resolved = [];
 
         foreach ($audits as $audit) {
@@ -109,6 +119,10 @@ final class LetterActivityTargetResolver
                 ),
                 'disposition_follow_up' => $this->fromFollowUp(
                     $followUps->get($audit->subject_id),
+                    $audit,
+                ),
+                'expert_consultation' => $this->fromExpertConsultation(
+                    $expertConsultations->get($audit->subject_id),
                     $audit,
                 ),
                 default => $this->fallback($audit),
@@ -218,6 +232,16 @@ final class LetterActivityTargetResolver
         }
 
         return $this->fromRecipient($followUp->dispositionRecipient, $audit);
+    }
+
+    /** @return array{target: array<string, mixed>, document: null} */
+    private function fromExpertConsultation(?ExpertConsultation $consultation, AuditLog $audit): array
+    {
+        if (! $consultation instanceof ExpertConsultation) {
+            return $this->fallback($audit);
+        }
+
+        return $this->fromIncomingLetter($consultation->incomingLetter, $audit);
     }
 
     /** @return array{target: array<string, mixed>, document: null} */
