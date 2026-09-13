@@ -48,6 +48,9 @@ export type FirstDispositionReceipt = {
 export type FirstDispositionCapabilities = {
     can_create_disposition: boolean;
     can_forward_to_sekda?: boolean;
+    can_request_expert_consultations?: boolean;
+    can_respond_expert_consultations?: boolean;
+    can_coordinate_expert_consultations?: boolean;
 };
 
 export type FirstDispositionRoutes = {

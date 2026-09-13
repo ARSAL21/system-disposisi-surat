@@ -58,6 +58,10 @@ export type AuthCapabilities = {
     can_create_standalone_outgoing?: boolean;
     can_review_standalone_outgoing?: boolean;
     can_approve_standalone_outgoing?: boolean;
+    can_view_expert_consultations?: boolean;
+    can_request_expert_consultations?: boolean;
+    can_respond_expert_consultations?: boolean;
+    can_coordinate_expert_consultations?: boolean;
 };
 
 export type Auth = {
