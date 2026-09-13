@@ -4,13 +4,18 @@ namespace App\Http\Controllers\BackOffice\Routing;
 
 use App\Dispositions\DispositionPresenter;
 use App\Enums\LetterRouteStatus;
+use App\Enums\PositionRelationshipType;
+use App\ExpertConsultations\ExpertConsultationPresenter;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BackOffice\Routing\ListExecutiveInboxRequest;
 use App\Models\Disposition;
 use App\Models\DispositionRecipient;
+use App\Models\ExpertConsultation;
 use App\Models\InstructionLabel;
 use App\Models\LetterRoute;
+use App\Models\Position;
 use App\Models\User;
+use App\Organization\OrganizationCatalog;
 use App\Routing\ExecutiveInboxQuery;
 use App\Routing\LetterRoutingPresenter;
 use App\Routing\LetterRoutingQuery;
@@ -87,6 +92,7 @@ class ExecutiveInboxController extends Controller
         LetterRoutingPresenter $presenter,
         AssistantDispositionTargetResolver $targetResolver,
         DispositionPresenter $dispositionPresenter,
+        ExpertConsultationPresenter $expertConsultationPresenter,
     ): Response {
         /** @var User $actor */
         $actor = $request->user();
@@ -127,6 +133,18 @@ class ExecutiveInboxController extends Controller
                 (int) $actor->getKey(),
             )
             : collect();
+        $canRequestExpertConsultations = Gate::allows('requestExpertConsultations', $letterRoute)
+            && $letterRoute->status === LetterRouteStatus::Pending
+            && ! $firstDisposition instanceof Disposition;
+        $expertAdvisors = $canRequestExpertConsultations
+            ? Position::query()->with(['activeAssignment.user:id,name', 'organizationalUnit:id,name'])
+                ->where('is_active', true)
+                ->whereHas('positionLevel', fn ($level) => $level->where('code', OrganizationCatalog::EXPERT_ADVISOR_LEVEL)->where('is_active', true))
+                ->whereHas('sourceRelationships', fn ($relation) => $relation->where('target_position_id', $letterRoute->recipient_position_id)->where('relationship_type', PositionRelationshipType::SubstantiveAccountability->value)->where('is_active', true))
+                ->orderBy('id')->get()
+            : collect();
+        $expertConsultations = ExpertConsultation::query()->with(['incomingLetter.senderOrganization:id,name', 'expertPosition.organizationalUnit:id,name', 'expertPosition.activeAssignment.user:id,name', 'requestedBy:id,name', 'requestedByPositionAssignment.position:id,name', 'report.reportedBy:id,name', 'report.reportedByPositionAssignment.position:id,name', 'documents'])
+            ->where('letter_route_id', $letterRoute->getKey())->orderBy('requested_at')->orderBy('id')->get();
 
         return Inertia::render('back-office/executive/inbox/Show', [
             'route' => $presenter->inboxRoute($letterRoute),
@@ -136,9 +154,16 @@ class ExecutiveInboxController extends Controller
                 ? $dispositionPresenter->firstDisposition($firstDisposition)
                 : null,
             'branchProgress' => $dispositionPresenter->executiveBranchProgress($firstDisposition),
+            'expertAdvisors' => $expertAdvisors->map(fn (Position $position): array => [
+                'id' => (int) $position->getKey(), 'name' => $position->name, 'field' => $position->organizationalUnit->name,
+                'holder_name' => $position->activeAssignment?->user->name, 'is_available' => $position->activeAssignment !== null,
+            ])->values()->all(),
+            'expertConsultations' => $expertConsultations->map(fn (ExpertConsultation $consultation): array => $expertConsultationPresenter->detail($consultation))->values()->all(),
+            'expertConsultationRoutes' => ['store' => route('back-office.executive.inbox.expert-consultations.store', $letterRoute)],
             'capabilities' => [
                 'can_create_disposition' => $canCreateDisposition,
                 'can_forward_to_sekda' => $canForwardToSekda,
+                'can_request_expert_consultations' => $canRequestExpertConsultations,
             ],
             'routes' => [
                 'index' => route('back-office.executive.inbox.index'),
