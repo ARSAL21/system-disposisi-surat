@@ -120,7 +120,11 @@ class ExecutiveInboxController extends Controller
         $canForwardToSekda = Gate::allows('forwardToSekda', $letterRoute)
             && $letterRoute->status === LetterRouteStatus::Pending
             && ! $firstDisposition instanceof Disposition;
-        $instructionLabels = $canCreateDisposition
+        // Both the Sekda disposition form and the Mayor's formal hand-off to
+        // Sekda use the same active instruction catalog. A Mayor route cannot
+        // create a regular disposition, so checking only $canCreateDisposition
+        // would incorrectly send an empty catalog to the Mayor's UI.
+        $instructionLabels = ($canCreateDisposition || $canForwardToSekda)
             ? InstructionLabel::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
