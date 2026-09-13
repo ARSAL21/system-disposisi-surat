@@ -18,6 +18,7 @@ use App\Models\OrganizationalUnit;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\PositionLevel;
+use App\Models\PositionRelationship;
 use App\Models\SubmissionDocument;
 use App\Models\User;
 use Database\Seeders\OrganizationAndUserSeeder;
@@ -46,13 +47,13 @@ test('operational bootstrap seeder creates the exact organization accounts and c
 
     $this->seed(OrganizationAndUserSeeder::class);
 
-    expect(PositionLevel::query()->count())->toBe(6)
-        ->and(OrganizationalUnit::query()->count())->toBe(13)
-        ->and(Position::query()->count())->toBe(14)
+    expect(PositionLevel::query()->count())->toBe(7)
+        ->and(OrganizationalUnit::query()->count())->toBe(14)
+        ->and(Position::query()->count())->toBe(17)
         ->and(InstructionLabel::query()->count())->toBe(7)
-        ->and(User::query()->count())->toBe(14)
+        ->and(User::query()->count())->toBe(17)
         ->and(User::query()->where('account_type', AccountType::PublicAccount->value)->exists())->toBeFalse()
-        ->and(PositionAssignment::query()->active()->count())->toBe(14)
+        ->and(PositionAssignment::query()->active()->count())->toBe(17)
         ->and(Role::query()->count())->toBe(count(RoleName::cases()))
         ->and(Permission::query()->count())->toBe(count(PermissionName::cases()))
         ->and(AuditLog::query()->count())->toBe($firstAuditCount)
@@ -71,6 +72,9 @@ test('operational bootstrap seeder creates the exact organization accounts and c
     $expectedAccounts = [
         'wali.kota@internal.test' => [RoleName::Mayor, 'WALI_KOTA'],
         'sekda@internal.test' => [RoleName::RegionalSecretary, 'SEKDA'],
+        'staf.ahli.pemerintahan@internal.test' => [RoleName::ExpertAdvisor, 'STAF_AHLI_PEMERINTAHAN_HUKUM'],
+        'staf.ahli.ekonomi@internal.test' => [RoleName::ExpertAdvisor, 'STAF_AHLI_EKONOMI_PEMBANGUNAN'],
+        'staf.ahli.kemasyarakatan@internal.test' => [RoleName::ExpertAdvisor, 'STAF_AHLI_KEMASYARAKATAN_SDM'],
         'asisten.1@internal.test' => [RoleName::Assistant, 'ASISTEN-I'],
         'asisten.2@internal.test' => [RoleName::Assistant, 'ASISTEN-II'],
         'asisten.3@internal.test' => [RoleName::Assistant, 'ASISTEN-III'],
@@ -98,6 +102,8 @@ test('operational bootstrap seeder creates the exact organization accounts and c
             ->and($user->activePositionAssignments)->toHaveCount(1)
             ->and($user->activePositionAssignments->firstOrFail()->position->code)->toBe($positionCode);
     }
+
+    expect(PositionRelationship::query()->count())->toBe(6);
 
     expect(User::role(RoleName::SuperAdmin->value)->exists())->toBeFalse()
         ->and(LetterSubmission::query()->exists())->toBeFalse()
@@ -130,7 +136,7 @@ test('operational bootstrap leaves a manually provisioned super admin untouched'
         ->and($superAdmin->password)->toBe($passwordHash)
         ->and($superAdmin->roles()->pluck('name')->all())->toBe([RoleName::SuperAdmin->value])
         ->and($superAdmin->activePositionAssignments()->exists())->toBeFalse()
-        ->and(User::query()->count())->toBe(15);
+        ->and(User::query()->count())->toBe(18);
 });
 
 test('operational bootstrap fails closed when a deterministic email belongs to a public account', function (): void {

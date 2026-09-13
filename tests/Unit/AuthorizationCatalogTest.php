@@ -15,6 +15,7 @@ test('authorization catalog exposes unique role and permission names', function 
             RoleName::Assistant->value,
             RoleName::SectionHead->value,
             RoleName::UnitStaff->value,
+            RoleName::ExpertAdvisor->value,
         ])
         ->toHaveCount(count(array_unique(AuthorizationCatalog::roleNames())))
         ->and(AuthorizationCatalog::permissionNames())
@@ -61,6 +62,10 @@ test('authorization catalog exposes unique role and permission names', function 
             PermissionName::CreateStandaloneOutgoing->value,
             PermissionName::ReviewStandaloneOutgoing->value,
             PermissionName::ApproveStandaloneOutgoing->value,
+            PermissionName::ViewExpertConsultations->value,
+            PermissionName::RequestExpertConsultations->value,
+            PermissionName::RespondExpertConsultations->value,
+            PermissionName::CoordinateExpertConsultations->value,
         ])
         ->toHaveCount(count(array_unique(AuthorizationCatalog::permissionNames())));
 });
@@ -115,6 +120,8 @@ test('operational roles expose least privilege capability bundles', function ():
         PermissionName::ViewLetterResponses->value,
         PermissionName::ViewOutgoingRegister->value,
         PermissionName::ViewStandaloneOutgoing->value,
+        PermissionName::ViewExpertConsultations->value,
+        PermissionName::RequestExpertConsultations->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::RegionalSecretary))->toBe([
         PermissionName::ViewExecutiveInbox->value,
         PermissionName::ViewDispositions->value,
@@ -131,6 +138,7 @@ test('operational roles expose least privilege capability bundles', function ():
         PermissionName::ViewOutgoingRegister->value,
         PermissionName::ViewStandaloneOutgoing->value,
         PermissionName::ApproveStandaloneOutgoing->value,
+        PermissionName::CoordinateExpertConsultations->value,
     ])->and(AuthorizationCatalog::permissionsFor(RoleName::Assistant))->toBe([
         PermissionName::ViewDispositions->value,
         PermissionName::CreateDispositions->value,
@@ -161,6 +169,9 @@ test('operational roles expose least privilege capability bundles', function ():
         PermissionName::ViewOutgoingTemplates->value,
         PermissionName::ViewStandaloneOutgoing->value,
         PermissionName::CreateStandaloneOutgoing->value,
+    ])->and(AuthorizationCatalog::permissionsFor(RoleName::ExpertAdvisor))->toBe([
+        PermissionName::ViewExpertConsultations->value,
+        PermissionName::RespondExpertConsultations->value,
     ]);
 });
 
