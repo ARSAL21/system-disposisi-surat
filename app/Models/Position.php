@@ -82,4 +82,16 @@ class Position extends Model
     {
         return $this->hasMany(LetterResponseDocument::class, 'owner_position_id');
     }
+
+    /** @return HasMany<PositionRelationship, $this> */
+    public function sourceRelationships(): HasMany
+    {
+        return $this->hasMany(PositionRelationship::class, 'source_position_id');
+    }
+
+    /** @return HasMany<PositionRelationship, $this> */
+    public function targetRelationships(): HasMany
+    {
+        return $this->hasMany(PositionRelationship::class, 'target_position_id');
+    }
 }
