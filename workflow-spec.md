@@ -943,6 +943,22 @@ COMPLETED
 
 Struktur ini adalah workflow resmi MVP. Penambahan state atau transition baru harus dilakukan berdasarkan requirement bisnis nyata dan memperbarui dokumen ini terlebih dahulu.
 
+## Telaah Staf Ahli pada jalur Wali Kota
+
+Telaah tidak menciptakan disposisi baru dan tidak mengubah status surat:
+
+```text
+PENDING -> REPORTED
+PENDING -> CANCELLED
+```
+
+Hanya Wali Kota pemegang active Position pada initial route `VIA_MAYOR` dapat
+meminta atau membatalkan telaah, maksimal tiga Position Staf Ahli berbeda pada
+satu waktu. Staf Ahli hanya dapat melaporkan tugas untuk Position-nya sendiri.
+Wali Kota tidak dapat meneruskan arahan ke Sekda selama masih terdapat telaah
+`PENDING`. Sekda hanya memperoleh ringkasan administratif dan tidak dapat
+mengakses instruksi, laporan, maupun dokumen telaah.
+
 ---
 
 # 21. Workflow Dossier Balasan M8.2

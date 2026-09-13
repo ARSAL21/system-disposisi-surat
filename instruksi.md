@@ -56,6 +56,11 @@ Kepala Bagian adalah terminal formal workflow MVP.
 
 Staff belum termasuk workflow formal MVP.
 
+Staf Ahli Wali Kota bukan recipient disposisi reguler. Pada jalur melalui Wali
+Kota, Wali Kota dapat meminta telaah tertutup dari Staf Ahli; hasilnya kembali
+kepada Wali Kota dan tidak dapat diteruskan oleh Staf Ahli kepada Sekda,
+Asisten, atau Kepala Bagian.
+
 ---
 
 ## 2. Pisahkan User, Role, Permission, Position, dan Assignment

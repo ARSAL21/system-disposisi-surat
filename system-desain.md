@@ -98,6 +98,21 @@ Aturan utama:
 * Kepala Bagian merupakan terminal formal workflow MVP.
 * Staff belum menjadi bagian workflow formal MVP.
 
+### Telaah Staf Ahli Wali Kota
+
+Staf Ahli melayani jalur konsultasi tertutup, bukan cabang disposisi:
+
+```text
+Wali Kota -> minta telaah -> Staf Ahli -> hasil telaah -> Wali Kota
+Wali Kota -> arahan formal -> Sekda -> Asisten -> Kepala Bagian
+```
+
+Hubungan substantif Staf Ahli kepada Wali Kota dan koordinasi administratif
+dengan Sekda disimpan sebagai relasi Position non-hierarkis. Relasi tersebut
+tidak mengubah `organizational_units.parent_id`, yang tetap menjadi sumber
+hierarki disposisi Asisten ke Kepala Bagian. Sekda hanya melihat status, actor,
+dan waktu telaah; ia tidak dapat membuka instruksi, laporan, atau lampiran.
+
 ---
 
 # 3. Prinsip Hybrid Intake
