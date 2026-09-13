@@ -244,6 +244,30 @@ final class AuthorizationCatalog
                     'description' => 'Menetapkan persetujuan akhir surat keluar mandiri pada tahap pimpinan.',
                     'group' => 'Surat Keluar Mandiri',
                 ],
+                PermissionName::ViewExpertConsultations => [
+                    'name' => $permission->value,
+                    'label' => 'Lihat tugas telaah Staf Ahli',
+                    'description' => 'Melihat permintaan dan hasil telaah Staf Ahli sesuai kewenangan jabatan.',
+                    'group' => 'Telaah Staf Ahli',
+                ],
+                PermissionName::RequestExpertConsultations => [
+                    'name' => $permission->value,
+                    'label' => 'Minta telaah Staf Ahli',
+                    'description' => 'Meminta telaah dari Staf Ahli untuk surat yang berada pada meja Wali Kota.',
+                    'group' => 'Telaah Staf Ahli',
+                ],
+                PermissionName::RespondExpertConsultations => [
+                    'name' => $permission->value,
+                    'label' => 'Sampaikan hasil telaah',
+                    'description' => 'Menyampaikan hasil telaah untuk tugas yang ditujukan kepada Position Staf Ahli aktif.',
+                    'group' => 'Telaah Staf Ahli',
+                ],
+                PermissionName::CoordinateExpertConsultations => [
+                    'name' => $permission->value,
+                    'label' => 'Koordinasi administratif telaah',
+                    'description' => 'Melihat status administratif telaah Staf Ahli tanpa isi laporan atau lampiran.',
+                    'group' => 'Telaah Staf Ahli',
+                ],
                 PermissionName::ViewUsers => [
                     'name' => $permission->value,
                     'label' => 'Lihat data pengguna',
@@ -348,6 +372,10 @@ final class AuthorizationCatalog
                 PermissionName::CreateStandaloneOutgoing->value,
                 PermissionName::ReviewStandaloneOutgoing->value,
                 PermissionName::ApproveStandaloneOutgoing->value,
+                PermissionName::ViewExpertConsultations->value,
+                PermissionName::RequestExpertConsultations->value,
+                PermissionName::RespondExpertConsultations->value,
+                PermissionName::CoordinateExpertConsultations->value,
             ],
             RoleName::LetterOfficer => [
                 PermissionName::ViewIntake->value,
@@ -395,6 +423,8 @@ final class AuthorizationCatalog
                 PermissionName::ViewLetterResponses->value,
                 PermissionName::ViewOutgoingRegister->value,
                 PermissionName::ViewStandaloneOutgoing->value,
+                PermissionName::ViewExpertConsultations->value,
+                PermissionName::RequestExpertConsultations->value,
             ],
             RoleName::RegionalSecretary => [
                 PermissionName::ViewExecutiveInbox->value,
@@ -412,6 +442,7 @@ final class AuthorizationCatalog
                 PermissionName::ViewOutgoingRegister->value,
                 PermissionName::ViewStandaloneOutgoing->value,
                 PermissionName::ApproveStandaloneOutgoing->value,
+                PermissionName::CoordinateExpertConsultations->value,
             ],
             RoleName::Assistant => [
                 PermissionName::ViewDispositions->value,
@@ -445,6 +476,10 @@ final class AuthorizationCatalog
                 PermissionName::ViewOutgoingTemplates->value,
                 PermissionName::ViewStandaloneOutgoing->value,
                 PermissionName::CreateStandaloneOutgoing->value,
+            ],
+            RoleName::ExpertAdvisor => [
+                PermissionName::ViewExpertConsultations->value,
+                PermissionName::RespondExpertConsultations->value,
             ],
         };
     }

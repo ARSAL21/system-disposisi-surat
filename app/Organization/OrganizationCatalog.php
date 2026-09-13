@@ -18,6 +18,8 @@ final class OrganizationCatalog
 
     public const string ASSISTANT_LEVEL = 'ASSISTANT';
 
+    public const string EXPERT_ADVISOR_LEVEL = 'EXPERT_ADVISOR';
+
     public const string SECTION_HEAD_LEVEL = 'SECTION_HEAD';
 
     public const string UNIT_STAFF_LEVEL = 'UNIT_STAFF';
@@ -27,6 +29,8 @@ final class OrganizationCatalog
     public const string MAYOR_POSITION = 'WALI_KOTA';
 
     public const string REGIONAL_SECRETARY_POSITION = 'SEKDA';
+
+    public const string EXPERT_ADVISOR_UNIT = 'STAF_AHLI_WALI_KOTA';
 
     /**
      * @return list<array{code: string, name: string, hierarchy_order: int, is_active: bool}>
@@ -44,6 +48,12 @@ final class OrganizationCatalog
                 'code' => self::REGIONAL_SECRETARY_LEVEL,
                 'name' => 'Sekretaris Daerah',
                 'hierarchy_order' => 20,
+                'is_active' => true,
+            ],
+            [
+                'code' => self::EXPERT_ADVISOR_LEVEL,
+                'name' => 'Staf Ahli Wali Kota',
+                'hierarchy_order' => 25,
                 'is_active' => true,
             ],
             [

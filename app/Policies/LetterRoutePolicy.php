@@ -80,6 +80,20 @@ class LetterRoutePolicy
             : Response::denyAsNotFound();
     }
 
+    public function requestExpertConsultations(User $user, LetterRoute $letterRoute): Response
+    {
+        if (! $user->isInternalAccount() || ! $user->is_active || ! $user->hasVerifiedEmail()) {
+            return Response::denyAsNotFound();
+        }
+        if (! $user->can(PermissionName::RequestExpertConsultations->value)) {
+            return Response::deny('You do not have permission to request expert consultations.');
+        }
+
+        return $this->dispositionPositionAssignmentResolver->hasMayorAssignmentForPosition($user, $letterRoute->recipient_position_id)
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+
     private function authorizeInboxViewing(User $user): Response
     {
         if (! $user->isInternalAccount() || ! $user->is_active || ! $user->hasVerifiedEmail()) {
